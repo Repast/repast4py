@@ -1,5 +1,9 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+
+#define R4PY_CORE_MODULE
+#include "coremodule.h"
+
 #include <new>
 #include "structmember.h"
 
@@ -99,7 +103,7 @@ static PyTypeObject AgentType = {
 
 static PyModuleDef coremodule = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "core",
+    .m_name = "repast4py.core",
     .m_doc = "Example module that creates an extension type.",
     .m_size = -1,
 };
@@ -108,13 +112,26 @@ static PyModuleDef coremodule = {
 PyMODINIT_FUNC
 PyInit_core(void)
 {
-    PyObject *m;
+
     if (PyType_Ready(&AgentType) < 0)
         return NULL;
 
+    PyObject *m;
     m = PyModule_Create(&coremodule);
     if (m == NULL)
         return NULL;
+
+    static void* R4PyCore_API[R4PyCore_API_pointers];
+    PyObject* c_api_object;
+
+    R4PyCore_API[0] = (void*)&AgentType;
+    c_api_object = PyCapsule_New((void*)R4PyCore_API, "repast4py.core._C_API", NULL);
+
+    if (PyModule_AddObject(m, "_C_API", c_api_object) < 0) {
+        Py_XDECREF(c_api_object);
+        Py_DECREF(m);
+        return NULL;
+    }
 
     Py_INCREF(&AgentType);
     if (PyModule_AddObject(m, "Agent", (PyObject *) &AgentType) < 0) {
