@@ -20,7 +20,7 @@ namespace repast4py {
 // see https://docs.scipy.org/doc/numpy/reference/c-api.array.html?highlight=impor#c.import_array
 // import_array() call in the add to module part
 
-struct DiscretePoint {
+struct R4Py_DiscretePoint {
     PyObject_HEAD
     PyArrayObject* coords;
 };
@@ -32,8 +32,14 @@ struct TypeSelector {
 };
 
 template<>
-struct TypeSelector<DiscretePoint> {
+struct TypeSelector<R4Py_DiscretePoint> {
     using type = long;
+};
+
+template<typename PointType>
+struct Point {
+    using coord_type  = typename TypeSelector<PointType>::type;
+    coord_type x, y, z;
 };
 
 // template<typename PointType>
@@ -48,18 +54,27 @@ struct TypeSelector<DiscretePoint> {
 //     }
 // };
 
-template<typename PointType>
-struct Point {
-    using coord_type  = typename TypeSelector<PointType>::type;
-    coord_type x, y, z;
-};
+void extract_coords(R4Py_DiscretePoint* pt, Point<R4Py_DiscretePoint>& coords) {
+    long* data = (long*)pt->coords->data;
+    coords.x = data[0];
+    coords.y = data[1];
+    coords.z = data[2];
+}
 
-DiscretePoint* create_point(PyTypeObject* pt_type, const Point<DiscretePoint>& wpt) {
-    if (pt_type == NULL) {
-        return NULL;
-    }
-    PyObject* obj = PyObject_CallFunction((PyObject*)pt_type, "lll", wpt.x, wpt.y, wpt.z);
-    return (DiscretePoint*)obj;
+void update_point(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coords) {
+    long* data = (long*)pt->coords->data;
+    data[0] = coords.x;
+    data[1] = coords.y;
+    data[2] = coords.z;
+
+    //printf("Updated Point: %lu,%lu,%lu\n", data[0], data[1], data[2]);
+}
+
+
+R4Py_DiscretePoint* create_point(PyTypeObject* pt_type, const Point<R4Py_DiscretePoint>& wpt) {
+    R4Py_DiscretePoint* pt = (R4Py_DiscretePoint*)pt_type->tp_new(pt_type, NULL, NULL);
+    update_point(pt, wpt);
+    return pt;
 }
 
 template<typename PointType>
@@ -75,33 +90,21 @@ struct PointComp {
 template<typename PointType>
 struct SpaceItem {
     PointType* pt;
-    Agent* agent;
+    R4Py_Agent* agent;
 };
 
 
-void extract_coords(DiscretePoint* pt, Point<DiscretePoint>& coords) {
-    long* data = (long*)pt->coords->data;
-    coords.x = data[0];
-    coords.y = data[1];
-    coords.z = data[2];
-}
-
-void update_point(DiscretePoint* pt, const Point<DiscretePoint>& coords) {
-    long* data = (long*)pt->coords->data;
-    data[0] = coords.x;
-    data[1] = coords.y;
-    data[2] = coords.z;
-}
-
-bool point_equals(DiscretePoint* pt, const Point<DiscretePoint>& coords) {
+bool point_equals(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coords) {
     if (pt) {
         long* data = (long*)pt->coords->data;
+        //printf("%lu,%lu,%lu  -- %lu,%lu,%lu\n", data[0], data[1], data[2],
+        //    coords.x, coords.y, coords.z);
         return data[0] == coords.x && data[1] == coords.y && data[2] == coords.z;
     }
     return false;
 }
 
-using AgentList = std::shared_ptr<std::list<Agent*>>;
+using AgentList = std::shared_ptr<std::list<R4Py_Agent*>>;
 
 template<typename MapType, typename PointType>
 class MultiOccupancyAccessor {
@@ -114,20 +117,20 @@ public:
     MultiOccupancyAccessor();
     ~MultiOccupancyAccessor() {}
 
-    Agent* get(MapType& location_map, const Point<PointType>& pt);
+    R4Py_Agent* get(MapType& location_map, const Point<PointType>& pt);
     size_t size(MapType& location_map, const Point<PointType>& pt);
     AgentList getAll(MapType& location_map, const Point<PointType>& pt);
-    bool put(Agent* agent, MapType& location_map, const Point<PointType>& pt);
-    bool remove(Agent* agent, MapType& location_map, const Point<PointType>& pt);
+    bool put(R4Py_Agent* agent, MapType& location_map, const Point<PointType>& pt);
+    bool remove(R4Py_Agent* agent, MapType& location_map, const Point<PointType>& pt);
 };
 
 template<typename MapType, typename PointType>
 MultiOccupancyAccessor<MapType, PointType>::MultiOccupancyAccessor() : empty_list{} {
-    empty_list = std::make_shared<std::list<Agent*>>();
+    empty_list = std::make_shared<std::list<R4Py_Agent*>>();
 }
 
 template<typename MapType, typename PointType>
-Agent* MultiOccupancyAccessor<MapType, PointType>::get(MapType& location_map, const Point<PointType>& pt) {
+R4Py_Agent* MultiOccupancyAccessor<MapType, PointType>::get(MapType& location_map, const Point<PointType>& pt) {
     auto iter = location_map.find(pt);
     if (iter == location_map.end() || iter->second->size() == 0) {
         return nullptr;
@@ -156,10 +159,12 @@ AgentList MultiOccupancyAccessor<MapType, PointType>::getAll(MapType& location_m
 }
 
 template<typename MapType, typename PointType>
-bool MultiOccupancyAccessor<MapType, PointType>::put(Agent* agent, MapType& location_map, const Point<PointType>& pt) {
+bool MultiOccupancyAccessor<MapType, PointType>::put(R4Py_Agent* agent, MapType& location_map, const Point<PointType>& pt) {
     auto iter = location_map.find(pt);
     if (iter == location_map.end()) {
-        location_map[pt] = std::make_shared<std::list<Agent*>>(std::initializer_list<Agent*>{agent});
+        auto l = std::make_shared<std::list<R4Py_Agent*>>();
+        l->push_back(agent);
+        location_map.emplace(pt, l);
     } else {
         iter->second->push_back(agent);
     }
@@ -168,7 +173,7 @@ bool MultiOccupancyAccessor<MapType, PointType>::put(Agent* agent, MapType& loca
 }
 
 template<typename MapType, typename PointType>
-bool MultiOccupancyAccessor<MapType, PointType>::remove(Agent* agent, MapType& location_map, const Point<PointType>& pt) {
+bool MultiOccupancyAccessor<MapType, PointType>::remove(R4Py_Agent* agent, MapType& location_map, const Point<PointType>& pt) {
     auto iter = location_map.find(pt);
     if (iter == location_map.end()) {
         return false;
@@ -188,7 +193,7 @@ bool MultiOccupancyAccessor<MapType, PointType>::remove(Agent* agent, MapType& l
 }
 
 template<typename PointType>
-using AgentMapType = std::map<AgentID*, std::shared_ptr<SpaceItem<PointType>>, agent_id_comp>;
+using AgentMapType = std::map<R4Py_AgentID*, std::shared_ptr<SpaceItem<PointType>>, agent_id_comp>;
 
 template<typename PointType>
 using LocationMapType = std::map<Point<PointType>, AgentList, PointComp<PointType>>;
@@ -207,13 +212,12 @@ public:
     BaseSpace(const std::string& name);
     virtual ~BaseSpace();
 
-    bool addAgent(Agent* agent);
-    bool removeAgent(Agent* agent);
-    Agent* getAgentAt(PointType* pt);
-    // TODO 
-    // getObjectsAt();
-    PointType* getLocation(Agent* agent);
-    PointType* move(Agent* agent, PointType* to);
+    bool addAgent(R4Py_Agent* agent);
+    bool removeAgent(R4Py_Agent* agent);
+    R4Py_Agent* getAgentAt(PointType* pt);
+    AgentList getAgentsAt(PointType* pt);
+    PointType* getLocation(R4Py_Agent* agent);
+    PointType* move(R4Py_Agent* agent, PointType* to);
 };
 
 template<typename PointType, typename Accessor>
@@ -239,7 +243,7 @@ BaseSpace<PointType, Accessor>::~BaseSpace() {
 }
 
 template<typename PointType, typename Accessor>
-bool BaseSpace<PointType, Accessor>::addAgent(Agent* agent) {
+bool BaseSpace<PointType, Accessor>::addAgent(R4Py_Agent* agent) {
     auto item = std::make_shared<SpaceItem<PointType>>();
     item->agent = agent;
     Py_INCREF(agent);
@@ -250,7 +254,7 @@ bool BaseSpace<PointType, Accessor>::addAgent(Agent* agent) {
 }
 
 template<typename PointType, typename Accessor>
-bool BaseSpace<PointType, Accessor>::removeAgent(Agent* agent) {
+bool BaseSpace<PointType, Accessor>::removeAgent(R4Py_Agent* agent) {
     auto iter = agent_map.find(agent->aid);
     bool ret_val = false;
     if (iter != agent_map.end()) {
@@ -266,14 +270,19 @@ bool BaseSpace<PointType, Accessor>::removeAgent(Agent* agent) {
 }
 
 template<typename PointType, typename Accessor>
-Agent* BaseSpace<PointType, Accessor>::getAgentAt(PointType* pt) {
+R4Py_Agent* BaseSpace<PointType, Accessor>::getAgentAt(PointType* pt) {
     extract_coords(pt, wpt);
     return accessor.get(location_map, wpt);
 }
 
+template<typename PointType, typename Accessor>
+AgentList BaseSpace<PointType, Accessor>::getAgentsAt(PointType* pt) {
+    extract_coords(pt, wpt);
+    return accessor.getAll(location_map, wpt);
+}
 
 template<typename PointType, typename Accessor>
-PointType* BaseSpace<PointType, Accessor>::getLocation(Agent* agent) {
+PointType* BaseSpace<PointType, Accessor>::getLocation(R4Py_Agent* agent) {
     auto iter = agent_map.find(agent->aid);
     if (iter != agent_map.end()) {
         return iter->second->pt;
@@ -282,7 +291,7 @@ PointType* BaseSpace<PointType, Accessor>::getLocation(Agent* agent) {
 }
 
 template<typename PointType, typename Accessor>
-PointType* BaseSpace<PointType, Accessor>::move(Agent* agent, PointType* pt) {
+PointType* BaseSpace<PointType, Accessor>::move(R4Py_Agent* agent, PointType* pt) {
     auto iter = agent_map.find(agent->aid);
     if (iter != agent_map.end()) {
         // TODO transform with borders and don't use 
@@ -295,8 +304,9 @@ PointType* BaseSpace<PointType, Accessor>::move(Agent* agent, PointType* pt) {
                 if (iter->second->pt) {
                     // if successful put, and agent is already located 
                     // so need to remove
-                    extract_coords(iter->second->pt, wpt);
-                    accessor.remove(agent, location_map, wpt);
+                    Point<PointType> ppt;
+                    extract_coords(iter->second->pt, ppt);
+                    accessor.remove(agent, location_map, ppt);
                     update_point(iter->second->pt, wpt);
                 }  else {
                     iter->second->pt = create_point(Py_TYPE(pt), wpt);
@@ -310,13 +320,13 @@ PointType* BaseSpace<PointType, Accessor>::move(Agent* agent, PointType* pt) {
         return iter->second->pt;
 
     } else {
-        AgentID* id = agent->aid;
+        R4Py_AgentID* id = agent->aid;
         throw std::invalid_argument("Error moving agent (" + std::to_string(id->id) + "," + 
             std::to_string(id->type) + "): agent is not in " + name_);
     }
 }
 
-using Grid = BaseSpace<DiscretePoint, MultiOccupancyAccessor<LocationMapType<DiscretePoint>, DiscretePoint>>;
+using Grid = BaseSpace<R4Py_DiscretePoint, MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint>, R4Py_DiscretePoint>>;
 
 
 struct R4Py_Grid {

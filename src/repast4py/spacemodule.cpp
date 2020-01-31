@@ -11,15 +11,15 @@
 
 using namespace repast4py;
 
-static void DiscretePoint_dealloc(DiscretePoint* self) {
+static void DiscretePoint_dealloc(R4Py_DiscretePoint* self) {
     Py_DECREF(self->coords);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 static PyObject* DiscretePoint_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
     
-    DiscretePoint* self;
-    self = (DiscretePoint*) type->tp_alloc(type, 0);
+    R4Py_DiscretePoint* self;
+    self = (R4Py_DiscretePoint*) type->tp_alloc(type, 0);
     if (self != NULL) {
         npy_intp shape[] = {3};
         self->coords = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type, PyArray_DescrFromType(NPY_LONG), 
@@ -34,7 +34,7 @@ static PyObject* DiscretePoint_new(PyTypeObject* type, PyObject* args, PyObject*
 }
 
 
-static int DiscretePoint_init(DiscretePoint* self, PyObject* args, PyObject* kwds) {
+static int DiscretePoint_init(R4Py_DiscretePoint* self, PyObject* args, PyObject* kwds) {
     static char* kwlist[] = {(char*)"x", (char*)"y", (char*)"z", NULL};
     long x, y;
     long z = 0;
@@ -51,20 +51,20 @@ static int DiscretePoint_init(DiscretePoint* self, PyObject* args, PyObject* kwd
     return 0;
 }
 
-static PyObject* DiscretePoint_get_coords(DiscretePoint* self, void* closure) {
+static PyObject* DiscretePoint_get_coords(R4Py_DiscretePoint* self, void* closure) {
     Py_INCREF(self->coords);
     return (PyObject*)self->coords;
 }
 
-static PyObject* DiscretePoint_get_x(DiscretePoint* self, void* closure) {
+static PyObject* DiscretePoint_get_x(R4Py_DiscretePoint* self, void* closure) {
     return PyLong_FromLong(((long*)self->coords->data)[0]);
 }
 
-static PyObject* DiscretePoint_get_y(DiscretePoint* self, void* closure) {
+static PyObject* DiscretePoint_get_y(R4Py_DiscretePoint* self, void* closure) {
     return PyLong_FromLong(((long*)self->coords->data)[1]);
 }
 
-static PyObject* DiscretePoint_get_z(DiscretePoint* self, void* closure) {
+static PyObject* DiscretePoint_get_z(R4Py_DiscretePoint* self, void* closure) {
     return PyLong_FromLong(((long*)self->coords->data)[2]);
 }
 
@@ -76,7 +76,7 @@ static PyGetSetDef DiscretePoint_get_setters[] = {
     {NULL}
 };
 
-static PyObject* DiscretePoint_repr(DiscretePoint* self) {
+static PyObject* DiscretePoint_repr(R4Py_DiscretePoint* self) {
     long* data = (long*)self->coords->data;
     return PyUnicode_FromFormat("DiscretePoint(%ld, %ld, %ld)", data[0], data[1], data[2]);   
 }
@@ -85,7 +85,7 @@ static PyObject* DiscretePoint_repr(DiscretePoint* self) {
 static PyTypeObject DiscretePointType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
     "space.DiscretePoint",                          /* tp_name */
-    sizeof(DiscretePoint),                      /* tp_basicsize */
+    sizeof(R4Py_DiscretePoint),                      /* tp_basicsize */
     0,                                        /* tp_itemsize */
     (destructor)DiscretePoint_dealloc,                                         /* tp_dealloc */
     0,                                        /* tp_print */
@@ -156,21 +156,22 @@ static int Grid_init(R4Py_Grid* self, PyObject* args, PyObject* kwds) {
 
 static PyObject* Grid_addAgent(PyObject* self, PyObject* args) {
     PyObject* agent;
-    if (!PyArg_ParseTuple(args, "O!", &AgentType, &agent)) {
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
         return NULL;
     }
-    bool ret_val = ((R4Py_Grid*)self)->grid->addAgent((Agent*)agent);
+    bool ret_val = ((R4Py_Grid*)self)->grid->addAgent((R4Py_Agent*)agent);
     return PyBool_FromLong(static_cast<long>(ret_val));
 }
 
 static PyObject* Grid_getLocation(PyObject* self, PyObject* args) {
     PyObject* agent;
-    if (!PyArg_ParseTuple(args, "O!", &AgentType, &agent)) {
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
         return NULL;
     }
 
-    DiscretePoint* pt = ((R4Py_Grid*)self)->grid->getLocation((Agent*)agent);
+    R4Py_DiscretePoint* pt = ((R4Py_Grid*)self)->grid->getLocation((R4Py_Agent*)agent);
     if (pt) {
+        Py_INCREF(pt);
         return (PyObject*)pt;
     } else {
         Py_INCREF(Py_None);
@@ -180,13 +181,14 @@ static PyObject* Grid_getLocation(PyObject* self, PyObject* args) {
 
 static PyObject* Grid_move(PyObject* self, PyObject* args) {
     PyObject* agent, *pt;
-    if (!PyArg_ParseTuple(args, "O!O!", &AgentType, &agent, &DiscretePointType, &pt)) {
+    if (!PyArg_ParseTuple(args, "O!O!", &R4Py_AgentType, &agent, &DiscretePointType, &pt)) {
         return NULL;
     }
 
     try {
-        DiscretePoint* ret = ((R4Py_Grid*)self)->grid->move((Agent*)agent, (DiscretePoint*)pt);
+        R4Py_DiscretePoint* ret = ((R4Py_Grid*)self)->grid->move((R4Py_Agent*)agent, (R4Py_DiscretePoint*)pt);
         if (ret) {
+            Py_INCREF(ret);
             return (PyObject*)ret;
         } else {
             Py_INCREF(Py_None);
@@ -204,7 +206,7 @@ static PyObject* Grid_getAgent(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    Agent* ret =  ((R4Py_Grid*)self)->grid->getAgentAt((DiscretePoint*)pt);
+    R4Py_Agent* ret =  ((R4Py_Grid*)self)->grid->getAgentAt((R4Py_DiscretePoint*)pt);
     if (ret) {
         // Is this necessary??
         Py_INCREF(ret);
@@ -215,11 +217,27 @@ static PyObject* Grid_getAgent(PyObject* self, PyObject* args) {
     }
 }
 
+static PyObject* Grid_getAgents(PyObject* self, PyObject* args) {
+    PyObject* pt;
+    if (!PyArg_ParseTuple(args, "O!", &DiscretePointType, &pt)) {
+        return NULL;
+    }
+
+    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_Grid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
+    R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
+    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    // not completely sure why this is necessary but without it
+    // the iterator is decrefed out of existence after first call to __iter__
+    Py_INCREF(agent_iter);
+    return (PyObject*)agent_iter;
+}
+
 static PyMethodDef Grid_methods[] = {
     {"add_agent", Grid_addAgent, METH_VARARGS, "Adds the specified agent to this grid projection"},
     {"move", Grid_move, METH_VARARGS, "Moves the specified agent to the specified location in this grid projection"},
     {"get_location", Grid_getLocation, METH_VARARGS, "Gets the location of the specified agent in this grid projection"},
-    {"get_agent", Grid_getAgent, METH_VARARGS, "Gets the agent at the specified location in this grid projection"},
+    {"get_agent", Grid_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this grid projection"},
+    {"get_agents", Grid_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this grid projection"},
     {NULL, NULL, 0, NULL}
 };
 

@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#define R4PyCore_API_pointers 1
+#define R4PyCore_API_pointers 2
 
 #ifdef R4PY_CORE_MODULE
 
@@ -13,7 +13,8 @@ extern "C" {
 
 static void** R4PyCore_API;
 
-#define AgentType (*(PyTypeObject *)R4PyCore_API[0])
+#define R4Py_AgentType (*(PyTypeObject *)R4PyCore_API[0])
+#define R4Py_AgentIterType  (*(PyTypeObject *)R4PyCore_API[1])
 
 static int import_core(void) {
     R4PyCore_API = (void **)PyCapsule_Import("repast4py.core._C_API", 0);

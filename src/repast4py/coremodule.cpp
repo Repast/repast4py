@@ -11,17 +11,92 @@
 
 using namespace repast4py;
 
+//////////// R4Py_AgentIter
+static void AgentIter_dealloc(R4Py_AgentIter* self) {
+    delete self->iter;
+    Py_TYPE(self)->tp_free((PyObject*)self);
+    printf("deallocating\n");
+}
 
-static void Agent_dealloc(Agent* self) {
+static PyObject* AgentIter_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
+    R4Py_AgentIter* self = (R4Py_AgentIter*)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->iter = NULL;
+    }
+    return (PyObject*)self;
+}
+
+static PyObject* AgentIter_iter(R4Py_AgentIter* self) {
+    Py_INCREF(self);
+    self->iter->reset();
+    return (PyObject*) self;
+}
+
+static PyObject* AgentIter_next(R4Py_AgentIter* self) {
+    if (!self->iter->hasNext()) {
+        PyErr_SetNone(PyExc_StopIteration);
+        return NULL;
+    }
+    PyObject * obj = (PyObject*)self->iter->next();
+    Py_INCREF(obj);
+    return obj;
+}
+
+static PyTypeObject R4Py_AgentIterType = {
+    PyVarObject_HEAD_INIT(NULL, 0) 
+    "core.AgentIterator",                          /* tp_name */
+    sizeof(R4Py_AgentIter),                      /* tp_basicsize */
+    0,                                        /* tp_itemsize */
+    (destructor)AgentIter_dealloc,             /* tp_dealloc */
+    0,                                        /* tp_print */
+    0,                                        /* tp_getattr */
+    0,                                        /* tp_setattr */
+    0,                                        /* tp_reserved */
+    0,                                        /* tp_repr */
+    0,                                        /* tp_as_number */
+    0,                                        /* tp_as_sequence */
+    0,                                        /* tp_as_mapping */
+    0,                                        /* tp_hash  */
+    0,                                        /* tp_call */
+    0,                                        /* tp_str */
+    0,                                        /* tp_getattro */
+    0,                                        /* tp_setattro */
+    0,                                        /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
+    "AgentIterator Object",                         /* tp_doc */
+    0,                                        /* tp_traverse */
+    0,                                        /* tp_clear */
+    0,                                        /* tp_richcompare */
+    0,                                        /* tp_weaklistoffset */
+    (getiterfunc)AgentIter_iter,                           /* tp_iter */
+    (iternextfunc)AgentIter_next,                           /* tp_iternext */
+    0,                                      /* tp_methods */
+    0,                                      /* tp_members */
+    0,                                        /* tp_getset */
+    0,                                        /* tp_base */
+    0,                                        /* tp_dict */
+    0,                                        /* tp_descr_get */
+    0,                                        /* tp_descr_set */
+    0,                                        /* tp_dictoffset */
+    0,                                         /* tp_init */
+    0,                                        /* tp_alloc */
+    AgentIter_new                               /* tp_new */
+};
+
+////////////////// AgentIter End ///////////////////
+
+
+//////////////////// Agent ///////////////////
+static void Agent_dealloc(R4Py_Agent* self) {
     delete self->aid;
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 static PyObject* Agent_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
-    Agent* self;
-    self = (Agent*) type->tp_alloc(type, 0);
+    R4Py_Agent* self;
+    self = (R4Py_Agent*) type->tp_alloc(type, 0);
     if (self != NULL) {
-        self->aid = new (std::nothrow) AgentID;
+        self->aid = new R4Py_AgentID;
         if (self->aid) {
             self->aid->id = -1;
             self->aid->type = -1;
@@ -33,7 +108,7 @@ static PyObject* Agent_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
     return (PyObject*) self;
 }
 
-static int Agent_init(Agent* self, PyObject* args, PyObject* kwds) {
+static int Agent_init(R4Py_Agent* self, PyObject* args, PyObject* kwds) {
     static char* kwlist[] = {(char*)"id", (char*)"type", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "li", kwlist, &self->aid->id, &self->aid->type)) {
         return -1;
@@ -41,11 +116,11 @@ static int Agent_init(Agent* self, PyObject* args, PyObject* kwds) {
     return 0;
 }
 
-static PyObject* Agent_get_id(Agent* self, void* closure) {
+static PyObject* Agent_get_id(R4Py_Agent* self, void* closure) {
     return PyLong_FromLong(self->aid->id);
 }
 
-static PyObject* Agent_get_type(Agent* self, void* closure) {
+static PyObject* Agent_get_type(R4Py_Agent* self, void* closure) {
     return PyLong_FromLong(self->aid->type);
 }
 
@@ -55,15 +130,15 @@ static PyGetSetDef Agent_get_setters[] = {
     {NULL}
 };
 
-static PyObject* Agent_repr(Agent* self) {
+static PyObject* Agent_repr(R4Py_Agent* self) {
     return PyUnicode_FromFormat("Agent(%ld, %d)", self->aid->id, self->aid->type);
 }
 
 
-static PyTypeObject AgentType = {
+static PyTypeObject R4Py_AgentType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
     "core.Agent",                          /* tp_name */
-    sizeof(Agent),                      /* tp_basicsize */
+    sizeof(R4Py_Agent),                      /* tp_basicsize */
     0,                                        /* tp_itemsize */
     (destructor)Agent_dealloc,                                         /* tp_dealloc */
     0,                                        /* tp_print */
@@ -101,6 +176,7 @@ static PyTypeObject AgentType = {
     Agent_new                               /* tp_new */
 };
 
+
 static PyModuleDef coremodule = {
     PyModuleDef_HEAD_INIT,
     .m_name = "repast4py.core",
@@ -108,13 +184,19 @@ static PyModuleDef coremodule = {
     .m_size = -1,
 };
 
+
+
 // PyMODINIT_FUNC adds "extern C" among other things
 PyMODINIT_FUNC
 PyInit_core(void)
 {
 
-    if (PyType_Ready(&AgentType) < 0)
+    if (PyType_Ready(&R4Py_AgentType) < 0)
         return NULL;
+
+    if (PyType_Ready(&R4Py_AgentIterType) < 0)
+        return NULL;
+
 
     PyObject *m;
     m = PyModule_Create(&coremodule);
@@ -124,7 +206,8 @@ PyInit_core(void)
     static void* R4PyCore_API[R4PyCore_API_pointers];
     PyObject* c_api_object;
 
-    R4PyCore_API[0] = (void*)&AgentType;
+    R4PyCore_API[0] = (void*)&R4Py_AgentType;
+    R4PyCore_API[1] = (void*)&R4Py_AgentIterType;
     c_api_object = PyCapsule_New((void*)R4PyCore_API, "repast4py.core._C_API", NULL);
 
     if (PyModule_AddObject(m, "_C_API", c_api_object) < 0) {
@@ -133,9 +216,21 @@ PyInit_core(void)
         return NULL;
     }
 
-    Py_INCREF(&AgentType);
-    if (PyModule_AddObject(m, "Agent", (PyObject *) &AgentType) < 0) {
-        Py_DECREF(&AgentType);
+    Py_INCREF(&R4Py_AgentType);
+    if (PyModule_AddObject(m, "Agent", (PyObject *) &R4Py_AgentType) < 0) {
+        Py_XDECREF(c_api_object);
+        Py_DECREF(&R4Py_AgentType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    // TODO better pattern for cleaning up when things like this 
+    // fail
+    Py_INCREF(&R4Py_AgentIterType);
+    if (PyModule_AddObject(m, "AgentIterator", (PyObject *) &R4Py_AgentIterType) < 0) {
+        Py_XDECREF(c_api_object);
+        Py_DECREF(&R4Py_AgentType);
+        Py_DECREF(&R4Py_AgentIterType);
         Py_DECREF(m);
         return NULL;
     }
