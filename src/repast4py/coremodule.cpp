@@ -15,7 +15,6 @@ using namespace repast4py;
 static void AgentIter_dealloc(R4Py_AgentIter* self) {
     delete self->iter;
     Py_TYPE(self)->tp_free((PyObject*)self);
-    printf("deallocating\n");
 }
 
 static PyObject* AgentIter_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {

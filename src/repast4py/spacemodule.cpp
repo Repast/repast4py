@@ -3,6 +3,7 @@
 #include <new>
 #include "structmember.h"
 
+// See https://docs.scipy.org/doc/numpy/reference/c-api.array.html#importing-the-api
 #define PY_ARRAY_UNIQUE_SYMBOL REPAST4PY_ARRAY_API
 #include "numpy/arrayobject.h"
 
@@ -84,7 +85,7 @@ static PyObject* DiscretePoint_repr(R4Py_DiscretePoint* self) {
 
 static PyTypeObject DiscretePointType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
-    "space.DiscretePoint",                          /* tp_name */
+    "_space.DiscretePoint",                          /* tp_name */
     sizeof(R4Py_DiscretePoint),                      /* tp_basicsize */
     0,                                        /* tp_itemsize */
     (destructor)DiscretePoint_dealloc,                                         /* tp_dealloc */
@@ -140,26 +141,63 @@ static PyObject* Grid_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
 }
 
 static int Grid_init(R4Py_Grid* self, PyObject* args, PyObject* kwds) {
-    static char* kwlist[] = {(char*)"name", NULL};
+    // bounds=box, border=BorderType.Sticky, occupancy=OccupancyType.Multiple
+    static char* kwlist[] = {(char*)"name",(char*)"bounds", (char*)"borders",
+        (char*)"occupancy", NULL};
 
     const char* name;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &name)) {
+    PyObject* bounds;
+    int border_type, occ_type;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO!ii", kwlist, &name, &PyTuple_Type, &bounds,
+        &border_type, &occ_type)) 
+    {
         return -1;
     }
 
-    self->grid = new Grid(name);
+    long xmin, width;
+    long ymin, height;
+    long zmin, depth;
+
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) {
+        return -1;
+    }
+
+    if (border_type == 0) {
+        if (occ_type == 0) {
+            BoundingBox<R4Py_DiscretePoint> box(xmin, width, ymin, height, zmin, depth);
+            self->grid = new Grid<MOSGrid>(name, box);
+
+        } else {
+            PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
+            return -1;
+        }
+    } else {
+        PyErr_SetString(PyExc_RuntimeError, "Invalid border type");
+        return -1;
+    }
+
     if (!self->grid) {
         return -1;
     }
     return 0;
 }
 
-static PyObject* Grid_addAgent(PyObject* self, PyObject* args) {
+static PyObject* Grid_add(PyObject* self, PyObject* args) {
     PyObject* agent;
     if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
         return NULL;
     }
-    bool ret_val = ((R4Py_Grid*)self)->grid->addAgent((R4Py_Agent*)agent);
+    bool ret_val = ((R4Py_Grid*)self)->grid->add((R4Py_Agent*)agent);
+    return PyBool_FromLong(static_cast<long>(ret_val));
+}
+
+static PyObject* Grid_remove(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+    bool ret_val = ((R4Py_Grid*)self)->grid->remove((R4Py_Agent*)agent);
     return PyBool_FromLong(static_cast<long>(ret_val));
 }
 
@@ -233,7 +271,8 @@ static PyObject* Grid_getAgents(PyObject* self, PyObject* args) {
 }
 
 static PyMethodDef Grid_methods[] = {
-    {"add_agent", Grid_addAgent, METH_VARARGS, "Adds the specified agent to this grid projection"},
+    {"add", Grid_add, METH_VARARGS, "Adds the specified agent to this grid projection"},
+    {"remove", Grid_remove, METH_VARARGS, "Removes the specified agent from this grid projection"},
     {"move", Grid_move, METH_VARARGS, "Moves the specified agent to the specified location in this grid projection"},
     {"get_location", Grid_getLocation, METH_VARARGS, "Gets the location of the specified agent in this grid projection"},
     {"get_agent", Grid_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this grid projection"},
@@ -243,7 +282,7 @@ static PyMethodDef Grid_methods[] = {
 
 static PyTypeObject R4Py_GridType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
-    "space.Grid",                          /* tp_name */
+    "_space.Grid",                          /* tp_name */
     sizeof(R4Py_Grid),                      /* tp_basicsize */
     0,                                        /* tp_itemsize */
     (destructor)Grid_dealloc,                                         /* tp_dealloc */
@@ -287,14 +326,14 @@ static PyTypeObject R4Py_GridType = {
 
 static PyModuleDef spacemodule = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "repast4py.space",
+    .m_name = "repast4py._space",
     .m_doc = "Repast4Py space related classes and functions",
     .m_size = -1,
 };
 
 // PyMODINIT_FUNC adds "extern C" among other things
 PyMODINIT_FUNC
-PyInit_space(void)
+PyInit__space(void)
 {
 
     PyObject *m;
