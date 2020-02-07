@@ -12,14 +12,14 @@ namespace repast4py {
 struct R4Py_AgentID {
     long id;
     int type;
+    unsigned int rank;
 };
 
 struct agent_id_comp {
     bool operator()(const R4Py_AgentID* a1, const R4Py_AgentID* a2) const {
-        if (a1->id == a2->id) {
-            return a1->type < a2->type;
-        }
-        return a1->id < a2->id;
+        if (a1->id != a2->id) return a1->id < a2->id;
+        if (a1->type != a2->type) return a1->type < a2->type;
+        return a1->rank < a2->rank;
     }
 };
 

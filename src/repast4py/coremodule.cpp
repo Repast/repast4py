@@ -99,6 +99,7 @@ static PyObject* Agent_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
         if (self->aid) {
             self->aid->id = -1;
             self->aid->type = -1;
+            self->aid->rank = 0;
         } else {
             Py_TYPE(self)->tp_free((PyObject*)self);
             self = NULL;
@@ -108,8 +109,9 @@ static PyObject* Agent_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
 }
 
 static int Agent_init(R4Py_Agent* self, PyObject* args, PyObject* kwds) {
-    static char* kwlist[] = {(char*)"id", (char*)"type", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "li", kwlist, &self->aid->id, &self->aid->type)) {
+    static char* kwlist[] = {(char*)"id", (char*)"type", (char*)"rank", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "li|l", kwlist, &self->aid->id, &self->aid->type,
+        &self->aid->rank)) {
         return -1;
     }
     return 0;
@@ -119,13 +121,23 @@ static PyObject* Agent_get_id(R4Py_Agent* self, void* closure) {
     return PyLong_FromLong(self->aid->id);
 }
 
+static PyObject* Agent_get_rank(R4Py_Agent* self, void* closure) {
+    return PyLong_FromLong(self->aid->rank);
+}
+
 static PyObject* Agent_get_type(R4Py_Agent* self, void* closure) {
     return PyLong_FromLong(self->aid->type);
+}
+
+static PyObject* Agent_get_aid(R4Py_Agent* self, void* closure) {
+    return Py_BuildValue("(liI)", self->aid->id, self->aid->type, self->aid->rank);
 }
 
 static PyGetSetDef Agent_get_setters[] = {
     {(char*)"id", (getter)Agent_get_id, NULL, (char*)"agent id", NULL},
     {(char*)"type", (getter)Agent_get_type, NULL, (char*)"agent type", NULL},
+    {(char*)"rank", (getter)Agent_get_rank, NULL, (char*)"agent rank", NULL},
+    {(char*)"tag", (getter)Agent_get_aid, NULL, (char*)"agent identifier", NULL},
     {NULL}
 };
 

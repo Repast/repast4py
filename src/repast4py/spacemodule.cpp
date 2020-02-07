@@ -178,6 +178,7 @@ static int Grid_init(R4Py_Grid* self, PyObject* args, PyObject* kwds) {
     }
 
     if (!self->grid) {
+        PyErr_SetString(PyExc_RuntimeError, "Error creating native code grid");
         return -1;
     }
     return 0;
