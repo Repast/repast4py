@@ -8,11 +8,6 @@
 #include <memory>
 #include <algorithm>
 
-// see https://docs.scipy.org/doc/numpy/reference/c-api.array.html?highlight=impor#c.import_array/
-#define NO_IMPORT_ARRAY_API
-#define PY_ARRAY_UNIQUE_SYMBOL REPAST4PY_ARRAY_API
-#include "numpy/arrayobject.h"
-
 #include "geometry.h"
 #include "occupancy.h"
 #include "core.h"
@@ -183,7 +178,7 @@ public:
     virtual R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
 };
 
-IGrid::~IGrid() {}
+inline IGrid::~IGrid() {}
 
 // Multi Occupancy Sticky Grid
 template<typename DelegateType>

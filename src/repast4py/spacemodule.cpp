@@ -3,6 +3,9 @@
 #include <new>
 #include "structmember.h"
 
+
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 // See https://docs.scipy.org/doc/numpy/reference/c-api.array.html#importing-the-api
 #define PY_ARRAY_UNIQUE_SYMBOL REPAST4PY_ARRAY_API
 #include "numpy/arrayobject.h"
@@ -44,7 +47,7 @@ static int DiscretePoint_init(R4Py_DiscretePoint* self, PyObject* args, PyObject
         return -1;
     }
 
-    long* d = (long*)self->coords->data;
+    long* d = (long*)PyArray_DATA(self->coords);;
     d[0] = x;
     d[1] = y;
     d[2] = z;
@@ -58,15 +61,15 @@ static PyObject* DiscretePoint_get_coords(R4Py_DiscretePoint* self, void* closur
 }
 
 static PyObject* DiscretePoint_get_x(R4Py_DiscretePoint* self, void* closure) {
-    return PyLong_FromLong(((long*)self->coords->data)[0]);
+    return PyLong_FromLong(((long*)PyArray_DATA(self->coords))[0]);
 }
 
 static PyObject* DiscretePoint_get_y(R4Py_DiscretePoint* self, void* closure) {
-    return PyLong_FromLong(((long*)self->coords->data)[1]);
+    return PyLong_FromLong(((long*)PyArray_DATA(self->coords))[1]);
 }
 
 static PyObject* DiscretePoint_get_z(R4Py_DiscretePoint* self, void* closure) {
-    return PyLong_FromLong(((long*)self->coords->data)[2]);
+    return PyLong_FromLong(((long*)PyArray_DATA(self->coords))[2]);
 }
 
 static PyGetSetDef DiscretePoint_get_setters[] = {
@@ -78,7 +81,7 @@ static PyGetSetDef DiscretePoint_get_setters[] = {
 };
 
 static PyObject* DiscretePoint_repr(R4Py_DiscretePoint* self) {
-    long* data = (long*)self->coords->data;
+    long* data = (long*)PyArray_DATA(self->coords);
     return PyUnicode_FromFormat("DiscretePoint(%ld, %ld, %ld)", data[0], data[1], data[2]);   
 }
 

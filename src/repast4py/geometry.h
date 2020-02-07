@@ -8,10 +8,9 @@
 #include <memory>
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-
 // See https://docs.scipy.org/doc/numpy/reference/c-api.array.html#importing-the-api
 #define NO_IMPORT_ARRAY_API
-#define PY_ARRAY_UNIQUE_SYMBOL REPAST4PY_ARRAY_API
+//#define PY_ARRAY_UNIQUE_SYMBOL REPAST4PY_ARRAY_API
 #include "numpy/arrayobject.h"
 
 namespace repast4py {
@@ -38,22 +37,11 @@ struct Point {
     coord_type x, y, z;
 };
 
+R4Py_DiscretePoint* create_point(PyTypeObject* pt_type, const Point<R4Py_DiscretePoint>& wpt);
+bool point_equals(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coords);
+void extract_coords(R4Py_DiscretePoint* pt, Point<R4Py_DiscretePoint>& coords);
+void update_point(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coords);
 
-void extract_coords(R4Py_DiscretePoint* pt, Point<R4Py_DiscretePoint>& coords) {
-    long* data = (long*)pt->coords->data;
-    coords.x = data[0];
-    coords.y = data[1];
-    coords.z = data[2];
-}
-
-void update_point(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coords) {
-    long* data = (long*)pt->coords->data;
-    data[0] = coords.x;
-    data[1] = coords.y;
-    data[2] = coords.z;
-
-    //printf("Updated Point: %lu,%lu,%lu\n", data[0], data[1], data[2]);
-}
 
 template<typename PointType>
 struct PointComp {
@@ -64,37 +52,22 @@ struct PointComp {
     }
 };
 
-R4Py_DiscretePoint* create_point(PyTypeObject* pt_type, const Point<R4Py_DiscretePoint>& wpt) {
-    R4Py_DiscretePoint* pt = (R4Py_DiscretePoint*)pt_type->tp_new(pt_type, NULL, NULL);
-    update_point(pt, wpt);
-    return pt;
-}
-
-bool point_equals(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coords) {
-    if (pt) {
-        long* data = (long*)pt->coords->data;
-        //printf("%lu,%lu,%lu  -- %lu,%lu,%lu\n", data[0], data[1], data[2],
-        //    coords.x, coords.y, coords.z);
-        return data[0] == coords.x && data[1] == coords.y && data[2] == coords.z;
-    }
-    return false;
-}
-
-
 template<typename PointType>
 struct BoundingBox {
     using coord_type  = typename TypeSelector<PointType>::type;
     coord_type xmin_, xmax_;
     coord_type ymin_, ymax_;
     coord_type zmin_, zmax_;
-    coord_type width_, height_, depth_;
+    coord_type x_extent_, y_extent_, z_extent_;
 
-    BoundingBox(coord_type xmin, coord_type width, coord_type ymin, coord_type height,
-            coord_type zmin = 0, coord_type depth = 0);
+    BoundingBox(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
+            coord_type zmin = 0, coord_type z_extent = 0);
 
     ~BoundingBox() {}
 
 
+    void reset(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
+            coord_type zmin = 0, coord_type z_extent = 0);
     bool contains(const PointType* pt) const;
     bool contains(const Point<PointType>& pt) const;
 
@@ -102,10 +75,27 @@ struct BoundingBox {
 };
 
 template<typename PointType>
-BoundingBox<PointType>::BoundingBox(coord_type xmin, coord_type width, coord_type ymin, coord_type height,
-            coord_type zmin, coord_type depth) : xmin_{xmin}, xmax_{xmin + width}, ymin_{ymin},
-            ymax_{ymin + height}, zmin_{zmin}, zmax_{zmin + depth}, width_{width}, height_{height},
-            depth_{depth} {
+BoundingBox<PointType>::BoundingBox(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
+            coord_type zmin, coord_type z_extent) : xmin_{xmin}, xmax_{xmin + x_extent}, ymin_{ymin},
+            ymax_{ymin + y_extent}, zmin_{zmin}, zmax_{zmin + z_extent}, x_extent_{x_extent}, y_extent_{y_extent},
+            z_extent_{z_extent} {
+}
+
+template<typename PointType>
+void BoundingBox<PointType>::reset(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
+            coord_type zmin, coord_type z_extent) 
+{
+    xmin_ = xmin;
+    x_extent_ = x_extent;
+    xmax_ = xmin + x_extent;
+
+    ymin_ = ymin;
+    y_extent_ = y_extent;
+    ymax_ = ymin + y_extent;
+
+    zmin_ = zmin;
+    z_extent_ = z_extent;
+    zmax_ = zmin + z_extent;
 }
 
 template<typename PointType>
@@ -152,7 +142,7 @@ StickyBorders<PointType>::StickyBorders(const BoundingBox<PointType>& bounds) :
 
 template<typename PointType>
 void StickyBorders<PointType>::transform(const PointType* pt, Point<PointType>& transformed_pt) {
-    coord_type* data = (coord_type*) pt->coords->data;
+    coord_type* data = (coord_type*) PyArray_DATA(pt->coords);
     transformed_pt.x = std::max(bounds_.xmin_, std::min(bounds_.xmax_ - 1, data[0]));
     transformed_pt.y = std::max(bounds_.ymin_, std::min(bounds_.ymax_ - 1, data[1]));
     transformed_pt.z = std::max(bounds_.zmin_, std::min(bounds_.zmax_ - 1, data[2]));

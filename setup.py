@@ -3,7 +3,8 @@ import numpy as np
 
 core_module = Extension('repast4py.core', sources = ['src/repast4py/coremodule.cpp'], language='c++',
     extra_compile_args=["-std=c++11"], depends=["core.h"])
-space_module = Extension('repast4py._space', sources = ['src/repast4py/spacemodule.cpp'], language='c++',
+space_module = Extension('repast4py._space', sources = ['src/repast4py/spacemodule.cpp', 
+    'src/repast4py/geometry.cpp'], language='c++',
     extra_compile_args=["-std=c++11"], depends=['space.h', 'geometry.h'])
 
 setup(
