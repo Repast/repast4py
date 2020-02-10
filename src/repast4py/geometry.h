@@ -4,6 +4,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include <iostream>
 #include <algorithm>
 #include <memory>
 
@@ -73,6 +74,17 @@ struct BoundingBox {
 
     bool intersects(const BoundingBox<PointType>& box) const;
 };
+
+
+template<typename PointType>
+std::ostream& operator<<(std::ostream& os, const BoundingBox<PointType>& box) {
+    os << "BoundingBox(" << box.xmin_ << ", " << box.x_extent_ << ", "
+        << box.ymin_ << ", " << box.y_extent_ << ", "
+        << box.zmin_ << ", " << box.z_extent_ << ")";
+    return os;
+}
+
+
 
 template<typename PointType>
 BoundingBox<PointType>::BoundingBox(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
