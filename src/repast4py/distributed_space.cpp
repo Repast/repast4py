@@ -5,8 +5,9 @@
 namespace repast4py {
 
 
-CartesianTopology::CartesianTopology(MPI_Comm comm, int num_dims, bool periodic) : num_dims_{num_dims}, 
-    procs_per_dim{nullptr}, periodic_{periodic}
+CartesianTopology::CartesianTopology(MPI_Comm comm, int num_dims, BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic) : 
+    num_dims_{num_dims},  procs_per_dim{nullptr}, periodic_{periodic}, bounds_(global_bounds), x_remainder{0},
+    y_remainder{0}, z_remainder{0}
 {
     int size;
     MPI_Comm_size(comm, &size);
@@ -19,10 +20,19 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, int num_dims, bool periodic)
     std::fill_n(periods, num_dims, periodic ? 1 : 0);
 
     MPI_Cart_create(comm, num_dims, procs_per_dim, periods, 0, &comm_);
+
+    x_remainder = bounds_.x_extent_ % procs_per_dim[0];
+    if (num_dims_ > 1) {
+        y_remainder = bounds_.y_extent_ % procs_per_dim[1];
+        if (num_dims_ == 3) {
+            z_remainder = bounds_.z_extent_ % procs_per_dim[2];
+        }
+    }
 }
 
-CartesianTopology::CartesianTopology(MPI_Comm comm, const std::vector<int>& procs_per_dimension, bool periodic) :
-    num_dims_{procs_per_dimension.size()}, procs_per_dim{nullptr}, periodic_{periodic}
+CartesianTopology::CartesianTopology(MPI_Comm comm, const std::vector<int>& procs_per_dimension, 
+    BoundingBox<R4Py_DiscretePoint>& global_bounds,bool periodic) :
+    num_dims_{procs_per_dimension.size()}, procs_per_dim{nullptr}, periodic_{periodic}, bounds_(global_bounds)
 {
     int size;
     MPI_Comm_size(comm, &size);
@@ -44,6 +54,13 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, const std::vector<int>& proc
     std::fill_n(periods, num_dims_, periodic ? 1 : 0);
 
     MPI_Cart_create(comm, num_dims_, procs_per_dim, periods, 0, &comm_);
+    x_remainder = bounds_.x_extent_ % procs_per_dim[0];
+    if (num_dims_ > 1) {
+        y_remainder = bounds_.y_extent_ % procs_per_dim[1];
+        if (num_dims_ == 3) {
+            z_remainder = bounds_.z_extent_ % procs_per_dim[2];
+        }
+    }
 }
 
 CartesianTopology::~CartesianTopology() {
@@ -56,13 +73,23 @@ void CartesianTopology::getCoords(int rank, std::vector<int>& coords) {
     MPI_Cart_coords(comm_, rank, num_dims_, &coords[0]);
 }
 
-void CartesianTopology::getBounds(int rank, const BoundingBox<R4Py_DiscretePoint>& global_bounds, 
-        BoundingBox<R4Py_DiscretePoint>& local_bounds) 
-{
+static void adjust_min_extent(int coord, unsigned int remainder, long* min, long* extent) {
+    if (remainder > 0) {
+        (*extent) += coord < remainder ?  1 : 0;
+        if (coord > 0 && coord < remainder) {
+            (*min) += remainder - (remainder - coord);
+        } else if (coord >= remainder) {
+            (*min) += remainder;
+        }
+    }
+}
+
+void CartesianTopology::getBounds(int rank, BoundingBox<R4Py_DiscretePoint>& local_bounds) {
     int coords[num_dims_];
     MPI_Cart_coords(comm_, rank, num_dims_, coords);
-    long x_extent = global_bounds.x_extent_ / procs_per_dim[0];
-    long xmin = global_bounds.xmin_ +  x_extent * coords[0];
+    long x_extent = floor(bounds_.x_extent_ / procs_per_dim[0]);
+    long xmin = bounds_.xmin_ + x_extent * coords[0];
+    adjust_min_extent(coords[0], x_remainder, &xmin, &x_extent);
 
     long ymin = 0;
     long y_extent = 0;
@@ -70,13 +97,15 @@ void CartesianTopology::getBounds(int rank, const BoundingBox<R4Py_DiscretePoint
     long z_extent = 0;
 
     if (num_dims_ > 1) {
-        y_extent = global_bounds.y_extent_ / procs_per_dim[1];
-        ymin = global_bounds.ymin_ +  y_extent * coords[1];
+        y_extent = floor(bounds_.y_extent_ / procs_per_dim[1]);
+        ymin = bounds_.ymin_ +  y_extent * coords[1];
+        adjust_min_extent(coords[1], y_remainder, &ymin, &y_extent);
     }
 
     if (num_dims_ == 3) {
-        z_extent = global_bounds.z_extent_ / procs_per_dim[2];
-        zmin = global_bounds.zmin_ +  z_extent * coords[2];
+        z_extent = floor(bounds_.z_extent_ / procs_per_dim[2]);
+        zmin = bounds_.zmin_ +  z_extent * coords[2];
+        adjust_min_extent(coords[2], z_remainder, &zmin, &z_extent);
     }
 
     local_bounds.reset(xmin, x_extent, ymin, y_extent, zmin, z_extent);

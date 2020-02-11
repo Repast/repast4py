@@ -84,8 +84,6 @@ std::ostream& operator<<(std::ostream& os, const BoundingBox<PointType>& box) {
     return os;
 }
 
-
-
 template<typename PointType>
 BoundingBox<PointType>::BoundingBox(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
             coord_type zmin, coord_type z_extent) : xmin_{xmin}, xmax_{xmin + x_extent}, ymin_{ymin},
