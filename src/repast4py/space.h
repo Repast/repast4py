@@ -61,6 +61,8 @@ public:
     AgentList getAgentsAt(PointType* pt);
     PointType* getLocation(R4Py_Agent* agent);
     PointType* move(R4Py_Agent* agent, PointType* to);
+
+
 };
 
 template<typename PointType, typename AccessorType, typename BorderType>
@@ -149,9 +151,7 @@ PointType* BaseSpace<PointType, AccessorType,  BorderType>::move(R4Py_Agent* age
                     update_point(iter->second->pt, wpt);
                 }  else {
                     iter->second->pt = create_point(Py_TYPE(pt), wpt);
-                    
                 }
-                
             } else {
                 return nullptr;
             }
@@ -236,6 +236,19 @@ R4Py_DiscretePoint* Grid<DelegateType>::move(R4Py_Agent* agent, R4Py_DiscretePoi
 using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint>, R4Py_DiscretePoint>;
 using DiscreteSBType = StickyBorders<R4Py_DiscretePoint>;
 using MOSGrid = BaseSpace<R4Py_DiscretePoint, DiscreteMOType, DiscreteSBType>;
+
+
+template<typename BorderType>
+struct is_periodic {
+    bool operator()();
+};
+
+template<>
+struct is_periodic<MOSGrid> {
+    bool operator()() {
+        return false;
+    }
+};
 
 struct R4Py_Grid {
     PyObject_HEAD

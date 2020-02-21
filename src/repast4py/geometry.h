@@ -24,7 +24,7 @@ struct R4Py_DiscretePoint {
 
 template<typename PointType>
 struct TypeSelector {
-    using type = double;
+    //using type = double;
 };
 
 template<>
@@ -40,7 +40,9 @@ struct Point {
 
 R4Py_DiscretePoint* create_point(PyTypeObject* pt_type, const Point<R4Py_DiscretePoint>& wpt);
 bool point_equals(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coords);
+// sets coords.xyz from pt.xyz
 void extract_coords(R4Py_DiscretePoint* pt, Point<R4Py_DiscretePoint>& coords);
+// sets pt.xyz from coords.xyz
 void update_point(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coords);
 
 
@@ -159,7 +161,6 @@ void StickyBorders<PointType>::transform(const PointType* pt, Point<PointType>& 
 }
 
 using GridStickyBorders = StickyBorders<R4Py_DiscretePoint>;
-
 
 }
 

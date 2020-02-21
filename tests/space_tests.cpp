@@ -33,10 +33,9 @@ TEST(CartesianTopology, testAutoProcsPerDim) {
         CartesianTopology ct(test_comm, 2, gb, true);
         BoundingBox<R4Py_DiscretePoint> lb(0, 0, 0, 0);
 
-        int rank;
-        MPI_Comm_rank(test_comm, &rank);
+        int rank = ct.getRank();
 
-        ct.getBounds(rank, lb);
+        ct.getBounds(lb);
         if (rank == 0) {
             ASSERT_EQ(0, lb.xmin_);
             ASSERT_EQ(25, lb.x_extent_);
@@ -107,10 +106,8 @@ TEST(CartesianTopology, testRemainders) {
         CartesianTopology ct(test_comm, 2, gb, true);
         BoundingBox<R4Py_DiscretePoint> lb(0, 0, 0, 0);
 
-        int rank;
-        MPI_Comm_rank(test_comm, &rank);
-
-        ct.getBounds(rank, lb);
+        int rank = ct.getRank();
+        ct.getBounds(lb);
         if (rank == 0) {
             ASSERT_EQ(0, lb.xmin_);
             ASSERT_EQ(27, lb.x_extent_);
@@ -175,7 +172,7 @@ CTNeighbor find_neighbor(int rank, std::vector<CTNeighbor>& nghs) {
     for (auto n : nghs) {
         if (n.rank == rank) return n;
     }
-    return {-1, -1, -1, -1};
+    return {-1, -1, -1, -1, {0, 0, 0, 0}, {0, 0, 0, 0}};
 }
 
 void test_ngh(const CTNeighbor& n, int x, int y, int z) {
@@ -190,9 +187,8 @@ TEST(CartesianTopology, testGetNeighbors) {
     CartesianTopology ct(MPI_COMM_WORLD, 2, gb, false);
 
     std::vector<CTNeighbor> nghs;
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    ct.getNeighbors(rank, nghs);
+    int rank = ct.getRank();
+    ct.getNeighbors(nghs);
 
     if (rank == 0) {
         // for (int i = 0; i < 9; ++i) {
@@ -277,9 +273,8 @@ TEST(CartesianTopology, testGetNeighborsPeriodic) {
     CartesianTopology ct(MPI_COMM_WORLD, 2, gb, true);
 
     std::vector<CTNeighbor> nghs;
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    ct.getNeighbors(rank, nghs);
+    int rank = ct.getRank();
+    ct.getNeighbors(nghs);
 
     // test_ngh(find_neighbor(0, nghs), 0, 0, -1);
     // test_ngh(find_neighbor(1, nghs), 0, 1, -1);
@@ -406,18 +401,8 @@ TEST(CartesianTopology, testSpecifyProcsPerDim) {
         CartesianTopology ct(MPI_COMM_WORLD, dims, gb, false);
         BoundingBox<R4Py_DiscretePoint> lb(0, 0, 0, 0);
 
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-        // std::vector<int> coords;
-        // if (rank == 0) {
-        //     for (int i = 0; i < 8; ++i) {
-        //         ct.getCoords(i, coords);
-        //         std::cout << i << ": " << coords[0] << ", " << coords[1] << std::endl;
-        //     }
-        // }
-
-        ct.getBounds(rank, gb);
+        int rank = ct.getRank();
+        ct.getBounds(gb);
         if (rank == 0) {
             ASSERT_EQ(0, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);

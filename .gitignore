@@ -62,3 +62,7 @@ templates/scripts/archive/
 # Turbine outputs
 **/turbine-output
 **/experiments
+
+old_repast_py_src/
+Debug/
+notes_nc.txt

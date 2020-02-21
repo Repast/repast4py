@@ -68,9 +68,9 @@ CartesianTopology::~CartesianTopology() {
     delete[] procs_per_dim;
 }
 
-void CartesianTopology::getCoords(int rank, std::vector<int>& coords) {
+void CartesianTopology::getCoords(std::vector<int>& coords) {
     coords.reserve(num_dims_);
-    MPI_Cart_coords(comm_, rank, num_dims_, &coords[0]);
+    MPI_Cart_coords(comm_, getRank(), num_dims_, &coords[0]);
 }
 
 static void adjust_min_extent(int coord, unsigned int remainder, long* min, long* extent) {
@@ -82,6 +82,16 @@ static void adjust_min_extent(int coord, unsigned int remainder, long* min, long
             (*min) += remainder;
         }
     }
+}
+
+int CartesianTopology::getRank() {
+    int rank;
+    MPI_Comm_rank(comm_, &rank);
+    return rank;
+}
+
+MPI_Comm CartesianTopology::getCartesianComm() {
+    return comm_;
 }
 
 void CartesianTopology::getBounds(int rank, BoundingBox<R4Py_DiscretePoint>& local_bounds) {
@@ -109,11 +119,17 @@ void CartesianTopology::getBounds(int rank, BoundingBox<R4Py_DiscretePoint>& loc
     }
 
     local_bounds.reset(xmin, x_extent, ymin, y_extent, zmin, z_extent);
+
 }
 
-void CartesianTopology::getNeighbors(int rank, std::vector<CTNeighbor>& neighbors) {
+void CartesianTopology::getBounds(BoundingBox<R4Py_DiscretePoint>& local_bounds) {
+    int rank = getRank();
+    getBounds(rank, local_bounds);
+}
+
+void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
     int coords[num_dims_];
-    MPI_Cart_coords(comm_, rank, num_dims_, coords);
+    MPI_Cart_coords(comm_, getRank(), num_dims_, coords);
     
     if (num_dims_ == 1) {
         std::list<int> offsets{-1, 1};
@@ -126,7 +142,9 @@ void CartesianTopology::getNeighbors(int rank, std::vector<CTNeighbor>& neighbor
             int n_rank;
             MPI_Cart_rank(comm_, working, &n_rank);
             MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-            neighbors.push_back({n_rank, working[0], -1, -1});
+            neighbors.push_back({n_rank, working[0], -1, -1, {0, 0, 0, 0},
+                {0, 0, 0, 0}});
+    
         }
 
     } else if (num_dims_ == 2) {
@@ -149,7 +167,8 @@ void CartesianTopology::getNeighbors(int rank, std::vector<CTNeighbor>& neighbor
                     int n_rank;
                     MPI_Cart_rank(comm_, working, &n_rank);
                     MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-                    neighbors.push_back({n_rank, working[0], working[1], -1});
+                    neighbors.push_back({n_rank, working[0], working[1], -1, {0, 0, 0, 0},
+                    {0, 0, 0, 0}});
                 }
             }
         }
@@ -176,13 +195,17 @@ void CartesianTopology::getNeighbors(int rank, std::vector<CTNeighbor>& neighbor
                         int n_rank;
                         MPI_Cart_rank(comm_, working, &n_rank);
                         MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-                        neighbors.push_back({n_rank, working[0], working[1], working[2]});
+                        neighbors.push_back({n_rank, working[0], working[1], working[2], {0, 0, 0, 0},
+                        {0, 0, 0, 0}});
                     }
                 }
             }
         }
     }
 
+    for (auto& ngh : neighbors) {
+        getBounds(ngh.rank, ngh.local_bounds);
+    }
 }
 
 
