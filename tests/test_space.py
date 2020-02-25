@@ -13,7 +13,7 @@ class GridTests(unittest.TestCase):
     def test_move(self):
         a1 = core.Agent(1, 0)
 
-        box = space.BoundingBox(xmin=0, width=20, ymin=0, height=25, zmin=-1, depth=5)
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
         grid = space.Grid("grid", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple)
 
         grid.add(a1)
@@ -84,7 +84,7 @@ class GridTests(unittest.TestCase):
 
 
     def test_remove(self):
-        box = space.BoundingBox(xmin=0, width=20, ymin=0, height=25, zmin=0, depth=0)
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=0, zextent=0)
         grid = space.Grid("grid", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple)
         agent = grid.get_agent(space.DiscretePoint(0, 0))
         self.assertIsNone(agent)
@@ -107,7 +107,7 @@ class GridTests(unittest.TestCase):
 
 
     def test_get(self):
-        box = space.BoundingBox(xmin=0, width=20, ymin=0, height=25, zmin=-1, depth=5)
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
         grid = space.Grid("grid", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple)
         
         agent = grid.get_agent(space.DiscretePoint(0, 0))

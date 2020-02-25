@@ -43,7 +43,7 @@ static PyObject* AgentIter_next(R4Py_AgentIter* self) {
 
 static PyTypeObject R4Py_AgentIterType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
-    "core.AgentIterator",                          /* tp_name */
+    "_core.AgentIterator",                          /* tp_name */
     sizeof(R4Py_AgentIter),                      /* tp_basicsize */
     0,                                        /* tp_itemsize */
     (destructor)AgentIter_dealloc,             /* tp_dealloc */
@@ -84,6 +84,79 @@ static PyTypeObject R4Py_AgentIterType = {
 
 ////////////////// AgentIter End ///////////////////
 
+////////////////// PyObjectIter ///////////////////
+static void PyObjectIter_dealloc(R4Py_PyObjectIter* self) {
+    delete self->iter;
+    Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static PyObject* PyObjectIter_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
+    R4Py_PyObjectIter* self = (R4Py_PyObjectIter*)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->iter = NULL;
+    }
+    return (PyObject*)self;
+}
+
+static PyObject* PyObjectIter_iter(R4Py_PyObjectIter* self) {
+    Py_INCREF(self);
+    self->iter->reset();
+    return (PyObject*) self;
+}
+
+static PyObject* PyObjectIter_next(R4Py_PyObjectIter* self) {
+    if (!self->iter->hasNext()) {
+        PyErr_SetNone(PyExc_StopIteration);
+        return NULL;
+    }
+    PyObject * obj = (PyObject*)self->iter->next();
+    Py_INCREF(obj);
+    return obj;
+}
+
+static PyTypeObject R4Py_PyObjectIterType = {
+    PyVarObject_HEAD_INIT(NULL, 0) 
+    "_core.PyObjectIterator",                          /* tp_name */
+    sizeof(R4Py_PyObjectIter),                      /* tp_basicsize */
+    0,                                        /* tp_itemsize */
+    (destructor)PyObjectIter_dealloc,             /* tp_dealloc */
+    0,                                        /* tp_print */
+    0,                                        /* tp_getattr */
+    0,                                        /* tp_setattr */
+    0,                                        /* tp_reserved */
+    0,                                        /* tp_repr */
+    0,                                        /* tp_as_number */
+    0,                                        /* tp_as_sequence */
+    0,                                        /* tp_as_mapping */
+    0,                                        /* tp_hash  */
+    0,                                        /* tp_call */
+    0,                                        /* tp_str */
+    0,                                        /* tp_getattro */
+    0,                                        /* tp_setattro */
+    0,                                        /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
+    "PyObjectIterator Object",                         /* tp_doc */
+    0,                                        /* tp_traverse */
+    0,                                        /* tp_clear */
+    0,                                        /* tp_richcompare */
+    0,                                        /* tp_weaklistoffset */
+    (getiterfunc)PyObjectIter_iter,                           /* tp_iter */
+    (iternextfunc)PyObjectIter_next,                           /* tp_iternext */
+    0,                                      /* tp_methods */
+    0,                                      /* tp_members */
+    0,                                        /* tp_getset */
+    0,                                        /* tp_base */
+    0,                                        /* tp_dict */
+    0,                                        /* tp_descr_get */
+    0,                                        /* tp_descr_set */
+    0,                                        /* tp_dictoffset */
+    0,                                         /* tp_init */
+    0,                                        /* tp_alloc */
+    PyObjectIter_new                               /* tp_new */
+};
+
+////////////////// PyObjectIter End ///////////////////
+
 
 //////////////////// Agent ///////////////////
 static void Agent_dealloc(R4Py_Agent* self) {
@@ -95,7 +168,7 @@ static PyObject* Agent_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
     R4Py_Agent* self;
     self = (R4Py_Agent*) type->tp_alloc(type, 0);
     if (self != NULL) {
-        self->aid = new R4Py_AgentID;
+        self->aid = new R4Py_AgentID();
         if (self->aid) {
             self->aid->id = -1;
             self->aid->type = -1;
@@ -148,7 +221,7 @@ static PyObject* Agent_repr(R4Py_Agent* self) {
 
 static PyTypeObject R4Py_AgentType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
-    "core.Agent",                          /* tp_name */
+    "_core.Agent",                          /* tp_name */
     sizeof(R4Py_Agent),                      /* tp_basicsize */
     0,                                        /* tp_itemsize */
     (destructor)Agent_dealloc,                                         /* tp_dealloc */
@@ -190,8 +263,8 @@ static PyTypeObject R4Py_AgentType = {
 
 static PyModuleDef coremodule = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "repast4py.core",
-    .m_doc = "Example module that creates an extension type.",
+    .m_name = "repast4py._core",
+    .m_doc = "core module",
     .m_size = -1,
 };
 
@@ -199,7 +272,7 @@ static PyModuleDef coremodule = {
 
 // PyMODINIT_FUNC adds "extern C" among other things
 PyMODINIT_FUNC
-PyInit_core(void)
+PyInit__core(void)
 {
 
     if (PyType_Ready(&R4Py_AgentType) < 0)
@@ -207,6 +280,9 @@ PyInit_core(void)
 
     if (PyType_Ready(&R4Py_AgentIterType) < 0)
         return NULL;
+
+    if (PyType_Ready(&R4Py_PyObjectIterType) < 0)
+        return  NULL;
 
 
     PyObject *m;
@@ -219,7 +295,10 @@ PyInit_core(void)
 
     R4PyCore_API[0] = (void*)&R4Py_AgentType;
     R4PyCore_API[1] = (void*)&R4Py_AgentIterType;
-    c_api_object = PyCapsule_New((void*)R4PyCore_API, "repast4py.core._C_API", NULL);
+    R4PyCore_API[2] = (void*)&R4Py_PyObjectIterType;
+
+
+    c_api_object = PyCapsule_New((void*)R4PyCore_API, "repast4py._core._C_API", NULL);
 
     if (PyModule_AddObject(m, "_C_API", c_api_object) < 0) {
         Py_XDECREF(c_api_object);
@@ -242,6 +321,16 @@ PyInit_core(void)
         Py_XDECREF(c_api_object);
         Py_DECREF(&R4Py_AgentType);
         Py_DECREF(&R4Py_AgentIterType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    Py_INCREF(&R4Py_PyObjectIterType);
+    if (PyModule_AddObject(m, "PyObjectIterator", (PyObject *) &R4Py_PyObjectIterType) < 0) {
+        Py_XDECREF(c_api_object);
+        Py_DECREF(&R4Py_AgentType);
+        Py_DECREF(&R4Py_AgentIterType);
+        Py_DECREF(&R4Py_PyObjectIterType);
         Py_DECREF(m);
         return NULL;
     }

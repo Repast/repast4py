@@ -25,6 +25,12 @@ struct RankPtPair {
     Point<R4Py_DiscretePoint> pt;
 };
 
+struct R4Py_MoveAddress {
+    PyObject_HEAD
+    R4Py_AgentID* aid;
+    int rank;
+    R4Py_DiscretePoint* pt;
+};
 
 class CartesianTopology {
 
@@ -33,14 +39,14 @@ private:
     int* procs_per_dim;
     MPI_Comm comm_;
     bool periodic_;
-    BoundingBox<R4Py_DiscretePoint>& bounds_;
+    BoundingBox<R4Py_DiscretePoint> bounds_;
     unsigned int x_remainder, y_remainder, z_remainder;
 
     void getBounds(int rank, BoundingBox<R4Py_DiscretePoint>& local_bounds);
 
 public:
-    CartesianTopology(MPI_Comm, int num_dims, BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic);
-    CartesianTopology(MPI_Comm, const std::vector<int>& procs_per_dimension, BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic);
+    CartesianTopology(MPI_Comm, int num_dims, const BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic);
+    CartesianTopology(MPI_Comm, const std::vector<int>& procs_per_dimension, const BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic);
     ~CartesianTopology();
 
     int getRank();
@@ -51,6 +57,8 @@ public:
 };
 
 
+using AIDPyObjMapT = std::map<R4Py_AgentID*, PyObject*>;
+
 template<typename BaseGrid>
 class DistributedGrid {
 
@@ -58,7 +66,8 @@ private:
     std::unique_ptr<BaseGrid> grid;
     BoundingBox<R4Py_DiscretePoint> local_bounds;
     std::map<R4Py_AgentID*, R4Py_Agent*> ghosts;
-    std::map<R4Py_AgentID*, R4Py_Agent*> out_of_bounds_agents;
+    // value: tuple ((aid.id, aid.type, aid.rank), ngh.rank, pt)
+    std::shared_ptr<AIDPyObjMapT> out_of_bounds_agents;
     unsigned int buffer_size_;
     MPI_Comm cart_comm;
     std::vector<CTNeighbor> nghs;
@@ -77,17 +86,20 @@ public:
     AgentList getAgentsAt(R4Py_DiscretePoint* pt);
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent);
     R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to);
+    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData();
+    BoundingBox<R4Py_DiscretePoint> getLocalBounds() const;
 };
 
 template<typename BaseGrid>
 DistributedGrid<BaseGrid>::DistributedGrid(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds, 
-        unsigned int buffer_size, MPI_Comm comm) : grid {std::unique_ptr<BaseGrid>(new BaseGrid(name, bounds))}, local_bounds(0, 0, 0, 0),
-        ghosts(), buffer_size_(buffer_size), cart_comm(), nghs(), rank(-1)
+        unsigned int buffer_size, MPI_Comm comm) : grid {std::unique_ptr<BaseGrid>(new BaseGrid(name, bounds))}, 
+        local_bounds(0, 0, 0, 0), ghosts(), out_of_bounds_agents(std::make_shared<AIDPyObjMapT>()), 
+        buffer_size_(buffer_size), cart_comm(), nghs(), rank(-1)
 {
     int dims = 1;
     if (bounds.y_extent_ > 0) ++dims;
     if (bounds.z_extent_ > 0) ++dims;
-    CartesianTopology ct(comm, dims, bounds, is_periodic<BaseGrid>());
+    CartesianTopology ct(comm, dims, bounds, is_periodic<BaseGrid>::value);
     rank = ct.getRank();
     ct.getBounds(local_bounds);
     cart_comm = ct.getCartesianComm();
@@ -209,20 +221,122 @@ R4Py_DiscretePoint* DistributedGrid<BaseGrid>::move(R4Py_Agent* agent, R4Py_Disc
     // space is already occupied
     if (pt) {
         if (local_bounds.contains(pt)) {
-            out_of_bounds_agents.erase(agent->aid);
+            out_of_bounds_agents->erase(agent->aid);
         } else {
             // what neighbor now contains the agent
             for (auto& ngh : nghs) {
                 if (ngh.local_bounds.contains(pt)) {
-                    RankPtPair rpp;
-                    extract_coords(pt, rpp.pt);
-                    out_of_bounds_agents[agent->aid] = rpp;
+                    Py_INCREF(pt);
+                    PyObject* obj = Py_BuildValue("((liI), I, O)", 
+                        agent->aid->id, agent->aid->type, agent->aid->rank, 
+                        ngh.rank, pt);
+                    (*out_of_bounds_agents)[agent->aid] = obj;
                 }
             }
         }
     }
     return pt;
 }
+
+template<typename BaseGrid>
+std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> DistributedGrid<BaseGrid>::getOOBData() {
+    return out_of_bounds_agents;
+}
+
+
+template<typename BaseGrid>
+BoundingBox<R4Py_DiscretePoint> DistributedGrid<BaseGrid>::getLocalBounds() const {
+    return local_bounds;
+}
+
+class ISharedGrid {
+
+public:
+    virtual ~ISharedGrid() = 0;
+
+    virtual bool add(R4Py_Agent* agent) = 0;
+    virtual bool remove(R4Py_Agent* agent) = 0;
+    virtual R4Py_Agent* getAgentAt(R4Py_DiscretePoint* pt) = 0;
+    virtual AgentList getAgentsAt(R4Py_DiscretePoint* pt) = 0;
+    virtual R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) = 0;
+    virtual R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
+    virtual std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData() = 0;
+    virtual BoundingBox<R4Py_DiscretePoint> getLocalBounds() const = 0;
+    
+};
+
+inline ISharedGrid::~ISharedGrid() {}
+
+template<typename DelegateType>
+class SharedGrid : public ISharedGrid {
+
+private:
+    std::unique_ptr<DelegateType> delegate;
+
+public:
+    SharedGrid(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds, 
+        unsigned int buffer_size, MPI_Comm comm);
+    virtual ~SharedGrid() {}
+    bool add(R4Py_Agent* agent) override;
+    bool remove(R4Py_Agent* agent) override;
+    R4Py_Agent* getAgentAt(R4Py_DiscretePoint* pt) override;
+    AgentList getAgentsAt(R4Py_DiscretePoint* pt) override;
+    R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) override;
+    R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
+    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData() override;
+    BoundingBox<R4Py_DiscretePoint> getLocalBounds() const override;
+};
+
+template<typename DelegateType>
+SharedGrid<DelegateType>::SharedGrid(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds, 
+        unsigned int buffer_size, MPI_Comm comm) : 
+    delegate{std::unique_ptr<DelegateType>(new DelegateType(name, bounds, buffer_size, comm))} {}
+
+template<typename DelegateType>
+bool SharedGrid<DelegateType>::add(R4Py_Agent* agent) {
+    return delegate->add(agent);
+}
+
+template<typename DelegateType>
+bool SharedGrid<DelegateType>::remove(R4Py_Agent* agent) {
+    return delegate->remove(agent);
+}
+
+template<typename DelegateType>
+R4Py_Agent* SharedGrid<DelegateType>::getAgentAt(R4Py_DiscretePoint* pt) {
+    return delegate->getAgentAt(pt);
+}
+
+template<typename DelegateType>
+AgentList SharedGrid<DelegateType>::getAgentsAt(R4Py_DiscretePoint* pt) {
+    return delegate->getAgentsAt(pt);
+}
+
+template<typename DelegateType>
+R4Py_DiscretePoint* SharedGrid<DelegateType>::getLocation(R4Py_Agent* agent) {
+    return delegate->getLocation(agent);
+}
+
+template<typename DelegateType>
+R4Py_DiscretePoint* SharedGrid<DelegateType>::move(R4Py_Agent* agent, R4Py_DiscretePoint* to) {
+    return delegate->move(agent, to);
+}
+
+template<typename DelegateType>
+std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> SharedGrid<DelegateType>::getOOBData() {
+    return delegate->getOOBData();
+}
+
+template<typename DelegateType>
+BoundingBox<R4Py_DiscretePoint> SharedGrid<DelegateType>::getLocalBounds() const {
+    return delegate->getLocalBounds();
+}
+
+
+struct R4Py_SharedGrid {
+    PyObject_HEAD
+    ISharedGrid* grid;
+};
 
 }
 

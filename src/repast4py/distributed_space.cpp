@@ -5,7 +5,7 @@
 namespace repast4py {
 
 
-CartesianTopology::CartesianTopology(MPI_Comm comm, int num_dims, BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic) : 
+CartesianTopology::CartesianTopology(MPI_Comm comm, int num_dims, const BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic) : 
     num_dims_{num_dims},  procs_per_dim{nullptr}, periodic_{periodic}, bounds_(global_bounds), x_remainder{0},
     y_remainder{0}, z_remainder{0}
 {
@@ -31,7 +31,7 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, int num_dims, BoundingBox<R4
 }
 
 CartesianTopology::CartesianTopology(MPI_Comm comm, const std::vector<int>& procs_per_dimension, 
-    BoundingBox<R4Py_DiscretePoint>& global_bounds,bool periodic) :
+    const BoundingBox<R4Py_DiscretePoint>& global_bounds,bool periodic) :
     num_dims_{procs_per_dimension.size()}, procs_per_dim{nullptr}, periodic_{periodic}, bounds_(global_bounds)
 {
     int size;

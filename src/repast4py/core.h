@@ -86,6 +86,64 @@ R4Py_Agent* TAgentIter<IterableT>::next() {
     return agent;
 }
 
+class PyObjectIter {
+
+protected:
+    bool incr;
+
+public:
+    PyObjectIter() : incr{false} {}
+    virtual ~PyObjectIter() {}
+    virtual PyObject* next() = 0;
+    virtual bool hasNext() = 0;
+    virtual void reset() = 0;
+};
+
+
+struct R4Py_PyObjectIter {
+    PyObject_HEAD
+    PyObjectIter* iter;
+};
+
+template<typename MapT>
+class ValueIter : public PyObjectIter {
+
+private:
+    std::shared_ptr<MapT> iterable_;
+    typename MapT::const_iterator iter_;
+
+public:
+    ValueIter(std::shared_ptr<MapT>);
+    virtual ~ValueIter() {}
+
+    PyObject* next() override;
+    bool hasNext() override;
+    void reset() override;
+};
+
+template<typename MapT>
+ValueIter<MapT>::ValueIter(std::shared_ptr<MapT> iterable) : PyObjectIter(),
+    iterable_{iterable}, iter_(iterable_->begin()) {}
+
+template<typename MapT>
+bool ValueIter<MapT>::hasNext() {
+    return iter_ != iterable_->end();
+}
+
+template<typename MapT>
+void ValueIter<MapT>::reset() {
+    iter_ = iterable_->begin();
+}
+
+template<typename MapT>
+PyObject* ValueIter<MapT>::next() {
+    PyObject* obj = iter_->second;
+    ++iter_;
+    return obj;
+}
+
+
+
 
 }
 

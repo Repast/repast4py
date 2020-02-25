@@ -62,9 +62,11 @@ struct BoundingBox {
     coord_type ymin_, ymax_;
     coord_type zmin_, zmax_;
     coord_type x_extent_, y_extent_, z_extent_;
+    unsigned int num_dims;
 
     BoundingBox(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
             coord_type zmin = 0, coord_type z_extent = 0);
+    BoundingBox(const BoundingBox<PointType>& other);
 
     ~BoundingBox() {}
 
@@ -73,8 +75,6 @@ struct BoundingBox {
             coord_type zmin = 0, coord_type z_extent = 0);
     bool contains(const PointType* pt) const;
     bool contains(const Point<PointType>& pt) const;
-
-    bool intersects(const BoundingBox<PointType>& box) const;
 };
 
 
@@ -94,6 +94,17 @@ BoundingBox<PointType>::BoundingBox(coord_type xmin, coord_type x_extent, coord_
 }
 
 template<typename PointType>
+BoundingBox<PointType>::BoundingBox(const BoundingBox<PointType>& other) : xmin_{other.xmin_}, 
+    xmax_{other.xmin_ + other.x_extent_}, ymin_{other.ymin_}, ymax_{other.ymin_ + other.y_extent_}, 
+    zmin_{other.zmin_}, zmax_{other.zmin_ + other.z_extent_}, x_extent_{other.x_extent_}, 
+    y_extent_{other.y_extent_}, z_extent_{other.z_extent_}, num_dims(1)
+{
+    if (y_extent_ > 0) num_dims = 2;
+    if (z_extent_ > 0) num_dims = 3;
+
+}
+
+template<typename PointType>
 void BoundingBox<PointType>::reset(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
             coord_type zmin, coord_type z_extent) 
 {
@@ -108,29 +119,46 @@ void BoundingBox<PointType>::reset(coord_type xmin, coord_type x_extent, coord_t
     zmin_ = zmin;
     z_extent_ = z_extent;
     zmax_ = zmin + z_extent;
+
+    num_dims = 1;
+    if (y_extent_ > 0) num_dims = 2;
+    if (z_extent_ > 0) num_dims = 3;
 }
 
 template<typename PointType>
 bool BoundingBox<PointType>::contains(const PointType* pt) const {
-    coord_type* data = (coord_type*)pt->coords->data;
-    return data[0] >= xmin_ && data[1] >= ymin_ && data[0] < xmax_ && data[1] < ymax_ &&
-        data[2] >= zmin_ && data[2] < zmax_;
+    coord_type* data = (coord_type*)PyArray_DATA(pt->coords);
+
+    bool y_contains = true;
+    bool z_contains = true;
+    bool x_contains = data[0] >= xmin_ && data[0] < xmax_;
+
+    if (num_dims == 2) {
+        y_contains = data[1] >= ymin_ && data[1] < ymax_;
+    } else if (num_dims == 3) {
+        y_contains = data[1] >= ymin_ && data[1] < ymax_;
+        z_contains =  data[2] >= zmin_ && data[2] < zmax_;
+    }
+
+    return x_contains && y_contains && z_contains;
 }
 
 template<typename PointType>
 bool BoundingBox<PointType>::contains(const Point<PointType>& pt) const {
-    return pt.x >= xmin_ && pt.y >= ymin_ && pt.x < xmax_ && pt.y < ymax_ &&
-        pt.z >= zmin_ && pt.z < zmax_;
+    bool y_contains = true;
+    bool z_contains = true;
+    bool x_contains = pt.x >= xmin_ && pt.x < xmax_;
+
+    if (num_dims == 2) {
+        y_contains = pt.y >= ymin_ && pt.y < ymax_;
+    } else if (num_dims == 3) {
+        y_contains = pt.y >= ymin_ && pt.y < ymax_;
+        z_contains = pt.z >= zmin_ && pt.z < zmax_;
+    }
+
+    return x_contains && y_contains && z_contains;
 }
 
-template<typename PointType>
-bool BoundingBox<PointType>::intersects(const BoundingBox<PointType>& other) const {
-    if (xmin_ >= other.xmax_ || other.xmin_ >= xmax_) return false;
-    if (ymin_ >= other.ymax_ || other.ymin_ >= ymax_) return false;
-    if (zmin_ >= other.zmax_ || other.zmin_ >= zmax_) return false;
-
-    return true;
-}
 
 template<typename PointType>
 class StickyBorders {

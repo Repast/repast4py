@@ -180,7 +180,6 @@ public:
 
 inline IGrid::~IGrid() {}
 
-// Multi Occupancy Sticky Grid
 template<typename DelegateType>
 class Grid : public IGrid {
 
@@ -240,14 +239,12 @@ using MOSGrid = BaseSpace<R4Py_DiscretePoint, DiscreteMOType, DiscreteSBType>;
 
 template<typename BorderType>
 struct is_periodic {
-    bool operator()();
+    static constexpr bool value {false};
 };
 
 template<>
 struct is_periodic<MOSGrid> {
-    bool operator()() {
-        return false;
-    }
+    static constexpr bool value {false};
 };
 
 struct R4Py_Grid {

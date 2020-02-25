@@ -2,8 +2,8 @@
 
 Compile with: 
 
-`python setup.py build_ext --inplace`
+`CC=mpicc CXX=mpicxx python setup.py build_ext --inplace`
 
 or for debugging:
 
-`CFLAGS="-O0 -g" CXXFLAGS="-O0 -g" python setup.py build_ext --inplace`
+`CC=mpicc CXX=mpicxx CFLAGS="-O0 -g" CXXFLAGS="-O0 -g" python setup.py build_ext --inplace`
