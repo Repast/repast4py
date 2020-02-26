@@ -46,18 +46,13 @@ static PyObject* DiscretePoint_new(PyTypeObject* type, PyObject* args, PyObject*
 
 static int DiscretePoint_init(R4Py_DiscretePoint* self, PyObject* args, PyObject* kwds) {
     static char* kwlist[] = {(char*)"x", (char*)"y", (char*)"z", NULL};
-    long x, y;
-    long z = 0;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ll|l", kwlist, &x, &y, &z)) {
+    
+    long* d = (long*)PyArray_DATA(self->coords);
+    d[2] = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ll|l", kwlist, &d[0], &d[1], &d[2])) {
         return -1;
     }
 
-    long* d = (long*)PyArray_DATA(self->coords);;
-    d[0] = x;
-    d[1] = y;
-    d[2] = z;
-    
     return 0;
 }
 
@@ -471,6 +466,28 @@ static PyObject* SharedGrid_move(PyObject* self, PyObject* args) {
     }
 }
 
+static PyObject* SharedGrid_synchMove(PyObject* self, PyObject* args) {
+    PyArrayObject* obj;
+    R4Py_Agent* agent;
+    if (!PyArg_ParseTuple(args, "O!O!", &R4Py_AgentType, &agent, &PyArray_Type, &obj)) {
+        return NULL;
+    }
+    R4Py_DiscretePoint* pt = (R4Py_DiscretePoint*)(&DiscretePointType)->tp_new(&DiscretePointType, 
+        NULL, NULL);
+    if (pt == NULL) {
+        return NULL;
+    }
+    long* obj_data = (long*)PyArray_DATA(obj);
+    long* pt_data = (long*)PyArray_DATA(pt->coords);
+    pt_data[0] = obj_data[0];
+    pt_data[1] = obj_data[1];
+    pt_data[2] = obj_data[2];
+
+    ((R4Py_SharedGrid*)self)->grid->move((R4Py_Agent*)agent, pt);
+
+    Py_RETURN_NONE;
+}
+
 static PyObject* SharedGrid_getAgent(PyObject* self, PyObject* args) {
     PyObject* pt;
     if (!PyArg_ParseTuple(args, "O!", &DiscretePointType, &pt)) {
@@ -513,6 +530,11 @@ static PyObject* SharedGrid_getOOBData(PyObject* self, PyObject* args) {
     return (PyObject*)obj_iter;
 }
 
+static PyObject* SharedGrid_clearOOBData(PyObject* self, PyObject* args) {
+    ((R4Py_SharedGrid*)self)->grid->clearOOBData();
+    Py_RETURN_NONE;
+}
+
 static PyObject* SharedGrid_getLocalBounds(PyObject* self, PyObject* args) {
     BoundingBox<R4Py_DiscretePoint> bounds = ((R4Py_SharedGrid*)self)->grid->getLocalBounds();
     PyObject* box_args = Py_BuildValue("(llllll)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
@@ -537,7 +559,9 @@ static PyMethodDef SharedGrid_methods[] = {
     {"get_agent", SharedGrid_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this shared grid projection"},
     {"get_agents", SharedGrid_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this shared grid projection"},
     {"_get_oob", SharedGrid_getOOBData, METH_VARARGS, "Gets the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
+    {"_clear_oob", SharedGrid_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
     {"get_local_bounds", SharedGrid_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared grid projection"},
+    {"_synch_move", SharedGrid_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection as part of a movement synchronization"},
     {NULL, NULL, 0, NULL}
 };
 

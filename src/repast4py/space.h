@@ -57,6 +57,7 @@ public:
 
     bool add(R4Py_Agent* agent);
     bool remove(R4Py_Agent* agent);
+    bool remove(R4Py_AgentID* aid);
     R4Py_Agent* getAgentAt(PointType* pt);
     AgentList getAgentsAt(PointType* pt);
     PointType* getLocation(R4Py_Agent* agent);
@@ -99,8 +100,8 @@ bool BaseSpace<PointType, AccessorType,  BorderType>::add(R4Py_Agent* agent) {
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
-bool BaseSpace<PointType, AccessorType,  BorderType>::remove(R4Py_Agent* agent) {
-    auto iter = agent_map.find(agent->aid);
+bool BaseSpace<PointType, AccessorType,  BorderType>::remove(R4Py_AgentID* aid) {
+    auto iter = agent_map.find(aid);
     bool ret_val = false;
     if (iter != agent_map.end()) {
         if (iter->second->pt) {
@@ -112,6 +113,11 @@ bool BaseSpace<PointType, AccessorType,  BorderType>::remove(R4Py_Agent* agent) 
         agent_map.erase(iter);
     }
     return ret_val;
+}
+
+template<typename PointType, typename AccessorType, typename BorderType>
+bool BaseSpace<PointType, AccessorType,  BorderType>::remove(R4Py_Agent* agent) {
+    return remove(agent->aid);
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
@@ -172,6 +178,7 @@ public:
 
     virtual bool add(R4Py_Agent* agent) = 0;
     virtual bool remove(R4Py_Agent* agent) = 0;
+    virtual bool remove(R4Py_AgentID* aid) = 0;
     virtual R4Py_Agent* getAgentAt(R4Py_DiscretePoint* pt) = 0;
     virtual AgentList getAgentsAt(R4Py_DiscretePoint* pt) = 0;
     virtual R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) = 0;
@@ -191,6 +198,7 @@ public:
     virtual ~Grid() {}
     bool add(R4Py_Agent* agent) override;
     bool remove(R4Py_Agent* agent) override;
+    bool remove(R4Py_AgentID* aid) override;
     R4Py_Agent* getAgentAt(R4Py_DiscretePoint* pt) override;
     AgentList getAgentsAt(R4Py_DiscretePoint* pt) override;
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) override;
@@ -209,6 +217,11 @@ bool Grid<DelegateType>::add(R4Py_Agent* agent) {
 template<typename DelegateType>
 bool Grid<DelegateType>::remove(R4Py_Agent* agent) {
     return delegate->remove(agent);
+}
+
+template<typename DelegateType>
+bool Grid<DelegateType>::remove(R4Py_AgentID* aid) {
+    return delegate->remove(aid);
 }
 
 template<typename DelegateType>

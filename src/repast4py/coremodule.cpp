@@ -160,6 +160,7 @@ static PyTypeObject R4Py_PyObjectIterType = {
 
 //////////////////// Agent ///////////////////
 static void Agent_dealloc(R4Py_Agent* self) {
+    Py_XDECREF(self->aid->as_tuple);
     delete self->aid;
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -173,10 +174,19 @@ static PyObject* Agent_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
             self->aid->id = -1;
             self->aid->type = -1;
             self->aid->rank = 0;
+
+            // self->aid->as_tuple = PyTuple_New(3);
+            // if (!self->aid->as_tuple) {
+            //     delete self->aid;
+            //     Py_TYPE(self)->tp_free((PyObject*)self);
+            //     self = NULL;
+            // }
         } else {
             Py_TYPE(self)->tp_free((PyObject*)self);
             self = NULL;
         }
+
+
     }
     return (PyObject*) self;
 }
@@ -187,6 +197,8 @@ static int Agent_init(R4Py_Agent* self, PyObject* args, PyObject* kwds) {
         &self->aid->rank)) {
         return -1;
     }
+    // TODO - maybe build this with PyTuple_New rather than parse the format string
+    self->aid->as_tuple = Py_BuildValue("(liI)", self->aid->id, self->aid->type, self->aid->rank);
     return 0;
 }
 
@@ -202,15 +214,17 @@ static PyObject* Agent_get_type(R4Py_Agent* self, void* closure) {
     return PyLong_FromLong(self->aid->type);
 }
 
-static PyObject* Agent_get_aid(R4Py_Agent* self, void* closure) {
-    return Py_BuildValue("(liI)", self->aid->id, self->aid->type, self->aid->rank);
+static PyObject* Agent_get_uid(R4Py_Agent* self, void* closure) {
+    PyObject* uid = self->aid->as_tuple;
+    Py_INCREF(uid);
+    return uid;
 }
 
 static PyGetSetDef Agent_get_setters[] = {
     {(char*)"id", (getter)Agent_get_id, NULL, (char*)"agent id", NULL},
     {(char*)"type", (getter)Agent_get_type, NULL, (char*)"agent type", NULL},
     {(char*)"rank", (getter)Agent_get_rank, NULL, (char*)"agent rank", NULL},
-    {(char*)"tag", (getter)Agent_get_aid, NULL, (char*)"agent identifier", NULL},
+    {(char*)"uid", (getter)Agent_get_uid, NULL, (char*)"agent identifier", NULL},
     {NULL}
 };
 

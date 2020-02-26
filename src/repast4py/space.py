@@ -1,5 +1,7 @@
+from mpi4py import MPI
 
-from ._space import Grid, DiscretePoint, SharedGrid
+from ._space import Grid, DiscretePoint
+from ._space import SharedGrid as _SharedGrid
 
 from enum import Enum
 from collections import namedtuple
@@ -19,4 +21,12 @@ else:
 
 
 
+class SharedGrid(_SharedGrid):
 
+    def __init__(self, name, bounds, borders, occupancy, buffersize, comm):
+        super().__init__(name, bounds, borders, occupancy, buffersize, comm)
+
+    def synchronize_buffer(self, create_agent):
+        pass
+
+    

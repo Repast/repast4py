@@ -13,6 +13,7 @@ struct R4Py_AgentID {
     long id;
     int type;
     unsigned int rank;
+    PyObject* as_tuple;
 };
 
 struct agent_id_comp {

@@ -25,7 +25,7 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(4, a2.id)
         self.assertEqual(5, a2.type)
         self.assertEqual(0, a2.rank)
-        self.assertEqual((4, 5, 0), a2.tag)
+        self.assertEqual((4, 5, 0), a2.uid)
 
     def test_subclassing(self):
         a1 = EAgent(1, 2, 3, 0)
@@ -37,7 +37,7 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(4, a2.id)
         self.assertEqual(5, a2.type)
         self.assertEqual(0, a2.rank)
-        self.assertEqual((4, 5, 0), a2.tag)
+        self.assertEqual((4, 5, 0), a2.uid)
         self.assertEqual(1, a2.energy)
 
 
