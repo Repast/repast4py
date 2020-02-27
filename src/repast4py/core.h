@@ -31,11 +31,8 @@ struct R4Py_Agent {
 
 class AgentIter {
 
-protected:
-    bool incr;
-
 public:
-    AgentIter() : incr{false} {}
+    AgentIter() {}
     virtual ~AgentIter() {}
     virtual R4Py_Agent* next() = 0;
     virtual bool hasNext() = 0;
@@ -140,9 +137,48 @@ template<typename MapT>
 PyObject* ValueIter<MapT>::next() {
     PyObject* obj = iter_->second;
     ++iter_;
+    // incref is in module function
     return obj;
 }
 
+template<typename SequenceT, typename UnpackT>
+class SequenceIter : public PyObjectIter {
+
+private:
+    std::shared_ptr<SequenceT> iterable_;
+    typename SequenceT::iterator iter_;
+    UnpackT unpack;
+
+public:
+    SequenceIter(std::shared_ptr<SequenceT>);
+    virtual ~SequenceIter() {}
+
+    PyObject* next() override;
+    bool hasNext() override;
+    void reset() override;
+};
+
+template<typename SequenceT, typename UnpackT>
+SequenceIter<SequenceT, UnpackT>::SequenceIter(std::shared_ptr<SequenceT> iterable) : PyObjectIter(),
+    iterable_{iterable}, iter_{iterable_->begin()}, unpack{} {}
+
+template<typename SequenceT, typename UnpackT>
+bool SequenceIter<SequenceT, UnpackT>::hasNext() {   
+    return iter_ != iterable_->end();
+}
+
+template<typename SequenceT, typename UnpackT>
+void SequenceIter<SequenceT, UnpackT>::reset() {
+    iter_ = iterable_->begin();
+}
+
+template<typename SequenceT, typename UnpackT>
+PyObject* SequenceIter<SequenceT, UnpackT>::next() {
+    PyObject* obj = unpack(*iter_);
+    ++iter_;
+    // incref is in module function
+    return obj;
+}
 
 
 

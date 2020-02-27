@@ -172,7 +172,7 @@ CTNeighbor find_neighbor(int rank, std::vector<CTNeighbor>& nghs) {
     for (auto n : nghs) {
         if (n.rank == rank) return n;
     }
-    return {-1, -1, -1, -1, {0, 0, 0, 0}, {0, 0, 0, 0}};
+    return {-1, -1, -1, -1, nullptr, {0, 0, 0, 0}};
 }
 
 void test_ngh(const CTNeighbor& n, int x, int y, int z) {

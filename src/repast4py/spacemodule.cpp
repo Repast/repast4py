@@ -56,6 +56,44 @@ static int DiscretePoint_init(R4Py_DiscretePoint* self, PyObject* args, PyObject
     return 0;
 }
 
+static PyObject* DiscretePoint_reset1D(PyObject* self, PyObject* args) {
+    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    if (!PyArg_ParseTuple(args, "l", &d[0])) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* DiscretePoint_reset2D(PyObject* self, PyObject* args) {
+    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    if (!PyArg_ParseTuple(args, "ll", &d[0], &d[1])) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* DiscretePoint_reset3D(PyObject* self, PyObject* args) {
+    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    if (!PyArg_ParseTuple(args, "lll", &d[0], &d[1], &d[2])) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* DiscretePoint_reset(PyObject* self, PyObject* args) {
+    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    PyTupleObject* pt;
+    if (!PyArg_ParseTuple(args, "O", &pt)) {
+        return NULL;
+    }
+
+    d[0] = PyLong_AsLong(PyTuple_GET_ITEM(pt, 0));
+    d[1] = PyLong_AsLong(PyTuple_GET_ITEM(pt, 1));
+    d[2] = PyLong_AsLong(PyTuple_GET_ITEM(pt, 2));
+
+    Py_RETURN_NONE;
+}
+
 static PyObject* DiscretePoint_get_coords(R4Py_DiscretePoint* self, void* closure) {
     Py_INCREF(self->coords);
     return (PyObject*)self->coords;
@@ -73,6 +111,7 @@ static PyObject* DiscretePoint_get_z(R4Py_DiscretePoint* self, void* closure) {
     return PyLong_FromLong(((long*)PyArray_DATA(self->coords))[2]);
 }
 
+
 static PyGetSetDef DiscretePoint_get_setters[] = {
     {(char*)"x", (getter)DiscretePoint_get_x, NULL, (char*)"discrete point x", NULL},
     {(char*)"y", (getter)DiscretePoint_get_y, NULL, (char*)"discrete point y", NULL},
@@ -80,6 +119,15 @@ static PyGetSetDef DiscretePoint_get_setters[] = {
     {(char*)"coordinates", (getter)DiscretePoint_get_coords, NULL, (char*)"discrete point coordinates", NULL},
     {NULL}
 };
+
+static PyMethodDef DiscretePoint_methods[] = {
+    {"_reset1D", DiscretePoint_reset1D, METH_VARARGS, ""},
+    {"_reset2D", DiscretePoint_reset2D, METH_VARARGS, ""},
+    {"_reset3D", DiscretePoint_reset3D, METH_VARARGS, ""},
+    {"_reset", DiscretePoint_reset, METH_VARARGS, ""},
+    {NULL, NULL, 0, NULL}
+};
+
 
 static PyObject* DiscretePoint_repr(R4Py_DiscretePoint* self) {
     long* data = (long*)PyArray_DATA(self->coords);
@@ -128,7 +176,7 @@ static PyTypeObject DiscretePointType = {
     0,                                        /* tp_weaklistoffset */
     0,                                        /* tp_iter */
     0,                                        /* tp_iternext */
-    0,                                      /* tp_methods */
+    DiscretePoint_methods,                                      /* tp_methods */
     0,                                      /* tp_members */
     DiscretePoint_get_setters,                                        /* tp_getset */
     0,                                        /* tp_base */
@@ -347,6 +395,7 @@ static PyTypeObject R4Py_GridType = {
 ///////////////////////// Shared Grid ///////////////////////////
 static void SharedGrid_dealloc(R4Py_SharedGrid* self) {
     delete self->grid;
+    Py_XDECREF(self->cart_comm);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -355,6 +404,7 @@ static PyObject* SharedGrid_new(PyTypeObject* type, PyObject* args, PyObject* kw
     if (self != NULL) {
         // maybe I should create it here, rather than in init??
         self->grid = nullptr;
+        self->cart_comm = nullptr;
     }
     return (PyObject*)self;
 }
@@ -408,6 +458,12 @@ static int SharedGrid_init(R4Py_SharedGrid* self, PyObject* args, PyObject* kwds
         PyErr_SetString(PyExc_RuntimeError, "Error creating native code shared grid");
         return -1;
     }
+
+    self->cart_comm = PyMPIComm_New(self->grid->getCartesianCommunicator());
+    if (self->cart_comm == NULL) {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -530,6 +586,14 @@ static PyObject* SharedGrid_getOOBData(PyObject* self, PyObject* args) {
     return (PyObject*)obj_iter;
 }
 
+static PyObject* SharedGrid_getBufferData(PyObject* self, PyObject* args) { 
+    std::shared_ptr<std::vector<CTNeighbor>> nghs = ((R4Py_SharedGrid*)self)->grid->getNeighborData();
+    R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
+    obj_iter->iter = new SequenceIter<std::vector<CTNeighbor>, GetBufferInfo>(nghs);
+    Py_INCREF(obj_iter);
+    return (PyObject*)obj_iter; 
+}
+
 static PyObject* SharedGrid_clearOOBData(PyObject* self, PyObject* args) {
     ((R4Py_SharedGrid*)self)->grid->clearOOBData();
     Py_RETURN_NONE;
@@ -550,6 +614,10 @@ static PyObject* SharedGrid_getLocalBounds(PyObject* self, PyObject* args) {
     return box;
 }
 
+static PyMemberDef SharedGrid_members[] = {
+    {"_cart_comm", T_OBJECT_EX, offsetof(R4Py_SharedGrid, cart_comm), READONLY, "The cartesian communicator for this shared grid"},
+    {NULL}
+};
 
 static PyMethodDef SharedGrid_methods[] = {
     {"add", SharedGrid_add, METH_VARARGS, "Adds the specified agent to this shared grid projection"},
@@ -562,6 +630,7 @@ static PyMethodDef SharedGrid_methods[] = {
     {"_clear_oob", SharedGrid_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
     {"get_local_bounds", SharedGrid_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared grid projection"},
     {"_synch_move", SharedGrid_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection as part of a movement synchronization"},
+    {"_get_buffer_data", SharedGrid_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared grid projetion"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -594,7 +663,7 @@ static PyTypeObject R4Py_ShareGridType = {
     0,                                        /* tp_iter */
     0,                                        /* tp_iternext */
     SharedGrid_methods,                                      /* tp_methods */
-    0,                                      /* tp_members */
+    SharedGrid_members,                                      /* tp_members */
     0,                                        /* tp_getset */
     0,                                        /* tp_base */
     0,                                        /* tp_dict */

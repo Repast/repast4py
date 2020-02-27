@@ -9,15 +9,12 @@ def create_agent_predicate(agent_type):
 
 class SharedContext:
 
-    def __init__(self, comm, caching=True):
+    def __init__(self, comm):
         self._local_agents = {}
-        if caching:
-            self._cached_agents = {}
         self.projections = {}
         self.projection_id = 0
         self.rank = comm.Get_rank()
         self.comm = comm
-        self.caching = caching
 
     def add(self, agent):
         self._local_agents[agent.uid] = agent
@@ -45,8 +42,6 @@ class SharedContext:
                     proj.remove(removed_agents[agent_id])
                 else:
                     removed_agents[agent_id] = agent
-                    if self.caching:
-                        self._cached_agents[agent_id] = agent
                     data = agent.save()
                     proj.remove(agent)
                 
@@ -72,11 +67,7 @@ class SharedContext:
                     agent = self._local_agents[agent_data[0]]
                 else:
                     # print("New agent", agent_data)
-                    if self.caching and agent_data[0] in self._cached_agents:
-                        agent = self._cached_agents[agent_data[0]]
-                        agent.restore(agent_data)
-                    else:
-                        agent = create_agent(agent_data)
+                    agent = create_agent(agent_data)
                 
                     # print("Adding", agent.id)
                     self.add(agent)

@@ -143,6 +143,8 @@ PointType* BaseSpace<PointType, AccessorType,  BorderType>::getLocation(R4Py_Age
 
 template<typename PointType, typename AccessorType, typename BorderType>
 PointType* BaseSpace<PointType, AccessorType,  BorderType>::move(R4Py_Agent* agent, PointType* pt) {
+    // If this gets changed such that the argument pt is not a temp input arg then 
+    // we need to make sure that any move calls reflect that. 
     auto iter = agent_map.find(agent->aid);
     if (iter != agent_map.end()) {
         borders.transform(pt, wpt);

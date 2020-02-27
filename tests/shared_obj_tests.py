@@ -110,6 +110,63 @@ class SharedGridTests(unittest.TestCase):
                 self.assertTrue(np.array_equal(exp[1], ob[2]))
             self.assertEqual(0, len(expected))
 
+    def test_buffer_data(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+       
+
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+        grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
+            occupancy=OccupancyType.Multiple, buffersize=2, comm=MPI.COMM_WORLD)
+
+        if (rank == 0):
+            a01 = core.Agent(1, 0, rank)
+            a02 = core.Agent(2, 0, rank)
+            a03 = core.Agent(3, 0, rank)
+            grid.add(a01)
+            grid.add(a02)
+            grid.add(a03)
+
+            pt = space.DiscretePoint(8, 20)
+            grid.move(a01, pt)
+            pt = space.DiscretePoint(9, 15)
+            grid.move(a02, pt)
+            pt = space.DiscretePoint(1, 15)
+            grid.move(a03, pt)
+
+            expected = (1, (8, 10, 0, 0, 0, 0))
+            count = 0
+            for bd in grid._get_buffer_data():
+                self.assertEqual(expected, bd)
+                count += 1
+            self.assertEqual(1, count)
+
+
+        if (rank == 1):
+            a11 = core.Agent(1, 0, rank)
+            a12 = core.Agent(2, 0, rank)
+            a13 = core.Agent(3, 0, rank)
+
+            grid.add(a11)
+            grid.add(a12)
+            grid.add(a13)
+
+            pt = space.DiscretePoint(10, 20)
+            grid.move(a11, pt)
+            pt = space.DiscretePoint(11, 15)
+            grid.move(a12, pt)
+            pt = space.DiscretePoint(15, 15)
+            grid.move(a13, pt)
+
+            expected = (0, (10, 12, 0, 0, 0, 0))
+            count = 0
+            for bd in grid._get_buffer_data():
+                self.assertEqual(expected, bd)
+                count += 1
+            self.assertEqual(1, count)
+                
+
 class EAgent(core.Agent):
 
     def __init__(self, id, agent_type, rank, energy):
@@ -256,8 +313,6 @@ class SharedContextTests(unittest.TestCase):
             agent = context._local_agents[(2, 0, 1)]
             self.assertEqual((2, 0, 1), agent.uid)
             self.assertEqual(-10, agent.energy)
-            # test restored through cache
-            self.assertTrue(agent.restored)
             pt = space.DiscretePoint(12, 38)
             self.assertEqual(agent, grid.get_agent(pt))
             self.assertEqual(pt, grid.get_location(agent))
@@ -271,4 +326,32 @@ class SharedContextTests(unittest.TestCase):
 
 
 
-    
+    def test_buffer(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+        grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
+            occupancy=OccupancyType.Multiple, buffersize=2, comm=MPI.COMM_WORLD)
+
+        context = core.SharedContext(comm)
+        context.add_projection(grid)
+
+        # test that adding to context 
+        # adds to projection
+        if rank == 0:
+            a1 = EAgent(1, 0, rank, 12)
+            context.add(a1)
+            # oob
+            pt = space.DiscretePoint(12, 5)
+            grid.move(a1, pt)
+
+        else:
+            a2 = EAgent(2, 0, rank, 3)
+            a3 = EAgent(3, 0, rank, 2)
+            context.add(a2)
+            context.add(a3)
+            # oob
+            pt = space.DiscretePoint(5, 30)
+            grid.move(a2, pt)
+            grid.move(a3, space.DiscretePoint(3, 20))

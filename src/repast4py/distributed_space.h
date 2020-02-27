@@ -16,8 +16,17 @@ namespace repast4py {
 struct CTNeighbor {
     int rank;
     int cart_coord_x, cart_coord_y, cart_coord_z;
-    BoundingBox<R4Py_DiscretePoint> buffer_bounds;
+    // Py Tuple with info for who and what range to cover when sending 
+    // buffered agents - tuple: (rank, (xmin, xmax, ymin, ymax, zmin, zmax))
+    PyObject* buffer_info;
     BoundingBox<R4Py_DiscretePoint> local_bounds;
+};
+
+struct GetBufferInfo {
+
+    PyObject* operator()(CTNeighbor& ct) {
+        return ct.buffer_info;
+    }
 };
 
 class CartesianTopology {
@@ -57,10 +66,10 @@ private:
     std::shared_ptr<AIDPyObjMapT> out_of_bounds_agents;
     unsigned int buffer_size_;
     MPI_Comm cart_comm;
-    std::vector<CTNeighbor> nghs;
+    std::shared_ptr<std::vector<CTNeighbor>> nghs;
     int rank;
 
-    void calcBufferBounds(int ngh_cart_coords[], int offsets[]);
+    void calcBufferBounds(CTNeighbor& ngh, int offsets[]);
 
 public:
     DistributedGrid(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds, 
@@ -75,15 +84,18 @@ public:
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent);
     R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to);
     std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData();
+    std::shared_ptr<std::vector<CTNeighbor>> getNeighborData();
     void clearOOBData();
     BoundingBox<R4Py_DiscretePoint> getLocalBounds() const;
+    MPI_Comm getCartesianCommunicator();
+
 };
 
 template<typename BaseGrid>
 DistributedGrid<BaseGrid>::DistributedGrid(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds, 
         unsigned int buffer_size, MPI_Comm comm) : grid {std::unique_ptr<BaseGrid>(new BaseGrid(name, bounds))}, 
-        local_bounds(0, 0, 0, 0), out_of_bounds_agents(std::make_shared<AIDPyObjMapT>()), 
-        buffer_size_(buffer_size), cart_comm(), nghs(), rank(-1)
+        local_bounds{0, 0, 0, 0}, out_of_bounds_agents{std::make_shared<AIDPyObjMapT>()}, 
+        buffer_size_{buffer_size}, cart_comm{}, nghs{std::make_shared<std::vector<CTNeighbor>>()}, rank{-1}
 {
     int dims = 1;
     if (bounds.y_extent_ > 0) ++dims;
@@ -92,90 +104,68 @@ DistributedGrid<BaseGrid>::DistributedGrid(const std::string& name, const Boundi
     rank = ct.getRank();
     ct.getBounds(local_bounds);
     cart_comm = ct.getCartesianComm();
-    ct.getNeighbors(nghs);
+    ct.getNeighbors(*nghs);
     std::vector<int> coords;
     ct.getCoords(coords);
-    
+
+
+    int offsets[3] = {0, 0, 0};
 
     if (dims == 1) {
-        int x_offsets[2] = {-1, 1};
-        for (int i = 0; i < 2; ++i) {
-            int ngh_card_coords[] = {coords[0] + x_offsets[i]};
-            int offsets[] = {x_offsets[i], 0, 0};
-            calcBufferBounds(ngh_card_coords, offsets);
+        for (auto& ngh : (*nghs)) {
+            offsets[0] = ngh.cart_coord_x - coords[0];
+            calcBufferBounds(ngh, offsets);
         }
     } else if (dims == 2) {
-        int coord_offsets[3] = {-1, 0, 1};
-        for (int x = 0; x < 3; ++x) {
-            int x_offset = coord_offsets[x];
-            for (int y = 0; y < 3; ++y) {
-                int y_offset = coord_offsets[y];
-                int ngh_card_coords[] = {coords[0] + x_offset, coords[1] + y_offset};
-                int offsets[] = {x_offset, y_offset, 0};
-                if (!(x == 0 && y == 0)) {
-                    calcBufferBounds(ngh_card_coords, offsets);
-                }
-            }
+        for (auto& ngh : (*nghs)) {
+            offsets[0] = ngh.cart_coord_x - coords[0];
+            offsets[1] = ngh.cart_coord_y - coords[1];
+            calcBufferBounds(ngh, offsets);
         }
-    } else if (dims == 2) {
-        int coord_offsets[3] = {-1, 0, 1};
-        for (int x = 0; x < 3; ++x) {
-            int x_offset = coord_offsets[x];
-            for (int y = 0; y < 3; ++y) {
-                int y_offset = coord_offsets[y];
-                for (int z = 0; z < 3; ++z) {
-                    int z_offset = coord_offsets[z];
-                    int ngh_card_coords[] = {coords[0] + x_offset, coords[1] + y_offset, 
-                        coords[2] + z_offset};
-                    int offsets[] = {x_offset, y_offset, z_offset};
-                    if (!(x == 0 && y == 0 && z == 0)) {
-                        calcBufferBounds(ngh_card_coords, offsets);
-                    }
-                }
-            }
+    } else if (dims == 3) {
+        for (auto& ngh : (*nghs)) {
+            offsets[0] = ngh.cart_coord_x - coords[0];
+            offsets[1] = ngh.cart_coord_y - coords[1];
+            offsets[2] = ngh.cart_coord_z - coords[2];
+            calcBufferBounds(ngh, offsets);
         }
     }
+
+  
 }
 
 
 template<typename BaseGrid>
-void DistributedGrid<BaseGrid>::calcBufferBounds(int ngh_cart_coords[], int offsets[]) {
-    int n_rank;
-    MPI_Cart_rank(cart_comm, ngh_cart_coords, &n_rank);
-    if (n_rank != MPI_PROC_NULL) {
-        for (auto& ngh : nghs) {
-            if (ngh.rank == n_rank) {
-                BoundingBox<R4Py_DiscretePoint>& box = ngh.buffer_bounds;
-                if (offsets[0] == -1) {
-                    box.xmin_ = local_bounds.xmin_;
-                    box.x_extent_ = buffer_size_;
-                } else if (offsets[0] == 1) {
-                    box.xmin_ = local_bounds.xmax_ - buffer_size_;
-                    box.x_extent_ = buffer_size_;
-                }
+void DistributedGrid<BaseGrid>::calcBufferBounds(CTNeighbor& ngh, int offsets[]) {
+    long xmin = 0, xmax = 0, ymin = 0, ymax = 0, zmin = 0, zmax = 0;
 
-                if (offsets[1] == -1) {
-                    box.ymin_ = local_bounds.ymin_;
-                    box.y_extent_ = buffer_size_;
-                } else if (offsets[1] == 1) {
-                    box.ymin_ = local_bounds.ymax_ - buffer_size_;
-                    box.y_extent_ = buffer_size_;
-                }
-
-                if (offsets[2] == -1) {
-                    box.zmin_ = local_bounds.zmin_;
-                    box.z_extent_ = buffer_size_;
-                } else if (offsets[2] == 1) {
-                    box.zmin_ = local_bounds.zmax_ - buffer_size_;
-                    box.z_extent_ = buffer_size_;
-                }
-
-                break;
-            }
-        }
+    if (offsets[0] == -1) {
+        xmin = local_bounds.xmin_;
+        xmax = xmin + buffer_size_;
+    } else if (offsets[0] == 1) {
+        xmin = local_bounds.xmax_ - buffer_size_;
+        xmax = xmin + buffer_size_;
     }
-}
 
+    if (offsets[1] == -1) {
+        ymin = local_bounds.ymin_;
+        ymax = ymin + buffer_size_;
+    } else if (offsets[1] == 1) {
+        ymin = local_bounds.ymax_ - buffer_size_;
+        ymax = ymin + buffer_size_;
+    }
+
+    if (offsets[2] == -1) {
+        zmin = local_bounds.zmin_;
+        zmax = zmin + buffer_size_;
+    } else if (offsets[2] == 1) {
+        zmin = local_bounds.zmax_ - buffer_size_;
+        zmax = zmin + buffer_size_;
+    }
+
+    ngh.buffer_info = Py_BuildValue("(i(llllll))", ngh.rank, xmin, xmax, ymin, ymax,
+        zmin, zmax);
+}
 
 template<typename BaseGrid>
 bool DistributedGrid<BaseGrid>::add(R4Py_Agent* agent) {
@@ -218,7 +208,7 @@ R4Py_DiscretePoint* DistributedGrid<BaseGrid>::move(R4Py_Agent* agent, R4Py_Disc
             out_of_bounds_agents->erase(agent->aid);
         } else {
             // what neighbor now contains the agent
-            for (auto& ngh : nghs) {
+            for (auto& ngh : (*nghs)) {
                 if (ngh.local_bounds.contains(pt)) {
                     PyObject* aid_tuple = agent->aid->as_tuple;
                     Py_INCREF(aid_tuple);
@@ -239,6 +229,11 @@ std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> DistributedGrid<BaseGrid>::g
 }
 
 template<typename BaseGrid>
+std::shared_ptr<std::vector<CTNeighbor>> DistributedGrid<BaseGrid>::getNeighborData() {
+    return nghs;
+}
+
+template<typename BaseGrid>
 void DistributedGrid<BaseGrid>::clearOOBData() {
     out_of_bounds_agents->clear();
 }
@@ -246,6 +241,11 @@ void DistributedGrid<BaseGrid>::clearOOBData() {
 template<typename BaseGrid>
 BoundingBox<R4Py_DiscretePoint> DistributedGrid<BaseGrid>::getLocalBounds() const {
     return local_bounds;
+}
+
+template<typename BaseGrid>
+MPI_Comm DistributedGrid<BaseGrid>::getCartesianCommunicator() {
+    return cart_comm;
 }
 
 class ISharedGrid {
@@ -261,8 +261,11 @@ public:
     virtual R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
     virtual std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData() = 0;
+    virtual std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() = 0;
     virtual void clearOOBData() = 0;
     virtual BoundingBox<R4Py_DiscretePoint> getLocalBounds() const = 0;
+    virtual MPI_Comm getCartesianCommunicator() = 0;
+    
     
 };
 
@@ -286,8 +289,10 @@ public:
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) override;
     R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
     std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData() override;
+    std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() override;
     void clearOOBData() override;
     BoundingBox<R4Py_DiscretePoint> getLocalBounds() const override;
+    MPI_Comm getCartesianCommunicator() override;
 };
 
 template<typename DelegateType>
@@ -336,6 +341,11 @@ std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> SharedGrid<DelegateType>::ge
 }
 
 template<typename DelegateType>
+std::shared_ptr<std::vector<CTNeighbor>> SharedGrid<DelegateType>::getNeighborData() {
+    return delegate->getNeighborData();
+}
+
+template<typename DelegateType>
 void SharedGrid<DelegateType>::clearOOBData() {
     return delegate->clearOOBData();
 }
@@ -345,10 +355,15 @@ BoundingBox<R4Py_DiscretePoint> SharedGrid<DelegateType>::getLocalBounds() const
     return delegate->getLocalBounds();
 }
 
+template<typename DelegateType>
+MPI_Comm SharedGrid<DelegateType>::getCartesianCommunicator() {
+    return delegate->getCartesianCommunicator();
+}
 
 struct R4Py_SharedGrid {
     PyObject_HEAD
     ISharedGrid* grid;
+    PyObject* cart_comm;
 };
 
 }

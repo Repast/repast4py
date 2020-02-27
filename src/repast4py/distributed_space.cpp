@@ -130,21 +130,20 @@ void CartesianTopology::getBounds(BoundingBox<R4Py_DiscretePoint>& local_bounds)
 void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
     int coords[num_dims_];
     MPI_Cart_coords(comm_, getRank(), num_dims_, coords);
-    
+
     if (num_dims_ == 1) {
         std::list<int> offsets{-1, 1};
         if (!periodic_) {
-            if (coords[0] + offsets.front()) offsets.pop_front();
-            else if (coords[0] + offsets.back() >= procs_per_dim[0]) offsets.pop_back();
+            if (coords[0] + offsets.front() < 0) offsets.pop_front();
+            if (coords[0] + offsets.back() >= procs_per_dim[0]) offsets.pop_back();
         }
         for (int xd : offsets) {
             int working[] = {coords[0] + xd};
             int n_rank;
             MPI_Cart_rank(comm_, working, &n_rank);
             MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-            neighbors.push_back({n_rank, working[0], -1, -1, {0, 0, 0, 0},
+            neighbors.push_back({n_rank, working[0], -1, -1, nullptr,
                 {0, 0, 0, 0}});
-    
         }
 
     } else if (num_dims_ == 2) {
@@ -152,22 +151,21 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
         std::list<int> yoffsets{-1, 0, 1};
         if (!periodic_) {
             if (coords[0] + xoffsets.front() < 0) xoffsets.pop_front();
-            else if (coords[0] + xoffsets.back() >= procs_per_dim[0]) xoffsets.pop_back();
+            if (coords[0] + xoffsets.back() >= procs_per_dim[0]) xoffsets.pop_back();
 
             if (coords[1] + yoffsets.front() < 0) yoffsets.pop_front();
-            else if (coords[1] + yoffsets.back() >= procs_per_dim[1]) yoffsets.pop_back();
+            if (coords[1] + yoffsets.back() >= procs_per_dim[1]) yoffsets.pop_back();
         }
-        // for (auto v : xoffsets) {
-        //     printf("%d\n", v);
-        // }
+
         for (int xd : xoffsets) {
             for (int yd : yoffsets) {
                 if (!(xd == 0 && yd == 0)) {
                     int working[] = {coords[0] + xd, coords[1] + yd};
+                    //printf("%d: (%d, %d)\n", getRank(), working[0], working[1]);
                     int n_rank;
                     MPI_Cart_rank(comm_, working, &n_rank);
                     MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-                    neighbors.push_back({n_rank, working[0], working[1], -1, {0, 0, 0, 0},
+                    neighbors.push_back({n_rank, working[0], working[1], -1, nullptr,
                     {0, 0, 0, 0}});
                 }
             }
@@ -179,13 +177,13 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
         std::list<int> zoffsets{-1, 0, 1};
         if (!periodic_) {
             if (coords[0] + xoffsets.front() < 0) xoffsets.pop_front();
-            else if (coords[0] + xoffsets.back() >= procs_per_dim[0]) xoffsets.pop_back();
+            if (coords[0] + xoffsets.back() >= procs_per_dim[0]) xoffsets.pop_back();
 
             if (coords[1] + yoffsets.front() < 0) yoffsets.pop_front();
-            else if (coords[1] + yoffsets.back() >= procs_per_dim[1]) yoffsets.pop_back();
+            if (coords[1] + yoffsets.back() >= procs_per_dim[1]) yoffsets.pop_back();
 
             if (coords[2] + zoffsets.front() < 0) zoffsets.pop_front();
-            else if (coords[2] + zoffsets.back() >= procs_per_dim[2]) zoffsets.pop_back();
+            if (coords[2] + zoffsets.back() >= procs_per_dim[2]) zoffsets.pop_back();
         }
         for (int xd : xoffsets) {
             for (int yd : yoffsets) {
@@ -195,7 +193,7 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
                         int n_rank;
                         MPI_Cart_rank(comm_, working, &n_rank);
                         MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-                        neighbors.push_back({n_rank, working[0], working[1], working[2], {0, 0, 0, 0},
+                        neighbors.push_back({n_rank, working[0], working[1], working[2], nullptr,
                         {0, 0, 0, 0}});
                     }
                 }
