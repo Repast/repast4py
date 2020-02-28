@@ -522,6 +522,27 @@ static PyObject* SharedGrid_move(PyObject* self, PyObject* args) {
     }
 }
 
+static PyObject* SharedGrid_moveBufferAgent(PyObject* self, PyObject* args) {
+    PyObject* agent, *pt;
+    if (!PyArg_ParseTuple(args, "O!O!", &R4Py_AgentType, &agent, &DiscretePointType, &pt)) {
+        return NULL;
+    }
+
+    try {
+        R4Py_DiscretePoint* ret = ((R4Py_SharedGrid*)self)->grid->moveBufferAgent((R4Py_Agent*)agent, (R4Py_DiscretePoint*)pt);
+        if (ret) {
+            Py_INCREF(ret);
+            return (PyObject*)ret;
+        } else {
+            Py_INCREF(Py_None);
+            return Py_None;
+        }
+    } catch (std::invalid_argument& ex) {
+        PyErr_SetString(PyExc_RuntimeError, ex.what());
+        return NULL;
+    }
+}
+
 static PyObject* SharedGrid_synchMove(PyObject* self, PyObject* args) {
     PyArrayObject* obj;
     R4Py_Agent* agent;
@@ -615,7 +636,7 @@ static PyObject* SharedGrid_getLocalBounds(PyObject* self, PyObject* args) {
 }
 
 static PyMemberDef SharedGrid_members[] = {
-    {"_cart_comm", T_OBJECT_EX, offsetof(R4Py_SharedGrid, cart_comm), READONLY, "The cartesian communicator for this shared grid"},
+    {(char* const)"_cart_comm", T_OBJECT_EX, offsetof(R4Py_SharedGrid, cart_comm), READONLY, (char* const)"The cartesian communicator for this shared grid"},
     {NULL}
 };
 
@@ -623,6 +644,7 @@ static PyMethodDef SharedGrid_methods[] = {
     {"add", SharedGrid_add, METH_VARARGS, "Adds the specified agent to this shared grid projection"},
     {"remove", SharedGrid_remove, METH_VARARGS, "Removes the specified agent from this shared grid projection"},
     {"move", SharedGrid_move, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection"},
+    {"_move_buffer_agent", SharedGrid_moveBufferAgent, METH_VARARGS, "Moves the specified agent to the specified buffer location in this shared grid projection"},
     {"get_location", SharedGrid_getLocation, METH_VARARGS, "Gets the location of the specified agent in this shared grid projection"},
     {"get_agent", SharedGrid_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this shared grid projection"},
     {"get_agents", SharedGrid_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this shared grid projection"},

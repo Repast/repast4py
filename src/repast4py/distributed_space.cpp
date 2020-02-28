@@ -5,9 +5,9 @@
 namespace repast4py {
 
 
-CartesianTopology::CartesianTopology(MPI_Comm comm, int num_dims, const BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic) : 
+CartesianTopology::CartesianTopology(MPI_Comm comm, MPI_Comm* cart_comm, int num_dims, const BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic) : 
     num_dims_{num_dims},  procs_per_dim{nullptr}, periodic_{periodic}, bounds_(global_bounds), x_remainder{0},
-    y_remainder{0}, z_remainder{0}
+    y_remainder{0}, z_remainder{0}, comm_{}
 {
     int size;
     MPI_Comm_size(comm, &size);
@@ -19,7 +19,8 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, int num_dims, const Bounding
     int periods[num_dims];
     std::fill_n(periods, num_dims, periodic ? 1 : 0);
 
-    MPI_Cart_create(comm, num_dims, procs_per_dim, periods, 0, &comm_);
+    MPI_Cart_create(comm, num_dims, procs_per_dim, periods, 0, cart_comm);
+    comm_ = *cart_comm;
 
     x_remainder = bounds_.x_extent_ % procs_per_dim[0];
     if (num_dims_ > 1) {
@@ -30,9 +31,11 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, int num_dims, const Bounding
     }
 }
 
-CartesianTopology::CartesianTopology(MPI_Comm comm, const std::vector<int>& procs_per_dimension, 
+CartesianTopology::CartesianTopology(MPI_Comm comm, MPI_Comm* cart_comm, const std::vector<int>& procs_per_dimension, 
     const BoundingBox<R4Py_DiscretePoint>& global_bounds,bool periodic) :
-    num_dims_{procs_per_dimension.size()}, procs_per_dim{nullptr}, periodic_{periodic}, bounds_(global_bounds)
+    num_dims_{(int)procs_per_dimension.size()}, procs_per_dim{nullptr}, 
+    periodic_{periodic}, bounds_(global_bounds), x_remainder{0},
+    y_remainder{0}, z_remainder{0}, comm_{}
 {
     int size;
     MPI_Comm_size(comm, &size);
@@ -53,7 +56,8 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, const std::vector<int>& proc
     int periods[num_dims_];
     std::fill_n(periods, num_dims_, periodic ? 1 : 0);
 
-    MPI_Cart_create(comm, num_dims_, procs_per_dim, periods, 0, &comm_);
+    MPI_Cart_create(comm, num_dims_, procs_per_dim, periods, 0, cart_comm);
+    comm_ = *cart_comm;
     x_remainder = bounds_.x_extent_ % procs_per_dim[0];
     if (num_dims_ > 1) {
         y_remainder = bounds_.y_extent_ % procs_per_dim[1];
@@ -64,7 +68,6 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, const std::vector<int>& proc
 }
 
 CartesianTopology::~CartesianTopology() {
-    MPI_Comm_free(&comm_);
     delete[] procs_per_dim;
 }
 
@@ -73,7 +76,7 @@ void CartesianTopology::getCoords(std::vector<int>& coords) {
     MPI_Cart_coords(comm_, getRank(), num_dims_, &coords[0]);
 }
 
-static void adjust_min_extent(int coord, unsigned int remainder, long* min, long* extent) {
+static void adjust_min_extent(int coord, int remainder, long* min, long* extent) {
     if (remainder > 0) {
         (*extent) += coord < remainder ?  1 : 0;
         if (coord > 0 && coord < remainder) {
@@ -88,10 +91,6 @@ int CartesianTopology::getRank() {
     int rank;
     MPI_Comm_rank(comm_, &rank);
     return rank;
-}
-
-MPI_Comm CartesianTopology::getCartesianComm() {
-    return comm_;
 }
 
 void CartesianTopology::getBounds(int rank, BoundingBox<R4Py_DiscretePoint>& local_bounds) {

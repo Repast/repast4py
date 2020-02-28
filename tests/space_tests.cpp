@@ -28,9 +28,9 @@ TEST(CartesianTopology, testAutoProcsPerDim) {
     create_test_comm(&test_comm);
 
     if (test_comm != MPI_COMM_NULL) {
-
+        MPI_Comm cart_comm;
         BoundingBox<R4Py_DiscretePoint> gb(0, 100, 0, 200);
-        CartesianTopology ct(test_comm, 2, gb, true);
+        CartesianTopology ct(test_comm, &cart_comm, 2, gb, true);
         BoundingBox<R4Py_DiscretePoint> lb(0, 0, 0, 0);
 
         int rank = ct.getRank();
@@ -101,9 +101,9 @@ TEST(CartesianTopology, testRemainders) {
     create_test_comm(&test_comm);
 
     if (test_comm != MPI_COMM_NULL) {
-
+        MPI_Comm cart_comm;
         BoundingBox<R4Py_DiscretePoint> gb(0, 107, 0, 201);
-        CartesianTopology ct(test_comm, 2, gb, true);
+        CartesianTopology ct(test_comm, &cart_comm, 2, gb, true);
         BoundingBox<R4Py_DiscretePoint> lb(0, 0, 0, 0);
 
         int rank = ct.getRank();
@@ -184,7 +184,8 @@ void test_ngh(const CTNeighbor& n, int x, int y, int z) {
 
 TEST(CartesianTopology, testGetNeighbors) {
     BoundingBox<R4Py_DiscretePoint> gb(0, 100, 0, 200);
-    CartesianTopology ct(MPI_COMM_WORLD, 2, gb, false);
+    MPI_Comm cart_comm;
+    CartesianTopology ct(MPI_COMM_WORLD, &cart_comm, 2, gb, false);
 
     std::vector<CTNeighbor> nghs;
     int rank = ct.getRank();
@@ -270,7 +271,8 @@ TEST(CartesianTopology, testGetNeighbors) {
 
 TEST(CartesianTopology, testGetNeighborsPeriodic) {
     BoundingBox<R4Py_DiscretePoint> gb(0, 100, 0, 200);
-    CartesianTopology ct(MPI_COMM_WORLD, 2, gb, true);
+    MPI_Comm cart_comm;
+    CartesianTopology ct(MPI_COMM_WORLD, &cart_comm, 2, gb, true);
 
     std::vector<CTNeighbor> nghs;
     int rank = ct.getRank();
@@ -398,7 +400,8 @@ TEST(CartesianTopology, testSpecifyProcsPerDim) {
     if (test_comm != MPI_COMM_NULL) {
         std::vector<int> dims{2, 4};
         BoundingBox<R4Py_DiscretePoint> gb(0, 100, 0, 200);
-        CartesianTopology ct(MPI_COMM_WORLD, dims, gb, false);
+        MPI_Comm cart_comm;
+        CartesianTopology ct(test_comm, &cart_comm, dims, gb, false);
         BoundingBox<R4Py_DiscretePoint> lb(0, 0, 0, 0);
 
         int rank = ct.getRank();
