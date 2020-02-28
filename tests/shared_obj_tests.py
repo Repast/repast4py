@@ -26,9 +26,9 @@ class SharedGridTests(unittest.TestCase):
     def test_ops(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
-        rank = comm.Get_rank()
-
+    
         if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
 
             a1 = core.Agent(1, 0, rank)
             a2 = core.Agent(2, 0, rank)
@@ -79,9 +79,10 @@ class SharedGridTests(unittest.TestCase):
     def test_move(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
-        rank = comm.Get_rank()
+        
 
         if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
 
             a1 = core.Agent(1, 0, rank)
             a2 = core.Agent(2, 0, rank)
@@ -127,12 +128,62 @@ class SharedGridTests(unittest.TestCase):
                     self.assertTrue(np.array_equal(exp[1], ob[2]))
                 self.assertEqual(0, len(expected))
 
+    # def test_move_3x3(self):
+    #     comm = MPI.COMM_WORLD
+    #     rank = comm.Get_rank()
+
+    #     a1 = core.Agent(1, 0, rank)
+    #     a2 = core.Agent(2, 0, rank)
+
+    #     box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+    #     grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
+    #         occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+
+    #     print('{}: bounds: {}'.format(rank, grid.get_local_bounds())
+
+    #     grid.add(a1)
+    #     grid.add(a2)
+
+    #     if (rank == 0):
+    #         pt = space.DiscretePoint(5, 20)
+    #         grid.move(a1, pt)
+    #         # move out of bounds
+    #         pt = space.DiscretePoint(12, 22)
+    #         grid.move(a1, pt)
+
+    #         expected = {(1, 0, 0) : (1, np.array([12, 22, 0]))}
+    #         for ob in grid._get_oob():
+    #             exp = expected.pop(ob[0])
+    #             self.assertEqual(exp[0], ob[1])
+    #             self.assertTrue(np.array_equal(exp[1], ob[2]))
+    #         self.assertEqual(0, len(expected))
+
+
+    #     if (rank == 1):
+    #         a3 = core.Agent(1, 0, rank)
+    #         grid.add(a3)
+
+    #         pt = space.DiscretePoint(12, 39)
+    #         grid.move(a2, pt)
+    #         grid.move(a3, pt)
+
+    #         grid.move(a2, space.DiscretePoint(0, 1))
+    #         grid.move(a3, space.DiscretePoint(8, 200))
+            
+    #         expected = {(2, 0, 1) : (0, np.array([0, 1, 0])),
+    #             (1, 0, 1) : (0, np.array([8, 39, 0]))}
+    #         for ob in grid._get_oob():
+    #             exp = expected.pop(ob[0])
+    #             self.assertEqual(exp[0], ob[1])
+    #             self.assertTrue(np.array_equal(exp[1], ob[2]))
+    #         self.assertEqual(0, len(expected))
+
     def test_buffer_data(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
-        rank = comm.Get_rank()
 
         if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
 
             box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
@@ -211,9 +262,10 @@ class SharedContextTests(unittest.TestCase):
     def test_add_remove(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
-        rank = comm.Get_rank()
+        
 
         if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
 
             box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
@@ -252,9 +304,10 @@ class SharedContextTests(unittest.TestCase):
     def test_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
-        rank = comm.Get_rank()
+        
 
         if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
 
             box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
@@ -353,9 +406,9 @@ class SharedContextTests(unittest.TestCase):
     def test_buffer(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
-        rank = comm.Get_rank()
-
+        
         if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
 
             box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
