@@ -24,6 +24,8 @@ class SharedContext:
     def add_projection(self, projection):
         self.projections[self.projection_id] = projection
         self.projection_id += 1
+        for a in self._local_agents.values():
+            projection.add(a)
 
     def remove(self, agent):
         del self._local_agents[agent.uid]
