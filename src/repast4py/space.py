@@ -81,9 +81,7 @@ class SharedGrid(_SharedGrid):
             for y in range(ranges[2], ranges[3]):
                 pt._reset2D(x, y)
                 agents = self.get_agents(pt)
-                # print('{}: {}, {}'.format(self._cart_comm.Get_rank(), pt, agents))
                 for a in agents:
-                    # print(a)
                     data_list.append((a.save(), (pt.x, pt.y, pt.z)))
     
     def _gather_3d(self, data_list, ranges):
