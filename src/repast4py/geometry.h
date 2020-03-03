@@ -18,6 +18,13 @@ namespace repast4py {
 
 struct R4Py_DiscretePoint {
     PyObject_HEAD
+    // array of longs
+    PyArrayObject* coords;
+};
+
+struct R4Py_ContinuousPoint {
+    PyObject_HEAD
+    // array of doubles
     PyArrayObject* coords;
 };
 
@@ -32,6 +39,11 @@ struct TypeSelector<R4Py_DiscretePoint> {
     using type = long;
 };
 
+template<>
+struct TypeSelector<R4Py_ContinuousPoint> {
+    using type = double;
+};
+
 template<typename PointType>
 struct Point {
     using coord_type  = typename TypeSelector<PointType>::type;
@@ -44,6 +56,13 @@ bool point_equals(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coord
 void extract_coords(R4Py_DiscretePoint* pt, Point<R4Py_DiscretePoint>& coords);
 // sets pt.xyz from coords.xyz
 void update_point(R4Py_DiscretePoint* pt, const Point<R4Py_DiscretePoint>& coords);
+
+R4Py_ContinuousPoint* create_point(PyTypeObject* pt_type, const Point<R4Py_ContinuousPoint>& wpt);
+bool point_equals(R4Py_ContinuousPoint* pt, const Point<R4Py_ContinuousPoint>& coords);
+// sets coords.xyz from pt.xyz
+void extract_coords(R4Py_ContinuousPoint* pt, Point<R4Py_ContinuousPoint>& coords);
+// sets pt.xyz from coords.xyz
+void update_point(R4Py_ContinuousPoint* pt, const Point<R4Py_ContinuousPoint>& coords);
 
 
 template<typename PointType>
@@ -183,19 +202,30 @@ StickyBorders<PointType>::StickyBorders(const BoundingBox<R4Py_DiscretePoint>& b
 template<typename PointType>
 void StickyBorders<PointType>::transform(const PointType* pt, Point<PointType>& transformed_pt) {
     coord_type* data = (coord_type*) PyArray_DATA(pt->coords);
-    transformed_pt.x = std::max(bounds_.xmin_, std::min(bounds_.xmax_ - 1, data[0]));
-    transformed_pt.y = std::max(bounds_.ymin_, std::min(bounds_.ymax_ - 1, data[1]));
-    transformed_pt.z = std::max(bounds_.zmin_, std::min(bounds_.zmax_ - 1, data[2]));
+
+    // coord_type v = (bounds_.xmax_ - 1) < data[0] ? (bounds_.xmax_ - 1) : data[0];
+    // transformed_pt.x = bounds_.xmin_ > v ? bounds_.xmin_ : v;
+
+    // v = (bounds_.ymax_ - 1) < data[1] ? (bounds_.ymax_ - 1) : data[1];
+    // transformed_pt.y = bounds_.ymin_ > v ? bounds_.ymin_ : v;
+
+    // v = (bounds_.zmax_ - 1) < data[2] ? (bounds_.zmax_ - 1) : data[2];
+    // transformed_pt.z = bounds_.zmin_ > v ? bounds_.zmin_ : v;
+
+    transformed_pt.x = std::max((coord_type)bounds_.xmin_, std::min((coord_type)bounds_.xmax_ - 1, data[0]));
+    transformed_pt.y = std::max((coord_type)bounds_.ymin_, std::min((coord_type)bounds_.ymax_ - 1, data[1]));
+    transformed_pt.z = std::max((coord_type)bounds_.zmin_, std::min((coord_type)bounds_.zmax_ - 1, data[2]));
 }
 
 using GridStickyBorders = StickyBorders<R4Py_DiscretePoint>;
+using CSStickyBorders = StickyBorders<R4Py_ContinuousPoint>;
 
 template <typename PointType>
 void transformX(const PointType* pt, Point<PointType>& transformed_pt, const BoundingBox<R4Py_DiscretePoint>& bounds) {
     using coord_type  = typename TypeSelector<PointType>::type;
     coord_type* data = (coord_type*) PyArray_DATA(pt->coords);
 
-    coord_type nc = (data[0] - bounds.xmin_) % bounds.x_extent_;
+    coord_type nc = fmod((data[0] - bounds.xmin_), bounds.x_extent_);
     transformed_pt.x = nc < 0 ? bounds.xmax_ + nc : bounds.xmin_ + nc;
 }
 
@@ -204,10 +234,10 @@ void transformXY(const PointType* pt, Point<PointType>& transformed_pt, const Bo
     using coord_type  = typename TypeSelector<PointType>::type;
     coord_type* data = (coord_type*) PyArray_DATA(pt->coords);
 
-    coord_type nc = (data[0] - bounds.xmin_) % bounds.x_extent_;
+    coord_type nc = fmod(data[0] - bounds.xmin_, bounds.x_extent_);
     transformed_pt.x = nc < 0 ? bounds.xmax_ + nc : bounds.xmin_ + nc;
 
-    nc = (data[1] - bounds.ymin_) % bounds.y_extent_;
+    nc = fmod(data[1] - bounds.ymin_, bounds.y_extent_);
     transformed_pt.y = nc < 0 ? bounds.ymax_ + nc : bounds.ymin_ + nc; 
 }
 
@@ -216,13 +246,13 @@ void transformXYZ(const PointType* pt, Point<PointType>& transformed_pt, const B
     using coord_type  = typename TypeSelector<PointType>::type;
     coord_type* data = (coord_type*) PyArray_DATA(pt->coords);
 
-    coord_type nc = (data[0] - bounds.xmin_) % bounds.x_extent_;
+    coord_type nc = fmod((data[0] - bounds.xmin_), bounds.x_extent_);
     transformed_pt.x = nc < 0 ? bounds.xmax_ + nc : bounds.xmin_ + nc;
 
-    nc = (data[1] - bounds.ymin_) % bounds.y_extent_;
+    nc = fmod(data[1] - bounds.ymin_, bounds.y_extent_);
     transformed_pt.y = nc < 0 ? bounds.ymax_ + nc : bounds.ymin_ + nc; 
 
-    nc = (data[2] - bounds.zmin_) % bounds.z_extent_;
+    nc = fmod(data[2] - bounds.zmin_, bounds.z_extent_);
     transformed_pt.z = nc < 0 ? bounds.zmax_ + nc : bounds.zmin_ + nc;
 }
 
@@ -263,6 +293,7 @@ void PeriodicBorders<PointType>::transform(const PointType* pt, Point<PointType>
 }
 
 using GridPeriodicBorders = PeriodicBorders<R4Py_DiscretePoint>;
+using CSPeriodicBorders = PeriodicBorders<R4Py_ContinuousPoint>;
 
 }
 

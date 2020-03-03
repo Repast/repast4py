@@ -14,6 +14,7 @@
 
 #include "space.h"
 #include "grid.h"
+#include "cspace.h"
 #include "coremodule.h"
 #include "distributed_space.h"
 
@@ -192,6 +193,180 @@ static PyTypeObject DiscretePointType = {
 
 
 /////////////////// Discrete Point End ///////
+
+//////////////////// Continuous Point ///////////////////////
+
+static void ContinuousPoint_dealloc(R4Py_ContinuousPoint* self) {
+    Py_DECREF(self->coords);
+    Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static PyObject* ContinuousPoint_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
+    
+    R4Py_ContinuousPoint* self;
+    self = (R4Py_ContinuousPoint*) type->tp_alloc(type, 0);
+    if (self != NULL) {
+        npy_intp shape[] = {3};
+        self->coords = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type, PyArray_DescrFromType(NPY_DOUBLE), 
+            1, shape, NULL, NULL, NPY_ARRAY_C_CONTIGUOUS, NULL);
+        if (self->coords == NULL) {
+            Py_DECREF(self);
+            return NULL;
+        }
+    }
+
+    return (PyObject*) self;
+}
+
+
+static int ContinuousPoint_init(R4Py_ContinuousPoint* self, PyObject* args, PyObject* kwds) {
+    static char* kwlist[] = {(char*)"x", (char*)"y", (char*)"z", NULL};
+    
+    double* d = (double*)PyArray_DATA(self->coords);
+    d[2] = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "dd|d", kwlist, &d[0], &d[1], &d[2])) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static PyObject* ContinuousPoint_reset1D(PyObject* self, PyObject* args) {
+    double* d = (double*)PyArray_DATA(((R4Py_ContinuousPoint*)self)->coords);
+    if (!PyArg_ParseTuple(args, "d", &d[0])) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* ContinuousPoint_reset2D(PyObject* self, PyObject* args) {
+    double* d = (double*)PyArray_DATA(((R4Py_ContinuousPoint*)self)->coords);
+    if (!PyArg_ParseTuple(args, "dd", &d[0], &d[1])) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* ContinuousPoint_reset3D(PyObject* self, PyObject* args) {
+    double* d = (double*)PyArray_DATA(((R4Py_ContinuousPoint*)self)->coords);
+    if (!PyArg_ParseTuple(args, "ddd", &d[0], &d[1], &d[2])) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* ContinuousPoint_reset(PyObject* self, PyObject* args) {
+    double* d = (double*)PyArray_DATA(((R4Py_ContinuousPoint*)self)->coords);
+    PyTupleObject* pt;
+    if (!PyArg_ParseTuple(args, "O", &pt)) {
+        return NULL;
+    }
+
+    d[0] = PyFloat_AsDouble(PyTuple_GET_ITEM(pt, 0));
+    d[1] = PyFloat_AsDouble(PyTuple_GET_ITEM(pt, 1));
+    d[2] = PyFloat_AsDouble(PyTuple_GET_ITEM(pt, 2));
+
+    Py_RETURN_NONE;
+}
+
+static PyObject* ContinuousPoint_get_coords(R4Py_ContinuousPoint* self, void* closure) {
+    Py_INCREF(self->coords);
+    return (PyObject*)self->coords;
+}
+
+static PyObject* ContinuousPoint_get_x(R4Py_ContinuousPoint* self, void* closure) {
+    return PyFloat_FromDouble(((double*)PyArray_DATA(self->coords))[0]);
+}
+
+static PyObject* ContinuousPoint_get_y(R4Py_ContinuousPoint* self, void* closure) {
+    return PyFloat_FromDouble(((double*)PyArray_DATA(self->coords))[1]);
+}
+
+static PyObject* ContinuousPoint_get_z(R4Py_ContinuousPoint* self, void* closure) {
+    return PyFloat_FromDouble(((double*)PyArray_DATA(self->coords))[2]);
+}
+
+
+static PyGetSetDef ContinuousPoint_get_setters[] = {
+    {(char*)"x", (getter)ContinuousPoint_get_x, NULL, (char*)"continuous point x", NULL},
+    {(char*)"y", (getter)ContinuousPoint_get_y, NULL, (char*)"continuous point y", NULL},
+    {(char*)"z", (getter)ContinuousPoint_get_z, NULL, (char*)"continuous point z", NULL},
+    {(char*)"coordinates", (getter)ContinuousPoint_get_coords, NULL, (char*)"continuous point coordinates", NULL},
+    {NULL}
+};
+
+static PyMethodDef ContinuousPoint_methods[] = {
+    {"_reset1D", ContinuousPoint_reset1D, METH_VARARGS, ""},
+    {"_reset2D", ContinuousPoint_reset2D, METH_VARARGS, ""},
+    {"_reset3D", ContinuousPoint_reset3D, METH_VARARGS, ""},
+    {"_reset", ContinuousPoint_reset, METH_VARARGS, ""},
+    {NULL, NULL, 0, NULL}
+};
+
+
+static PyObject* ContinuousPoint_repr(R4Py_ContinuousPoint* self) {
+    double* data = (double*)PyArray_DATA(self->coords);
+    return PyUnicode_FromFormat("ContinuousPoint(%s, %s, %s)", 
+        PyOS_double_to_string(data[0], 'f', Py_DTSF_ADD_DOT_0, 12, NULL),
+        PyOS_double_to_string(data[1], 'f', Py_DTSF_ADD_DOT_0, 12, NULL),
+        PyOS_double_to_string(data[2], 'f', Py_DTSF_ADD_DOT_0, 12, NULL));
+}
+
+static PyObject* ContinuousPoint_richcmp(PyObject* self, PyObject* other, int op) {
+    if (op == Py_EQ && Py_TYPE(self) == Py_TYPE(other)) {
+        double* p1 = (double*)PyArray_DATA(((R4Py_ContinuousPoint*)self)->coords);
+        double* p2 = (double*)PyArray_DATA(((R4Py_ContinuousPoint*)other)->coords);
+        if (p1[0] == p2[0] && p1[1] == p2[1] && p1[2] == p2[2]) 
+            Py_RETURN_TRUE;
+        else
+            Py_RETURN_FALSE;
+
+    }
+    Py_RETURN_NOTIMPLEMENTED;
+}
+
+
+static PyTypeObject ContinuousPointType = {
+    PyVarObject_HEAD_INIT(NULL, 0) 
+    "_space.ContinuousPoint",                          /* tp_name */
+    sizeof(R4Py_ContinuousPoint),                      /* tp_basicsize */
+    0,                                        /* tp_itemsize */
+    (destructor)ContinuousPoint_dealloc,                                         /* tp_dealloc */
+    0,                                        /* tp_print */
+    0,                                        /* tp_getattr */
+    0,                                        /* tp_setattr */
+    0,                                        /* tp_reserved */
+    (reprfunc)ContinuousPoint_repr,                                        /* tp_repr */
+    0,                                        /* tp_as_number */
+    0,                                        /* tp_as_sequence */
+    0,                                        /* tp_as_mapping */
+    0,                                        /* tp_hash  */
+    0,                                        /* tp_call */
+    0,                                        /* tp_str */
+    0,                                        /* tp_getattro */
+    0,                                        /* tp_setattro */
+    0,                                        /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
+    "ContinuousPoint Object",                         /* tp_doc */
+    0,                                        /* tp_traverse */
+    0,                                        /* tp_clear */
+    ContinuousPoint_richcmp,                    /* tp_richcompare */
+    0,                                        /* tp_weaklistoffset */
+    0,                                        /* tp_iter */
+    0,                                        /* tp_iternext */
+    ContinuousPoint_methods,                                      /* tp_methods */
+    0,                                      /* tp_members */
+    ContinuousPoint_get_setters,                                        /* tp_getset */
+    0,                                        /* tp_base */
+    0,                                        /* tp_dict */
+    0,                                        /* tp_descr_get */
+    0,                                        /* tp_descr_set */
+    0,                                        /* tp_dictoffset */
+    (initproc)ContinuousPoint_init,                                         /* tp_init */
+    0,                                        /* tp_alloc */
+    ContinuousPoint_new                             /* tp_new */
+};
+/////////////////// Continuous Point End ///////
 
 
 /////////////////// GRID ///////////////////////
@@ -719,6 +894,213 @@ static PyTypeObject R4Py_ShareGridType = {
 
 ////////////////////////////// shared grid end /////////////////////////
 
+///////////////////////// ContinousSpace ///////////////////////////////
+static void CSpace_dealloc(R4Py_CSpace* self) {
+    delete self->space;
+    Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static PyObject* CSpace_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
+    R4Py_CSpace* self = (R4Py_CSpace*)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        // maybe I should create it here, rather than in init??
+        self->space = nullptr;
+    }
+    return (PyObject*)self;
+}
+
+static int CSpace_init(R4Py_CSpace* self, PyObject* args, PyObject* kwds) {
+    // bounds=box, border=BorderType.Sticky, occupancy=OccupancyType.Multiple
+    static char* kwlist[] = {(char*)"name",(char*)"bounds", (char*)"borders",
+        (char*)"occupancy", NULL};
+
+    const char* name;
+    PyObject* bounds;
+    int border_type, occ_type;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO!ii", kwlist, &name, &PyTuple_Type, &bounds,
+        &border_type, &occ_type)) 
+    {
+        return -1;
+    }
+
+    long xmin, width;
+    long ymin, height;
+    long zmin, depth;
+
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) {
+        return -1;
+    }
+
+    BoundingBox<R4Py_DiscretePoint> box(xmin, width, ymin, height, zmin, depth);
+    if (border_type == 0) {
+        if (occ_type == 0) {
+            self->space = new CSpace<MOSCSpace>(name, box);
+
+        } else {
+            PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
+            return -1;
+        }
+    } else if (border_type == 1) {
+        if (occ_type == 0) {
+            self->space = new CSpace<MOPCSpace>(name, box);
+        } else {
+            PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
+            return -1;
+        }
+
+    } else {
+        PyErr_SetString(PyExc_RuntimeError, "Invalid border type");
+        return -1;
+    }
+
+    if (!self->space) {
+        PyErr_SetString(PyExc_RuntimeError, "Error creating native code space");
+        return -1;
+    }
+    return 0;
+}
+
+static PyObject* CSpace_add(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+    bool ret_val = ((R4Py_CSpace*)self)->space->add((R4Py_Agent*)agent);
+    return PyBool_FromLong(static_cast<long>(ret_val));
+}
+
+static PyObject* CSpace_remove(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+    bool ret_val = ((R4Py_CSpace*)self)->space->remove((R4Py_Agent*)agent);
+    return PyBool_FromLong(static_cast<long>(ret_val));
+}
+
+static PyObject* CSpace_getLocation(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+
+    R4Py_ContinuousPoint* pt = ((R4Py_CSpace*)self)->space->getLocation((R4Py_Agent*)agent);
+    if (pt) {
+        Py_INCREF(pt);
+        return (PyObject*)pt;
+    } else {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+}
+
+static PyObject* CSpace_move(PyObject* self, PyObject* args) {
+    PyObject* agent, *pt;
+    if (!PyArg_ParseTuple(args, "O!O!", &R4Py_AgentType, &agent, &ContinuousPointType, &pt)) {
+        return NULL;
+    }
+
+    try {
+        R4Py_ContinuousPoint* ret = ((R4Py_CSpace*)self)->space->move((R4Py_Agent*)agent, (R4Py_ContinuousPoint*)pt);
+        if (ret) {
+            Py_INCREF(ret);
+            return (PyObject*)ret;
+        } else {
+            Py_INCREF(Py_None);
+            return Py_None;
+        }
+    } catch (std::invalid_argument& ex) {
+        PyErr_SetString(PyExc_RuntimeError, ex.what());
+        return NULL;
+    }
+}
+
+static PyObject* CSpace_getAgent(PyObject* self, PyObject* args) {
+    PyObject* pt;
+    if (!PyArg_ParseTuple(args, "O!", &ContinuousPointType, &pt)) {
+        return NULL;
+    }
+
+    R4Py_Agent* ret =  ((R4Py_CSpace*)self)->space->getAgentAt((R4Py_ContinuousPoint*)pt);
+    if (ret) {
+        // Is this necessary??
+        Py_INCREF(ret);
+        return (PyObject*)ret;
+    } else {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+}
+
+static PyObject* CSpace_getAgents(PyObject* self, PyObject* args) {
+    PyObject* pt;
+    if (!PyArg_ParseTuple(args, "O!", &ContinuousPointType, &pt)) {
+        return NULL;
+    }
+
+    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_CSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
+    R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
+    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    // not completely sure why this is necessary but without it
+    // the iterator is decrefed out of existence after first call to __iter__
+    Py_INCREF(agent_iter);
+    return (PyObject*)agent_iter;
+}
+
+static PyMethodDef CSpace_methods[] = {
+    {"add", CSpace_add, METH_VARARGS, "Adds the specified agent to this grid projection"},
+    {"remove", CSpace_remove, METH_VARARGS, "Removes the specified agent from this grid projection"},
+    {"move", CSpace_move, METH_VARARGS, "Moves the specified agent to the specified location in this grid projection"},
+    {"get_location", CSpace_getLocation, METH_VARARGS, "Gets the location of the specified agent in this grid projection"},
+    {"get_agent", CSpace_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this grid projection"},
+    {"get_agents", CSpace_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this grid projection"},
+    {NULL, NULL, 0, NULL}
+};
+
+static PyTypeObject R4Py_CSpaceType = {
+    PyVarObject_HEAD_INIT(NULL, 0) 
+    "_space.ContinuousSpace",                          /* tp_name */
+    sizeof(R4Py_CSpace),                      /* tp_basicsize */
+    0,                                        /* tp_itemsize */
+    (destructor)CSpace_dealloc,                                         /* tp_dealloc */
+    0,                                        /* tp_print */
+    0,                                        /* tp_getattr */
+    0,                                        /* tp_setattr */
+    0,                                        /* tp_reserved */
+    0,                                        /* tp_repr */
+    0,                                        /* tp_as_number */
+    0,                                        /* tp_as_sequence */
+    0,                                        /* tp_as_mapping */
+    0,                                        /* tp_hash  */
+    0,                                        /* tp_call */
+    0,                                        /* tp_str */
+    0,                                        /* tp_getattro */
+    0,                                        /* tp_setattro */
+    0,                                        /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
+    "CSpace Object",                         /* tp_doc */
+    0,                                        /* tp_traverse */
+    0,                                        /* tp_clear */
+    0,                                        /* tp_richcompare */
+    0,                                        /* tp_weaklistoffset */
+    0,                                        /* tp_iter */
+    0,                                        /* tp_iternext */
+    CSpace_methods,                                      /* tp_methods */
+    0,                                      /* tp_members */
+    0,                                        /* tp_getset */
+    0,                                        /* tp_base */
+    0,                                        /* tp_dict */
+    0,                                        /* tp_descr_get */
+    0,                                        /* tp_descr_set */
+    0,                                        /* tp_dictoffset */
+    (initproc)CSpace_init,                                         /* tp_init */
+    0,                                        /* tp_alloc */
+    CSpace_new                             /* tp_new */
+};
+
+////////////////////////// ContinousSpace End //////////////////////////////
+
 
 
 static PyModuleDef spacemodule = {
@@ -748,7 +1130,9 @@ PyInit__space(void)
     import_array();
     
     if (PyType_Ready(&DiscretePointType) < 0) return NULL;
+    if (PyType_Ready(&ContinuousPointType) < 0) return NULL;
     if (PyType_Ready(&R4Py_GridType) < 0) return NULL;
+    if (PyType_Ready(&R4Py_CSpaceType) < 0) return NULL;
     if (PyType_Ready(&R4Py_ShareGridType) < 0) return NULL;
 
 
@@ -760,10 +1144,31 @@ PyInit__space(void)
         return NULL;
     }
 
+    Py_INCREF(&ContinuousPointType);
+    if (PyModule_AddObject(m, "ContinuousPoint", (PyObject *) &ContinuousPointType) < 0) {
+        Py_DECREF(&DiscretePointType);
+        Py_DECREF(&ContinuousPointType);
+        Py_DECREF(m);
+        
+        return NULL;
+    }
+
     Py_INCREF(&R4Py_GridType);
     if (PyModule_AddObject(m, "Grid", (PyObject *) &R4Py_GridType) < 0) {
         Py_DECREF(&DiscretePointType);
+        Py_DECREF(&ContinuousPointType);
         Py_DECREF(&R4Py_GridType);
+        Py_DECREF(m);
+        
+        return NULL;
+    }
+
+    Py_INCREF(&R4Py_CSpaceType);
+    if (PyModule_AddObject(m, "ContinuousSpace", (PyObject *) &R4Py_CSpaceType) < 0) {
+        Py_DECREF(&DiscretePointType);
+        Py_DECREF(&ContinuousPointType);
+        Py_DECREF(&R4Py_GridType);
+        Py_DECREF(&R4Py_CSpaceType);
         Py_DECREF(m);
         
         return NULL;
@@ -772,8 +1177,10 @@ PyInit__space(void)
     Py_INCREF(&R4Py_ShareGridType);
     if (PyModule_AddObject(m, "SharedGrid", (PyObject*) &R4Py_ShareGridType) < 0) {
         Py_DECREF(&DiscretePointType);
+        Py_DECREF(&ContinuousPointType);
         Py_DECREF(&R4Py_GridType);
         Py_DECREF(&R4Py_ShareGridType);
+        Py_DECREF(&R4Py_CSpaceType);
         Py_DECREF(m);
     }
 
