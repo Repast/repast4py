@@ -130,6 +130,11 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
     int coords[num_dims_];
     MPI_Cart_coords(comm_, getRank(), num_dims_, coords);
 
+    // we can get duplicate neighbors when we have periodic space 
+    // with only two procs in that dimension -- i.e. 1 and -1 offset 
+    // point to the same neighbor rank
+    std::map<int, CTNeighbor> ngh_map;
+
     if (num_dims_ == 1) {
         std::list<int> offsets{-1, 1};
         if (!periodic_) {
@@ -141,7 +146,7 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
             int n_rank;
             MPI_Cart_rank(comm_, working, &n_rank);
             MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-            neighbors.push_back({n_rank, working[0], -1, -1, nullptr,
+            ngh_map.emplace(n_rank, CTNeighbor{n_rank, working[0], -1, -1, nullptr,
                 {0, 0, 0, 0}});
         }
 
@@ -164,7 +169,7 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
                     int n_rank;
                     MPI_Cart_rank(comm_, working, &n_rank);
                     MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-                    neighbors.push_back({n_rank, working[0], working[1], -1, nullptr,
+                    ngh_map.emplace(n_rank, CTNeighbor{n_rank, working[0], working[1], -1, nullptr,
                     {0, 0, 0, 0}});
                 }
             }
@@ -192,7 +197,11 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
                         int n_rank;
                         MPI_Cart_rank(comm_, working, &n_rank);
                         MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-                        neighbors.push_back({n_rank, working[0], working[1], working[2], nullptr,
+                        // if (getRank() == 0) {
+                        //     printf("rank: %d, nds: %d, %d, %d, coords: %d, %d, %d, offsets: %d, %d, %d\n", n_rank, xd, yd, zd,
+                        //     coords[0], coords[1], coords[2], working[0], working[1], working[2]);
+                        // }
+                        ngh_map.emplace(n_rank, CTNeighbor{n_rank, working[0], working[1], working[2], nullptr,
                         {0, 0, 0, 0}});
                     }
                 }
@@ -200,6 +209,10 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
         }
     }
 
+    for (auto& kv : ngh_map) {
+        neighbors.push_back(kv.second);
+    }
+ 
     for (auto& ngh : neighbors) {
         getBounds(ngh.rank, ngh.local_bounds);
     }

@@ -126,6 +126,9 @@ DistributedGrid<BaseGrid>::DistributedGrid(const std::string& name, const Boundi
             offsets[0] = ngh.cart_coord_x - coords[0];
             offsets[1] = ngh.cart_coord_y - coords[1];
             offsets[2] = ngh.cart_coord_z - coords[2];
+            // if (rank == 0) {
+            //     printf("Offsets: %d - %d, %d, %d\n", ngh.rank, offsets[0], offsets[1], offsets[2]);
+            // }
             calcBufferBounds(ngh, offsets, dims);
         }
     }
@@ -147,30 +150,33 @@ void DistributedGrid<BaseGrid>::calcBufferBounds(CTNeighbor& ngh, int offsets[],
     }
     long zmin = 0, zmax = 0;
     if (num_dims == 3) {
+        ymin = local_bounds.ymin_; 
+        ymax = local_bounds.ymax_;
+
         zmin = local_bounds.zmin_;
         zmax = local_bounds.zmax_;
     }
 
-    if (offsets[0] == -1) {
+    if (offsets[0] == -1 || offsets[0] == 2) {
         xmin = local_bounds.xmin_;
         xmax = xmin + buffer_size_;
-    } else if (offsets[0] == 1) {
+    } else if (offsets[0] == 1 || offsets[0] == -2) {
         xmin = local_bounds.xmax_ - buffer_size_;
         xmax = xmin + buffer_size_;
     }
 
-    if (offsets[1] == -1) {
+    if (offsets[1] == -1 || offsets[1] == 2) {
         ymin = local_bounds.ymin_;
         ymax = ymin + buffer_size_;
-    } else if (offsets[1] == 1) {
+    } else if (offsets[1] == 1 || offsets[1] == -2) {
         ymin = local_bounds.ymax_ - buffer_size_;
         ymax = ymin + buffer_size_;
     }
 
-    if (offsets[2] == -1) {
+    if (offsets[2] == -1 || offsets[2] == 2) {
         zmin = local_bounds.zmin_;
         zmax = zmin + buffer_size_;
-    } else if (offsets[2] == 1) {
+    } else if (offsets[2] == 1 || offsets[2] == -2) {
         zmin = local_bounds.zmax_ - buffer_size_;
         zmax = zmin + buffer_size_;
     }

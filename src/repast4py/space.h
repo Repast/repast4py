@@ -248,8 +248,8 @@ R4Py_DiscretePoint* Grid<DelegateType>::move(R4Py_Agent* agent, R4Py_DiscretePoi
 
 // typedefs for Discrete Grid with multi occupancy and sticky borders
 using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint>, R4Py_DiscretePoint>;
-using DiscreteSBType = StickyBorders<R4Py_DiscretePoint>;
-using MOSGrid = BaseSpace<R4Py_DiscretePoint, DiscreteMOType, DiscreteSBType>;
+using MOSGrid = BaseSpace<R4Py_DiscretePoint, DiscreteMOType, GridStickyBorders>;
+using MOPGrid = BaseSpace<R4Py_DiscretePoint, DiscreteMOType, GridPeriodicBorders>;
 
 
 template<typename BorderType>
@@ -260,6 +260,11 @@ struct is_periodic {
 template<>
 struct is_periodic<MOSGrid> {
     static constexpr bool value {false};
+};
+
+template<>
+struct is_periodic<MOPGrid> {
+    static constexpr bool value {true};
 };
 
 struct R4Py_Grid {

@@ -278,16 +278,6 @@ TEST(CartesianTopology, testGetNeighborsPeriodic) {
     int rank = ct.getRank();
     ct.getNeighbors(nghs);
 
-    // test_ngh(find_neighbor(0, nghs), 0, 0, -1);
-    // test_ngh(find_neighbor(1, nghs), 0, 1, -1);
-    // test_ngh(find_neighbor(2, nghs), 0, 2, -1);
-    // test_ngh(find_neighbor(3, nghs), 1, 0, -1);
-    // test_ngh(find_neighbor(4, nghs), 1, 1, -1);
-    // test_ngh(find_neighbor(5, nghs), 1, 2, -1);
-    // test_ngh(find_neighbor(6, nghs), 2, 0, -1);
-    // test_ngh(find_neighbor(7, nghs), 2, 1, -1);
-    // test_ngh(find_neighbor(8, nghs), 2, 2, -1);
-
     if (rank == 0) {
         SCOPED_TRACE("0");
         ASSERT_EQ(8, nghs.size());

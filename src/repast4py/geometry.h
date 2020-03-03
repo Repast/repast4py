@@ -164,11 +164,11 @@ template<typename PointType>
 class StickyBorders {
 
 private:
-    BoundingBox<PointType> bounds_;
+    BoundingBox<R4Py_DiscretePoint> bounds_;
 
 public:
     using coord_type  = typename TypeSelector<PointType>::type;
-    StickyBorders(const BoundingBox<PointType>& bounds);
+    StickyBorders(const BoundingBox<R4Py_DiscretePoint>& bounds);
 
     ~StickyBorders() {}
 
@@ -176,7 +176,7 @@ public:
 };
 
 template<typename PointType>
-StickyBorders<PointType>::StickyBorders(const BoundingBox<PointType>& bounds) : 
+StickyBorders<PointType>::StickyBorders(const BoundingBox<R4Py_DiscretePoint>& bounds) : 
     bounds_{bounds}
 {}
 
@@ -189,6 +189,80 @@ void StickyBorders<PointType>::transform(const PointType* pt, Point<PointType>& 
 }
 
 using GridStickyBorders = StickyBorders<R4Py_DiscretePoint>;
+
+template <typename PointType>
+void transformX(const PointType* pt, Point<PointType>& transformed_pt, const BoundingBox<R4Py_DiscretePoint>& bounds) {
+    using coord_type  = typename TypeSelector<PointType>::type;
+    coord_type* data = (coord_type*) PyArray_DATA(pt->coords);
+
+    coord_type nc = (data[0] - bounds.xmin_) % bounds.x_extent_;
+    transformed_pt.x = nc < 0 ? bounds.xmax_ + nc : bounds.xmin_ + nc;
+}
+
+template <typename PointType>
+void transformXY(const PointType* pt, Point<PointType>& transformed_pt, const BoundingBox<R4Py_DiscretePoint>& bounds) {
+    using coord_type  = typename TypeSelector<PointType>::type;
+    coord_type* data = (coord_type*) PyArray_DATA(pt->coords);
+
+    coord_type nc = (data[0] - bounds.xmin_) % bounds.x_extent_;
+    transformed_pt.x = nc < 0 ? bounds.xmax_ + nc : bounds.xmin_ + nc;
+
+    nc = (data[1] - bounds.ymin_) % bounds.y_extent_;
+    transformed_pt.y = nc < 0 ? bounds.ymax_ + nc : bounds.ymin_ + nc; 
+}
+
+template <typename PointType>
+void transformXYZ(const PointType* pt, Point<PointType>& transformed_pt, const BoundingBox<R4Py_DiscretePoint>& bounds) {
+    using coord_type  = typename TypeSelector<PointType>::type;
+    coord_type* data = (coord_type*) PyArray_DATA(pt->coords);
+
+    coord_type nc = (data[0] - bounds.xmin_) % bounds.x_extent_;
+    transformed_pt.x = nc < 0 ? bounds.xmax_ + nc : bounds.xmin_ + nc;
+
+    nc = (data[1] - bounds.ymin_) % bounds.y_extent_;
+    transformed_pt.y = nc < 0 ? bounds.ymax_ + nc : bounds.ymin_ + nc; 
+
+    nc = (data[2] - bounds.zmin_) % bounds.z_extent_;
+    transformed_pt.z = nc < 0 ? bounds.zmax_ + nc : bounds.zmin_ + nc;
+}
+
+template<typename PointType>
+class PeriodicBorders {
+
+private:
+    using trans_func = void(*)(const PointType*, Point<PointType>&, const BoundingBox<R4Py_DiscretePoint>&);
+
+    BoundingBox<R4Py_DiscretePoint> bounds_;
+    trans_func transform_;
+
+public:
+    using coord_type  = typename TypeSelector<PointType>::type;
+    PeriodicBorders(const BoundingBox<R4Py_DiscretePoint>& bounds);
+
+    ~PeriodicBorders() {}
+
+    void transform(const PointType* pt, Point<PointType>& transformed_pt);
+};
+
+template<typename PointType>
+PeriodicBorders<PointType>::PeriodicBorders(const BoundingBox<R4Py_DiscretePoint>& bounds) : 
+    bounds_{bounds}
+{
+    if (bounds_.x_extent_ > 0 && bounds_.y_extent_ > 0 && bounds_.z_extent_ > 0) {
+        transform_ = &transformXYZ<PointType>;
+    } else if (bounds_.x_extent_ > 0 && bounds_.y_extent_ > 0) {
+        transform_ = &transformXY<PointType>;
+    } else {
+        transform_ = &transformX<PointType>;
+    }
+}
+
+template<typename PointType>
+void PeriodicBorders<PointType>::transform(const PointType* pt, Point<PointType>& transformed_pt) {
+    transform_(pt, transformed_pt, bounds_);
+}
+
+using GridPeriodicBorders = PeriodicBorders<R4Py_DiscretePoint>;
 
 }
 

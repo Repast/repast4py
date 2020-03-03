@@ -137,6 +137,57 @@ class SharedGridTests(unittest.TestCase):
                     self.assertTrue(np.array_equal(exp[1], ob[2]))
                 self.assertEqual(0, len(expected))
 
+    def test_oob_periodic(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            a1 = core.Agent(1, 0, rank)
+            a2 = core.Agent(2, 0, rank)
+
+            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+
+            grid.add(a1)
+            grid.add(a2)
+
+            if (rank == 0):
+                pt = space.DiscretePoint(5, 20)
+                grid.move(a1, pt)
+                # move out of bounds
+                pt = space.DiscretePoint(-3, 22)
+                grid.move(a1, pt)
+
+                expected = {(1, 0, 0) : (1, np.array([17, 22, 0]))}
+                for ob in grid._get_oob():
+                    exp = expected.pop(ob[0])
+                    self.assertEqual(exp[0], ob[1])
+                    self.assertTrue(np.array_equal(exp[1], ob[2]))
+                self.assertEqual(0, len(expected))
+
+
+            if (rank == 1):
+                a3 = core.Agent(1, 0, rank)
+                grid.add(a3)
+
+                pt = space.DiscretePoint(12, 39)
+                grid.move(a2, pt)
+                grid.move(a3, pt)
+
+                grid.move(a2, space.DiscretePoint(25, -3))
+                grid.move(a3, space.DiscretePoint(21, 42))
+                
+                expected = {(2, 0, 1) : (0, np.array([5, 37, 0])),
+                    (1, 0, 1) : (0, np.array([1, 2, 0]))}
+                for ob in grid._get_oob():
+                    exp = expected.pop(ob[0])
+                    self.assertEqual(exp[0], ob[1])
+                    self.assertTrue(np.array_equal(exp[1], ob[2]))
+                self.assertEqual(0, len(expected))
+
     def test_oob_3x3(self):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -233,7 +284,7 @@ class SharedGridTests(unittest.TestCase):
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
-            if (rank == 0):
+            if rank == 0:
                 a01 = core.Agent(1, 0, rank)
                 a02 = core.Agent(2, 0, rank)
                 a03 = core.Agent(3, 0, rank)
@@ -256,7 +307,7 @@ class SharedGridTests(unittest.TestCase):
                 self.assertEqual(1, count)
 
 
-            if (rank == 1):
+            if rank == 1:
                 a11 = core.Agent(1, 0, rank)
                 a12 = core.Agent(2, 0, rank)
                 a13 = core.Agent(3, 0, rank)
@@ -278,6 +329,300 @@ class SharedGridTests(unittest.TestCase):
                     self.assertEqual(expected, bd)
                     count += 1
                 self.assertEqual(1, count)
+
+    def test_buffer_data_periodic(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+        grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic, 
+            occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+
+        if rank == 0:
+            expected = {
+                8 : (0, 2, 0, 2, 0, 0),
+                6 : (0, 2, 0, 40, 0, 0),
+                7 : (0, 2, 38, 40, 0, 0),
+                2 : (0, 30, 0, 2, 0, 0),
+                1 : (0, 30, 38, 40, 0, 0),
+                5 : (28, 30, 0, 2, 0, 0),
+                3 : (28, 30, 0, 40, 0, 0),
+                4 : (28, 30, 38, 40, 0, 0)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+
+        elif rank == 1:
+            expected = {
+                6 : (0, 2, 40, 42, 0, 0),
+                7 : (0, 2, 40, 80, 0, 0),
+                8 : (0, 2, 78, 80, 0, 0),
+                0 : (0, 30, 40, 42, 0, 0),
+                2 : (0, 30, 78, 80, 0, 0),
+                3 : (28, 30, 40, 42, 0, 0),
+                4 : (28, 30, 40, 80, 0, 0),
+                5 : (28, 30, 78, 80, 0, 0)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        
+        elif rank == 2:
+            expected = {
+                7 : (0, 2, 80, 82, 0, 0),
+                8 : (0, 2, 80, 120, 0, 0),
+                6 : (0, 2, 118, 120, 0, 0),
+                1 : (0, 30, 80, 82, 0, 0),
+                0 : (0, 30, 118, 120, 0, 0),
+                4 : (28, 30, 80, 82, 0, 0),
+                5 : (28, 30, 80, 120, 0, 0),
+                3 : (28, 30, 118, 120, 0, 0)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        elif rank == 3:
+            expected = {
+                2 : (30, 32, 0, 2, 0, 0),
+                0 : (30, 32, 0, 40, 0, 0),
+                1 : (30, 32, 38, 40, 0, 0),
+                5 : (30, 60, 0, 2, 0, 0),
+                4 : (30, 60, 38, 40, 0, 0),
+                8 : (58, 60, 0, 2, 0, 0),
+                6 : (58, 60, 0, 40, 0, 0),
+                7 : (58, 60, 38, 40, 0, 0)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        elif rank == 4:
+            expected = {
+                0 : (30, 32, 40, 42, 0, 0),
+                1 : (30, 32, 40, 80, 0, 0),
+                2 : (30, 32, 78, 80, 0, 0),
+                3 : (30, 60, 40, 42, 0, 0),
+                5 : (30, 60, 78, 80, 0, 0),
+                6 : (58, 60, 40, 42, 0, 0),
+                7 : (58, 60, 40, 80, 0, 0),
+                8 : (58, 60, 78, 80, 0, 0)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        elif rank == 5:
+            expected = {
+                1 : (30, 32, 80, 82, 0, 0),
+                2 : (30, 32, 80, 120, 0, 0),
+                0 : (30, 32, 118, 120, 0, 0),
+                4 : (30, 60, 80, 82, 0, 0),
+                3 : (30, 60, 118, 120, 0, 0),
+                7 : (58, 60, 80, 82, 0, 0),
+                8 : (58, 60, 80, 120, 0, 0),
+                6 : (58, 60, 118, 120, 0, 0)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        elif rank == 6:
+            expected = {
+                5 : (60, 62, 0, 2, 0, 0),
+                3 : (60, 62, 0, 40, 0, 0),
+                4 : (60, 62, 38, 40, 0, 0),
+                8 : (60, 90, 0, 2, 0, 0),
+                7 : (60, 90, 38, 40, 0, 0),
+                2 : (88, 90, 0, 2, 0, 0),
+                0 : (88, 90, 0, 40, 0, 0),
+                1 : (88, 90, 38, 40, 0, 0)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        elif rank == 7:
+            expected = {
+                3 : (60, 62, 40, 42, 0, 0),
+                4 : (60, 62, 40, 80, 0, 0),
+                5 : (60, 62, 78, 80, 0, 0),
+                6 : (60, 90, 40, 42, 0, 0),
+                8 : (60, 90, 78, 80, 0, 0),
+                0 : (88, 90, 40, 42, 0, 0),
+                1 : (88, 90, 40, 80, 0, 0),
+                2 : (88, 90, 78, 80, 0, 0)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        elif rank == 8:
+            expected = {
+                4 : (60, 62, 80, 82, 0, 0),
+                5 : (60, 62, 80, 120, 0, 0),
+                3 : (60, 62, 118, 120, 0, 0),
+                7 : (60, 90, 80, 82, 0, 0),
+                6 : (60, 90, 118, 120, 0, 0),
+                1 : (88, 90, 80, 82, 0, 0),
+                2 : (88, 90, 80, 120, 0, 0),
+                0 : (88, 90, 118, 120, 0, 0)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+
+    def test_buffer_data_3d(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        if comm.size != 18:
+            if rank == 0:
+                print("3D buffer tests not run -- run with -n 18")
+            return
+        
+        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=60)
+        grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
+            occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+
+        #print('{}: bounds: {}'.format(rank, grid.get_local_bounds()))
+        if rank == 0:
+            expected = {
+                1 : (0, 30, 0, 40, 28, 30),
+                2 : (0, 30, 38, 40, 0, 30),
+                3 : (0, 30, 38, 40, 28, 30),
+                6 : (28, 30, 0, 40, 0, 30),
+                7 : (28, 30, 0, 40, 28, 30),
+                8 : (28, 30, 38, 40, 0, 30),
+                9 : (28, 30, 38, 40, 28, 30)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        elif rank == 8:
+            expected = {
+                0 : (30, 32, 40, 42, 0, 30),
+                1 : (30, 32, 40, 42, 28, 30),
+                2 : (30, 32, 40, 80, 0, 30),
+                3 : (30, 32, 40, 80, 28, 30),
+                4 : (30, 32, 78, 80, 0, 30),
+                5 : (30, 32, 78, 80, 28, 30),
+                6 : (30, 60, 40, 42, 0, 30),
+                7 : (30, 60, 40, 42, 28, 30),
+                9 : (30, 60, 40, 80, 28, 30),
+                10 : (30, 60, 78, 80, 0, 30),
+                11 : (30, 60, 78, 80, 28, 30),
+                12 : (58, 60, 40, 42, 0, 30),
+                13 : (58, 60, 40, 42, 28, 30),
+                14 : (58, 60, 40, 80, 0, 30),
+                15 : (58, 60, 40, 80, 28, 30),
+                16 : (58, 60, 78, 80, 0, 30),
+                17 : (58, 60, 78, 80, 28, 30) 
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        elif rank == 15:
+            expected = {
+                6 : (60, 62, 40, 42, 30, 32),
+                7 : (60, 62, 40, 42, 30, 60),
+                8 : (60, 62, 40, 80, 30, 32),
+                9 : (60, 62, 40, 80, 30, 60),
+                10 : (60, 62, 78, 80, 30, 32),
+                11 : (60, 62, 78, 80, 30, 60),
+                12 : (60, 90, 40, 42, 30, 32),
+                13 : (60, 90, 40, 42, 30, 60),
+                14 : (60, 90, 40, 80, 30, 32),
+                16 : (60, 90, 78, 80, 30, 32),
+                17 : (60, 90, 78, 80, 30, 60)
+            }
+            for bd in grid._get_buffer_data():
+                # print('{} : {},'.format(bd[0], bd[1]))
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+    def test_buffer_data_3d_periodic(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        if comm.size != 18:
+            if rank == 0:
+                print("3D buffer tests not run -- run with -n 18")
+            return
+
+        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=60)
+        grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic, 
+            occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+
+        if rank == 0:
+            expected = {
+                1 : (0, 30, 0, 40, 28, 30),
+                2 : (0, 30, 38, 40, 0, 30),
+                3 : (0, 30, 38, 40, 28, 30),
+                4 : (0, 30, 0, 2, 0, 30),
+                5 : (0, 30, 0, 2, 28, 30),
+                6 : (28, 30, 0, 40, 0, 30),
+                7 : (28, 30, 0, 40, 28, 30),
+                8 : (28, 30, 38, 40, 0, 30),
+                9 : (28, 30, 38, 40, 28, 30),
+                10 : (28, 30, 0, 2, 0, 30),
+                11 : (28, 30, 0, 2, 28, 30),
+                12 : (0, 2, 0, 40, 0, 30),
+                13 : (0, 2, 0, 40, 28, 30),
+                14 : (0, 2, 38, 40, 0, 30),
+                15 : (0, 2, 38, 40, 28, 30),
+                16 : (0, 2, 0, 2, 0, 30),
+                17 : (0, 2, 0, 2, 28, 30)             
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        elif rank == 15:
+            expected = {
+                0 : (88, 90, 40, 42, 30, 32),
+                1 : (88, 90, 40, 42, 30, 60),
+                2 : (88, 90, 40, 80, 30, 32),
+                3 : (88, 90, 40, 80, 30, 60),
+                4 : (88, 90, 78, 80, 30, 32),
+                5 : (88, 90, 78, 80, 30, 60),
+                6 : (60, 62, 40, 42, 30, 32),
+                7 : (60, 62, 40, 42, 30, 60),
+                8 : (60, 62, 40, 80, 30, 32),
+                9 : (60, 62, 40, 80, 30, 60),
+                10 : (60, 62, 78, 80, 30, 32),
+                11 : (60, 62, 78, 80, 30, 60),
+                12 : (60, 90, 40, 42, 30, 32),
+                13 : (60, 90, 40, 42, 30, 60),
+                14 : (60, 90, 40, 80, 30, 32),
+                16 : (60, 90, 78, 80, 30, 32),
+                17 : (60, 90, 78, 80, 30, 60)
+            }
+            for bd in grid._get_buffer_data():
+                exp = expected.pop(bd[0])
+                self.assertEqual(exp, bd[1])
+            self.assertEqual(0, len(expected))
+
+        
+
                     
 
 class EAgent(core.Agent):

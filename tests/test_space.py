@@ -82,6 +82,80 @@ class GridTests(unittest.TestCase):
         self.assertEqual(10, pt.y)
         self.assertEqual(3, pt.z)
 
+    
+    def test_periodic_move(self):
+        a1 = core.Agent(1, 0)
+
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
+        grid = space.Grid("grid", bounds=box, borders=BorderType.Periodic, occupancy=OccupancyType.Multiple)
+
+        grid.add(a1)
+
+        # move after initial add
+        grid.move(a1, space.DiscretePoint(2, 4))
+        pt = grid.get_location(a1)
+        self.assertEqual(2, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        # move to same location
+        grid.move(a1, space.DiscretePoint(2, 4))
+        pt = grid.get_location(a1)
+        self.assertEqual(2, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        # # move to new position after initial add
+        grid.move(a1, space.DiscretePoint(10, 12))
+        pt = grid.get_location(a1)
+        self.assertEqual(10, pt.x)
+        self.assertEqual(12, pt.y)
+        self.assertEqual(0, pt.z)
+
+        # # move to same location
+        grid.move(a1, space.DiscretePoint(10, 12))
+        pt = grid.get_location(a1)
+        self.assertEqual(10, pt.x)
+        self.assertEqual(12, pt.y)
+        self.assertEqual(0, pt.z)
+        
+        grid.move(a1, space.DiscretePoint(-1, 12))
+        pt = grid.get_location(a1)
+        # wraps around
+        self.assertEqual(19, pt.x)
+        self.assertEqual(12, pt.y)
+        self.assertEqual(0, pt.z)
+
+        grid.move(a1, space.DiscretePoint(21, 12))
+        pt = grid.get_location(a1)
+        self.assertEqual(1, pt.x)
+        self.assertEqual(12, pt.y)
+        self.assertEqual(0, pt.z)
+
+        grid.move(a1, space.DiscretePoint(5, -23))
+        pt = grid.get_location(a1)
+        self.assertEqual(5, pt.x)
+        self.assertEqual(2, pt.y)
+        self.assertEqual(0, pt.z)
+
+        grid.move(a1, space.DiscretePoint(5, 25))
+        pt = grid.get_location(a1)
+        self.assertEqual(5, pt.x)
+        self.assertEqual(0, pt.y)
+        self.assertEqual(0, pt.z)
+
+        grid.move(a1, space.DiscretePoint(5, 10, -2))
+        pt = grid.get_location(a1)
+        self.assertEqual(5, pt.x)
+        self.assertEqual(10, pt.y)
+        self.assertEqual(3, pt.z)
+
+        grid.move(a1, space.DiscretePoint(5, 10, 4))
+        pt = grid.get_location(a1)
+        self.assertEqual(5, pt.x)
+        self.assertEqual(10, pt.y)
+        self.assertEqual(-1, pt.z)
+
 
     def test_remove(self):
         box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=0, zextent=0)

@@ -9,6 +9,7 @@ import sys
 
 class BorderType:
     Sticky = 0
+    Periodic = 1
 
 class OccupancyType:
     Multiple = 0

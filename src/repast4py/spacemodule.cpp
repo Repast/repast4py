@@ -231,15 +231,23 @@ static int Grid_init(R4Py_Grid* self, PyObject* args, PyObject* kwds) {
         return -1;
     }
 
+    BoundingBox<R4Py_DiscretePoint> box(xmin, width, ymin, height, zmin, depth);
     if (border_type == 0) {
         if (occ_type == 0) {
-            BoundingBox<R4Py_DiscretePoint> box(xmin, width, ymin, height, zmin, depth);
             self->grid = new Grid<MOSGrid>(name, box);
 
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
         }
+    } else if (border_type == 1) {
+        if (occ_type == 0) {
+            self->grid = new Grid<MOPGrid>(name, box);
+        } else {
+            PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
+            return -1;
+        }
+
     } else {
         PyErr_SetString(PyExc_RuntimeError, "Invalid border type");
         return -1;
@@ -426,11 +434,11 @@ static int SharedGrid_init(R4Py_SharedGrid* self, PyObject* args, PyObject* kwds
         return -1;
     }
 
-    long xmin, width;
-    long ymin, height;
-    long zmin, depth;
+    long xmin, x_extent;
+    long ymin, y_extent;
+    long zmin, z_extent;
 
-    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) {
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent)) {
         return -1;
     }
 
@@ -439,9 +447,9 @@ static int SharedGrid_init(R4Py_SharedGrid* self, PyObject* args, PyObject* kwds
     Py_INCREF(py_comm);
     MPI_Comm* comm_p = PyMPIComm_Get(py_comm);
 
+     BoundingBox<R4Py_DiscretePoint> box(xmin, x_extent, ymin, y_extent, zmin, z_extent);
     if (border_type == 0) {
         if (occ_type == 0) {
-            BoundingBox<R4Py_DiscretePoint> box(xmin, width, ymin, height, zmin, depth);
             self->grid = new SharedGrid<DistributedGrid<MOSGrid>>(name, box, buffer_size, 
             *comm_p);
 
@@ -449,6 +457,17 @@ static int SharedGrid_init(R4Py_SharedGrid* self, PyObject* args, PyObject* kwds
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
         }
+    } else if (border_type == 1) {
+        if (occ_type == 0) {
+            self->grid = new SharedGrid<DistributedGrid<MOPGrid>>(name, box, buffer_size, 
+            *comm_p);
+
+        } else {
+            PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
+            return -1;
+        }
+
+   
     } else {
         PyErr_SetString(PyExc_RuntimeError, "Invalid border type");
         return -1;
