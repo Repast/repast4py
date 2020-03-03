@@ -13,6 +13,7 @@
 #include "mpi4py/mpi4py.h"
 
 #include "space.h"
+#include "grid.h"
 #include "coremodule.h"
 #include "distributed_space.h"
 

@@ -10,13 +10,26 @@ or for debugging:
 
 ## Tests ##
 
-`python -m unittest discover tests` will run all the unit tests in `tests` that
-begin with 'test'. 
+There are 3 types of python unit tests:
 
-Multiprocess tests can be run with:
+1. Ordinary single process tests. Run with:
 
-`mpirun -n 9 python -m unittest tests.shared_obj_tests.SharedContextTests.test_buffer_3x3`
+`python -m unittest discover tests` 
 
-C++ tests can be compiled with makefile target 'tests' and run with:
+2. Multiprocess (9 procs) mpi tests for 2D spaces. Run with:
+
+`mpirun -n 9 python -m unittest tests.shared_obj_tests`
+
+1. Multiprocess (18 procs) mpi tests for 3D spaces. Run with:
+
+`mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d`
+`mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic`
+
+Or for 3d tests if python >= 3.7:
+
+`mpirun -n 18 python -m unittest -k tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d*`
+
+
+There also some C++ unitest. C++ tests can be compiled with makefile target 'tests' and run with:
 
 `mpirun -n 9 ./unit_tests`
