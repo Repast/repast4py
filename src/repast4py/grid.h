@@ -9,7 +9,7 @@
 
 namespace repast4py {
 
-    class IGrid {
+class IGrid {
 
 public:
     virtual ~IGrid() = 0;

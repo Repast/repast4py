@@ -433,6 +433,12 @@ class CSpaceTests(unittest.TestCase):
         self.assertEqual(10, pt.y)
         self.assertEqual(-1, pt.z)
 
+        cspace.move(a1, space.ContinuousPoint(20.5, -1.5, 6.5))
+        pt = cspace.get_location(a1)
+        self.assertEqual(0.5, pt.x)
+        self.assertEqual(23.5, pt.y)
+        self.assertEqual(1.5, pt.z)
+
 
     def test_remove(self):
         box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=0, zextent=0)

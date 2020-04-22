@@ -240,6 +240,7 @@ R4Py_DiscretePoint* DistributedGrid<BaseGrid>::move(R4Py_Agent* agent, R4Py_Disc
                     Py_INCREF(pt_array);
                     PyObject* obj = Py_BuildValue("(O, I, O)", aid_tuple, ngh.rank, pt_array);
                     (*out_of_bounds_agents)[agent->aid] = obj;
+                    break;
                 }
             }
         }
