@@ -32,7 +32,7 @@ private:
     std::unique_ptr<DelegateType> delegate;
 
 public:
-    Grid(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds);
+    Grid(const std::string& name, const BoundingBox& bounds);
     virtual ~Grid() {}
     bool add(R4Py_Agent* agent) override;
     bool remove(R4Py_Agent* agent) override;
@@ -44,7 +44,7 @@ public:
 };
 
 template<typename DelegateType>
-Grid<DelegateType>::Grid(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds) : 
+Grid<DelegateType>::Grid(const std::string& name, const BoundingBox& bounds) : 
     delegate{std::unique_ptr<DelegateType>(new DelegateType(name, bounds))} {}
 
 template<typename DelegateType>

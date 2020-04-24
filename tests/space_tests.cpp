@@ -29,9 +29,9 @@ TEST(CartesianTopology, testAutoProcsPerDim) {
 
     if (test_comm != MPI_COMM_NULL) {
         MPI_Comm cart_comm;
-        BoundingBox<R4Py_DiscretePoint> gb(0, 100, 0, 200);
+        BoundingBox gb(0, 100, 0, 200);
         CartesianTopology ct(test_comm, &cart_comm, 2, gb, true);
-        BoundingBox<R4Py_DiscretePoint> lb(0, 0, 0, 0);
+        BoundingBox lb(0, 0, 0, 0);
 
         int rank = ct.getRank();
 
@@ -102,9 +102,9 @@ TEST(CartesianTopology, testRemainders) {
 
     if (test_comm != MPI_COMM_NULL) {
         MPI_Comm cart_comm;
-        BoundingBox<R4Py_DiscretePoint> gb(0, 107, 0, 201);
+        BoundingBox gb(0, 107, 0, 201);
         CartesianTopology ct(test_comm, &cart_comm, 2, gb, true);
-        BoundingBox<R4Py_DiscretePoint> lb(0, 0, 0, 0);
+        BoundingBox lb(0, 0, 0, 0);
 
         int rank = ct.getRank();
         ct.getBounds(lb);
@@ -183,7 +183,7 @@ void test_ngh(const CTNeighbor& n, int x, int y, int z) {
 }
 
 TEST(CartesianTopology, testGetNeighbors) {
-    BoundingBox<R4Py_DiscretePoint> gb(0, 100, 0, 200);
+    BoundingBox gb(0, 100, 0, 200);
     MPI_Comm cart_comm;
     CartesianTopology ct(MPI_COMM_WORLD, &cart_comm, 2, gb, false);
 
@@ -270,7 +270,7 @@ TEST(CartesianTopology, testGetNeighbors) {
 }
 
 TEST(CartesianTopology, testGetNeighborsPeriodic) {
-    BoundingBox<R4Py_DiscretePoint> gb(0, 100, 0, 200);
+    BoundingBox gb(0, 100, 0, 200);
     MPI_Comm cart_comm;
     CartesianTopology ct(MPI_COMM_WORLD, &cart_comm, 2, gb, true);
 
@@ -389,10 +389,10 @@ TEST(CartesianTopology, testSpecifyProcsPerDim) {
 
     if (test_comm != MPI_COMM_NULL) {
         std::vector<int> dims{2, 4};
-        BoundingBox<R4Py_DiscretePoint> gb(0, 100, 0, 200);
+        BoundingBox gb(0, 100, 0, 200);
         MPI_Comm cart_comm;
         CartesianTopology ct(test_comm, &cart_comm, dims, gb, false);
-        BoundingBox<R4Py_DiscretePoint> lb(0, 0, 0, 0);
+        BoundingBox lb(0, 0, 0, 0);
 
         int rank = ct.getRank();
         ct.getBounds(gb);

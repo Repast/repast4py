@@ -31,7 +31,7 @@ private:
     std::unique_ptr<DelegateType> delegate;
 
 public:
-    CSpace(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds);
+    CSpace(const std::string& name, const BoundingBox& bounds);
     virtual ~CSpace() {}
     bool add(R4Py_Agent* agent) override;
     bool remove(R4Py_Agent* agent) override;
@@ -43,7 +43,7 @@ public:
 };
 
 template<typename DelegateType>
-CSpace<DelegateType>::CSpace(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds) : 
+CSpace<DelegateType>::CSpace(const std::string& name, const BoundingBox& bounds) : 
     delegate{std::unique_ptr<DelegateType>(new DelegateType(name, bounds))} {}
 
 template<typename DelegateType>

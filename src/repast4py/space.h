@@ -52,7 +52,7 @@ private:
     std::string name_;
 
 public:
-    BaseSpace(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds);
+    BaseSpace(const std::string& name, const BoundingBox& bounds);
     virtual ~BaseSpace();
 
     bool add(R4Py_Agent* agent);
@@ -67,7 +67,7 @@ public:
 };
 
 template<typename PointType, typename AccessorType, typename BorderType>
-BaseSpace<PointType,AccessorType, BorderType>::BaseSpace(const std::string& name, const BoundingBox<R4Py_DiscretePoint>& bounds) : 
+BaseSpace<PointType,AccessorType, BorderType>::BaseSpace(const std::string& name, const BoundingBox& bounds) : 
     agent_map{}, location_map{}, accessor{}, borders{bounds}, wpt{0, 0, 0}, name_{name} {}
 
 template<typename PointType, typename AccessorType, typename BorderType>

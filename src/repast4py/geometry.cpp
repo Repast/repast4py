@@ -67,4 +67,117 @@ void update_point(R4Py_ContinuousPoint* pt, const Point<R4Py_ContinuousPoint>& c
     data[2] = coords.z;
 }
 
+std::ostream& operator<<(std::ostream& os, const BoundingBox& box) {
+    os << "BoundingBox(" << box.xmin_ << ", " << box.x_extent_ << ", "
+        << box.ymin_ << ", " << box.y_extent_ << ", "
+        << box.zmin_ << ", " << box.z_extent_ << ")";
+    return os;
+}
+
+
+BoundingBox::BoundingBox(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
+            coord_type zmin, coord_type z_extent) : xmin_{xmin}, xmax_{xmin + x_extent}, ymin_{ymin},
+            ymax_{ymin + y_extent}, zmin_{zmin}, zmax_{zmin + z_extent}, x_extent_{x_extent}, y_extent_{y_extent},
+            z_extent_{z_extent} {
+}
+
+BoundingBox::BoundingBox(const BoundingBox& other) : xmin_{other.xmin_}, 
+    xmax_{other.xmin_ + other.x_extent_}, ymin_{other.ymin_}, ymax_{other.ymin_ + other.y_extent_}, 
+    zmin_{other.zmin_}, zmax_{other.zmin_ + other.z_extent_}, x_extent_{other.x_extent_}, 
+    y_extent_{other.y_extent_}, z_extent_{other.z_extent_}, num_dims(1)
+{
+    if (y_extent_ > 0) num_dims = 2;
+    if (z_extent_ > 0) num_dims = 3;
+
+}
+
+
+void BoundingBox::reset(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
+            coord_type zmin, coord_type z_extent) 
+{
+    xmin_ = xmin;
+    x_extent_ = x_extent;
+    xmax_ = xmin + x_extent;
+
+    ymin_ = ymin;
+    y_extent_ = y_extent;
+    ymax_ = ymin + y_extent;
+
+    zmin_ = zmin;
+    z_extent_ = z_extent;
+    zmax_ = zmin + z_extent;
+
+    num_dims = 1;
+    if (y_extent_ > 0) num_dims = 2;
+    if (z_extent_ > 0) num_dims = 3;
+}
+
+
+bool BoundingBox::contains(const R4Py_DiscretePoint* pt) const {
+    coord_type* data = (coord_type*)PyArray_DATA(pt->coords);
+
+    bool y_contains = true;
+    bool z_contains = true;
+    bool x_contains = data[0] >= xmin_ && data[0] < xmax_;
+
+    if (num_dims == 2) {
+        y_contains = data[1] >= ymin_ && data[1] < ymax_;
+    } else if (num_dims == 3) {
+        y_contains = data[1] >= ymin_ && data[1] < ymax_;
+        z_contains =  data[2] >= zmin_ && data[2] < zmax_;
+    }
+
+    return x_contains && y_contains && z_contains;
+}
+
+bool BoundingBox::contains(const Point<R4Py_DiscretePoint>& pt) const {
+    bool y_contains = true;
+    bool z_contains = true;
+    bool x_contains = pt.x >= xmin_ && pt.x < xmax_;
+
+    if (num_dims == 2) {
+        y_contains = pt.y >= ymin_ && pt.y < ymax_;
+    } else if (num_dims == 3) {
+        y_contains = pt.y >= ymin_ && pt.y < ymax_;
+        z_contains = pt.z >= zmin_ && pt.z < zmax_;
+    }
+
+    return x_contains && y_contains && z_contains;
+}
+
+ bool BoundingBox::contains(const R4Py_ContinuousPoint* pt) const {
+     using pt_type = typename TypeSelector<R4Py_ContinuousPoint>::type;
+     pt_type* data = (pt_type*)PyArray_DATA(pt->coords);
+
+    bool y_contains = true;
+    bool z_contains = true;
+    bool x_contains = data[0] >= xmin_ && data[0] < xmax_;
+
+    if (num_dims == 2) {
+        y_contains = data[1] >= ymin_ && data[1] < ymax_;
+    } else if (num_dims == 3) {
+        y_contains = data[1] >= ymin_ && data[1] < ymax_;
+        z_contains =  data[2] >= zmin_ && data[2] < zmax_;
+    }
+
+    return x_contains && y_contains && z_contains;
+
+ }
+
+bool BoundingBox::contains(const Point<R4Py_ContinuousPoint>& pt) const {
+    bool y_contains = true;
+    bool z_contains = true;
+    bool x_contains = pt.x >= xmin_ && pt.x < xmax_;
+
+    if (num_dims == 2) {
+        y_contains = pt.y >= ymin_ && pt.y < ymax_;
+    } else if (num_dims == 3) {
+        y_contains = pt.y >= ymin_ && pt.y < ymax_;
+        z_contains = pt.z >= zmin_ && pt.z < zmax_;
+    }
+
+    return x_contains && y_contains && z_contains;
+}
+
+
 }

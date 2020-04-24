@@ -407,7 +407,7 @@ static int Grid_init(R4Py_Grid* self, PyObject* args, PyObject* kwds) {
         return -1;
     }
 
-    BoundingBox<R4Py_DiscretePoint> box(xmin, width, ymin, height, zmin, depth);
+    BoundingBox box(xmin, width, ymin, height, zmin, depth);
     if (border_type == 0) {
         if (occ_type == 0) {
             self->grid = new Grid<MOSGrid>(name, box);
@@ -623,10 +623,10 @@ static int SharedGrid_init(R4Py_SharedGrid* self, PyObject* args, PyObject* kwds
     Py_INCREF(py_comm);
     MPI_Comm* comm_p = PyMPIComm_Get(py_comm);
 
-     BoundingBox<R4Py_DiscretePoint> box(xmin, x_extent, ymin, y_extent, zmin, z_extent);
+    BoundingBox box(xmin, x_extent, ymin, y_extent, zmin, z_extent);
     if (border_type == 0) {
         if (occ_type == 0) {
-            self->grid = new SharedGrid<DistributedGrid<MOSGrid>>(name, box, buffer_size, 
+            self->grid = new SharedGrid<DistributedCartesianSpace<MOSGrid, R4Py_DiscretePoint>>(name, box, buffer_size, 
             *comm_p);
 
         } else {
@@ -635,7 +635,7 @@ static int SharedGrid_init(R4Py_SharedGrid* self, PyObject* args, PyObject* kwds
         }
     } else if (border_type == 1) {
         if (occ_type == 0) {
-            self->grid = new SharedGrid<DistributedGrid<MOPGrid>>(name, box, buffer_size, 
+            self->grid = new SharedGrid<DistributedCartesianSpace<MOPGrid, R4Py_DiscretePoint>>(name, box, buffer_size, 
             *comm_p);
 
         } else {
@@ -816,7 +816,7 @@ static PyObject* SharedGrid_clearOOBData(PyObject* self, PyObject* args) {
 }
 
 static PyObject* SharedGrid_getLocalBounds(PyObject* self, PyObject* args) {
-    BoundingBox<R4Py_DiscretePoint> bounds = ((R4Py_SharedGrid*)self)->grid->getLocalBounds();
+    BoundingBox bounds = ((R4Py_SharedGrid*)self)->grid->getLocalBounds();
     PyObject* box_args = Py_BuildValue("(llllll)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
         bounds.zmin_, bounds.z_extent_);
     PyObject* pmod = PyImport_ImportModule("repast4py.space");
@@ -851,7 +851,7 @@ static PyMethodDef SharedGrid_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-static PyTypeObject R4Py_ShareGridType = {
+static PyTypeObject R4Py_SharedGridType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
     "_space.SharedGrid",                          /* tp_name */
     sizeof(R4Py_SharedGrid),                      /* tp_basicsize */
@@ -932,7 +932,7 @@ static int CSpace_init(R4Py_CSpace* self, PyObject* args, PyObject* kwds) {
         return -1;
     }
 
-    BoundingBox<R4Py_DiscretePoint> box(xmin, width, ymin, height, zmin, depth);
+    BoundingBox box(xmin, width, ymin, height, zmin, depth);
     if (border_type == 0) {
         if (occ_type == 0) {
             self->space = new CSpace<MOSCSpace>(name, box);
@@ -1102,6 +1102,325 @@ static PyTypeObject R4Py_CSpaceType = {
 ////////////////////////// ContinousSpace End //////////////////////////////
 
 
+////////////////// SharedContinuousSpace ////////////////////////////
+
+static void SharedCSpace_dealloc(R4Py_SharedCSpace* self) {
+    delete self->space;
+    Py_XDECREF(self->cart_comm);
+    Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static PyObject* SharedCSpace_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
+    R4Py_SharedCSpace* self = (R4Py_SharedCSpace*)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        // maybe I should create it here, rather than in init??
+        self->space = nullptr;
+        self->cart_comm = nullptr;
+    }
+    return (PyObject*)self;
+}
+
+static int SharedCSpace_init(R4Py_SharedCSpace* self, PyObject* args, PyObject* kwds) {
+    // bounds=box, border=BorderType.Sticky, occupancy=OccupancyType.Multiple
+    static char* kwlist[] = {(char*)"name",(char*)"bounds", (char*)"borders",
+        (char*)"occupancy", (char*)"buffersize", (char*)"comm", NULL};
+
+    const char* name;
+    PyObject* bounds;
+    int border_type, occ_type, buffer_size;
+    PyObject* py_comm;
+
+    //
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO!iiiO!", kwlist, &name, &PyTuple_Type, &bounds,
+        &border_type, &occ_type, &buffer_size, &PyMPIComm_Type, &py_comm)) 
+    {
+        return -1;
+    }
+
+    long xmin, x_extent;
+    long ymin, y_extent;
+    long zmin, z_extent;
+
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent)) {
+        return -1;
+    }
+
+    // Because we are holding a reference to the communicator
+    // I think this is necessary
+    Py_INCREF(py_comm);
+    MPI_Comm* comm_p = PyMPIComm_Get(py_comm);
+
+    BoundingBox box(xmin, x_extent, ymin, y_extent, zmin, z_extent);
+    if (border_type == 0) {
+        if (occ_type == 0) {
+            self->space = new SharedContinuousSpace<DistributedCartesianSpace<MOSCSpace, R4Py_ContinuousPoint>>(name, box, buffer_size, 
+            *comm_p);
+
+        } else {
+            PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
+            return -1;
+        }
+    } else if (border_type == 1) {
+        if (occ_type == 0) {
+            self->space = new SharedContinuousSpace<DistributedCartesianSpace<MOPCSpace, R4Py_ContinuousPoint>>(name, box, buffer_size, 
+            *comm_p);
+
+        } else {
+            PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
+            return -1;
+        }
+
+   
+    } else {
+        PyErr_SetString(PyExc_RuntimeError, "Invalid border type");
+        return -1;
+    }
+
+    if (!self->space) {
+        PyErr_SetString(PyExc_RuntimeError, "Error creating native code shared grid");
+        return -1;
+    }
+
+    self->cart_comm = PyMPIComm_New(self->space->getCartesianCommunicator());
+    if (self->cart_comm == NULL) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static PyObject* SharedCSpace_add(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+    bool ret_val = ((R4Py_SharedCSpace*)self)->space->add((R4Py_Agent*)agent);
+    return PyBool_FromLong(static_cast<long>(ret_val));
+}
+
+static PyObject* SharedCSpace_remove(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+    bool ret_val = ((R4Py_SharedCSpace*)self)->space->remove((R4Py_Agent*)agent);
+    return PyBool_FromLong(static_cast<long>(ret_val));
+}
+
+static PyObject* SharedCSpace_getLocation(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+
+    R4Py_ContinuousPoint* pt = ((R4Py_SharedCSpace*)self)->space->getLocation((R4Py_Agent*)agent);
+    if (pt) {
+        Py_INCREF(pt);
+        return (PyObject*)pt;
+    } else {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+}
+
+static PyObject* SharedCSpace_move(PyObject* self, PyObject* args) {
+    PyObject* agent, *pt;
+    if (!PyArg_ParseTuple(args, "O!O!", &R4Py_AgentType, &agent, &ContinuousPointType, &pt)) {
+        return NULL;
+    }
+
+    try {
+        R4Py_ContinuousPoint* ret = ((R4Py_SharedCSpace*)self)->space->move((R4Py_Agent*)agent, (R4Py_ContinuousPoint*)pt);
+        if (ret) {
+            Py_INCREF(ret);
+            return (PyObject*)ret;
+        } else {
+            Py_INCREF(Py_None);
+            return Py_None;
+        }
+    } catch (std::invalid_argument& ex) {
+        PyErr_SetString(PyExc_RuntimeError, ex.what());
+        return NULL;
+    }
+}
+
+static PyObject* SharedCSpace_moveBufferAgent(PyObject* self, PyObject* args) {
+    PyObject* agent, *pt;
+    if (!PyArg_ParseTuple(args, "O!O!", &R4Py_AgentType, &agent, &ContinuousPointType, &pt)) {
+        return NULL;
+    }
+
+    try {
+        R4Py_ContinuousPoint* ret = ((R4Py_SharedCSpace*)self)->space->moveBufferAgent((R4Py_Agent*)agent, (R4Py_ContinuousPoint*)pt);
+        if (ret) {
+            Py_INCREF(ret);
+            return (PyObject*)ret;
+        } else {
+            Py_INCREF(Py_None);
+            return Py_None;
+        }
+    } catch (std::invalid_argument& ex) {
+        PyErr_SetString(PyExc_RuntimeError, ex.what());
+        return NULL;
+    }
+}
+
+static PyObject* SharedCSpace_synchMove(PyObject* self, PyObject* args) {
+    PyArrayObject* obj;
+    R4Py_Agent* agent;
+    if (!PyArg_ParseTuple(args, "O!O!", &R4Py_AgentType, &agent, &PyArray_Type, &obj)) {
+        return NULL;
+    }
+    R4Py_ContinuousPoint* pt = (R4Py_ContinuousPoint*)(&ContinuousPointType)->tp_new(&ContinuousPointType, 
+        NULL, NULL);
+    if (pt == NULL) {
+        return NULL;
+    }
+    double* obj_data = (double*)PyArray_DATA(obj);
+    double* pt_data = (double*)PyArray_DATA(pt->coords);
+    pt_data[0] = obj_data[0];
+    pt_data[1] = obj_data[1];
+    pt_data[2] = obj_data[2];
+
+    ((R4Py_SharedCSpace*)self)->space->move((R4Py_Agent*)agent, pt);
+
+    Py_RETURN_NONE;
+}
+
+static PyObject* SharedCSpace_getAgent(PyObject* self, PyObject* args) {
+    PyObject* pt;
+    if (!PyArg_ParseTuple(args, "O!", &ContinuousPointType, &pt)) {
+        return NULL;
+    }
+
+    R4Py_Agent* ret =  ((R4Py_SharedCSpace*)self)->space->getAgentAt((R4Py_ContinuousPoint*)pt);
+    if (ret) {
+        // Is this necessary??
+        Py_INCREF(ret);
+        return (PyObject*)ret;
+    } else {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+}
+
+static PyObject* SharedCSpace_getAgents(PyObject* self, PyObject* args) {
+    PyObject* pt;
+    if (!PyArg_ParseTuple(args, "O!", &ContinuousPointType, &pt)) {
+        return NULL;
+    }
+
+    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
+    R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
+    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    // not completely sure why this is necessary but without it
+    // the iterator is decrefed out of existence after first call to __iter__
+    Py_INCREF(agent_iter);
+    return (PyObject*)agent_iter;
+}
+
+static PyObject* SharedCSpace_getOOBData(PyObject* self, PyObject* args) {
+    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> oob = ((R4Py_SharedCSpace*)self)->space->getOOBData();
+    R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
+    obj_iter->iter = new ValueIter<std::map<R4Py_AgentID*, PyObject*>>(oob);
+    // not completely sure why this is necessary but without it
+    // the iterator is decrefed out of existence after first call to __iter__
+    Py_INCREF(obj_iter);
+    return (PyObject*)obj_iter;
+}
+
+static PyObject* SharedCSpace_getBufferData(PyObject* self, PyObject* args) { 
+    std::shared_ptr<std::vector<CTNeighbor>> nghs = ((R4Py_SharedCSpace*)self)->space->getNeighborData();
+    R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
+    obj_iter->iter = new SequenceIter<std::vector<CTNeighbor>, GetBufferInfo>(nghs);
+    Py_INCREF(obj_iter);
+    return (PyObject*)obj_iter; 
+}
+
+static PyObject* SharedCSpace_clearOOBData(PyObject* self, PyObject* args) {
+    ((R4Py_SharedCSpace*)self)->space->clearOOBData();
+    Py_RETURN_NONE;
+}
+
+static PyObject* SharedCSpace_getLocalBounds(PyObject* self, PyObject* args) {
+    BoundingBox bounds = ((R4Py_SharedCSpace*)self)->space->getLocalBounds();
+    PyObject* box_args = Py_BuildValue("(llllll)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
+        bounds.zmin_, bounds.z_extent_);
+    PyObject* pmod = PyImport_ImportModule("repast4py.space");
+    PyObject* bbox_class = PyObject_GetAttrString(pmod, "BoundingBox");
+    PyObject* box = PyObject_CallObject(bbox_class, box_args);
+
+    Py_DECREF(box_args);
+    Py_DECREF(pmod);
+    Py_DECREF(bbox_class);
+
+    return box;
+}
+
+static PyMemberDef SharedCSpace_members[] = {
+    {(char* const)"_cart_comm", T_OBJECT_EX, offsetof(R4Py_SharedCSpace, cart_comm), READONLY, (char* const)"The cartesian communicator for this shared grid"},
+    {NULL}
+};
+
+static PyMethodDef SharedCSpace_methods[] = {
+    {"add", SharedCSpace_add, METH_VARARGS, "Adds the specified agent to this shared grid projection"},
+    {"remove", SharedCSpace_remove, METH_VARARGS, "Removes the specified agent from this shared grid projection"},
+    {"move", SharedCSpace_move, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection"},
+    {"_move_buffer_agent", SharedCSpace_moveBufferAgent, METH_VARARGS, "Moves the specified agent to the specified buffer location in this shared grid projection"},
+    {"get_location", SharedCSpace_getLocation, METH_VARARGS, "Gets the location of the specified agent in this shared grid projection"},
+    {"get_agent", SharedCSpace_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this shared grid projection"},
+    {"get_agents", SharedCSpace_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this shared grid projection"},
+    {"_get_oob", SharedCSpace_getOOBData, METH_VARARGS, "Gets the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
+    {"_clear_oob", SharedCSpace_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
+    {"get_local_bounds", SharedCSpace_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared grid projection"},
+    {"_synch_move", SharedCSpace_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection as part of a movement synchronization"},
+    {"_get_buffer_data", SharedCSpace_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared grid projetion"},
+    {NULL, NULL, 0, NULL}
+};
+
+static PyTypeObject R4Py_SharedCSpaceType = {
+    PyVarObject_HEAD_INIT(NULL, 0) 
+    "_space.SharedContinuousSpace",                          /* tp_name */
+    sizeof(R4Py_SharedCSpace),                      /* tp_basicsize */
+    0,                                        /* tp_itemsize */
+    (destructor)SharedCSpace_dealloc,                                         /* tp_dealloc */
+    0,                                        /* tp_print */
+    0,                                        /* tp_getattr */
+    0,                                        /* tp_setattr */
+    0,                                        /* tp_reserved */
+    0,                                        /* tp_repr */
+    0,                                        /* tp_as_number */
+    0,                                        /* tp_as_sequence */
+    0,                                        /* tp_as_mapping */
+    0,                                        /* tp_hash  */
+    0,                                        /* tp_call */
+    0,                                        /* tp_str */
+    0,                                        /* tp_getattro */
+    0,                                        /* tp_setattro */
+    0,                                        /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
+    "SharedCSpace Object",                         /* tp_doc */
+    0,                                        /* tp_traverse */
+    0,                                        /* tp_clear */
+    0,                                        /* tp_richcompare */
+    0,                                        /* tp_weaklistoffset */
+    0,                                        /* tp_iter */
+    0,                                        /* tp_iternext */
+    SharedCSpace_methods,                                      /* tp_methods */
+    SharedCSpace_members,                                      /* tp_members */
+    0,                                        /* tp_getset */
+    0,                                        /* tp_base */
+    0,                                        /* tp_dict */
+    0,                                        /* tp_descr_get */
+    0,                                        /* tp_descr_set */
+    0,                                        /* tp_dictoffset */
+    (initproc)SharedCSpace_init,                                         /* tp_init */
+    0,                                        /* tp_alloc */
+    SharedCSpace_new                             /* tp_new */
+};
+
+
+///////////////////////// SharedContinuousSpace End /////////////////////////////
 
 static PyModuleDef spacemodule = {
     PyModuleDef_HEAD_INIT,
@@ -1133,7 +1452,8 @@ PyInit__space(void)
     if (PyType_Ready(&ContinuousPointType) < 0) return NULL;
     if (PyType_Ready(&R4Py_GridType) < 0) return NULL;
     if (PyType_Ready(&R4Py_CSpaceType) < 0) return NULL;
-    if (PyType_Ready(&R4Py_ShareGridType) < 0) return NULL;
+    if (PyType_Ready(&R4Py_SharedGridType) < 0) return NULL;
+    if (PyType_Ready(&R4Py_SharedCSpaceType) < 0) return NULL;
 
 
     Py_INCREF(&DiscretePointType);
@@ -1174,13 +1494,24 @@ PyInit__space(void)
         return NULL;
     }
 
-    Py_INCREF(&R4Py_ShareGridType);
-    if (PyModule_AddObject(m, "SharedGrid", (PyObject*) &R4Py_ShareGridType) < 0) {
+    Py_INCREF(&R4Py_SharedGridType);
+    if (PyModule_AddObject(m, "SharedGrid", (PyObject*) &R4Py_SharedGridType) < 0) {
         Py_DECREF(&DiscretePointType);
         Py_DECREF(&ContinuousPointType);
         Py_DECREF(&R4Py_GridType);
-        Py_DECREF(&R4Py_ShareGridType);
+        Py_DECREF(&R4Py_SharedGridType);
         Py_DECREF(&R4Py_CSpaceType);
+        Py_DECREF(m);
+    }
+
+    Py_INCREF(&R4Py_SharedGridType);
+    if (PyModule_AddObject(m, "SharedContinuousSpace", (PyObject*) &R4Py_SharedCSpaceType) < 0) {
+        Py_DECREF(&DiscretePointType);
+        Py_DECREF(&ContinuousPointType);
+        Py_DECREF(&R4Py_GridType);
+        Py_DECREF(&R4Py_SharedGridType);
+        Py_DECREF(&R4Py_CSpaceType);
+        Py_DECREF(&R4Py_SharedCSpaceType);
         Py_DECREF(m);
     }
 

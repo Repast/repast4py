@@ -2,6 +2,7 @@ from mpi4py import MPI
 
 from ._space import Grid, DiscretePoint, ContinuousPoint, ContinuousSpace
 from ._space import SharedGrid as _SharedGrid
+from ._space import SharedContinuousSpace as _SharedContinuousSpace
 
 from enum import Enum
 from collections import namedtuple
@@ -94,10 +95,14 @@ class SharedGrid(_SharedGrid):
                     agents = self.get_agents(pt)
                     for a in agents:
                         data_list.append((o.save(), (pt.x, pt.y, pt.z)))
-                    
 
 
+class SharedCSpace(_SharedContinuousSpace):
 
-
-
+    def __init__(self, name, bounds, borders, occupancy, buffersize, comm):
+        super().__init__(name, bounds, borders, occupancy, buffersize, comm)
     
+    def synchronize_buffer(self, create_agent):
+        pass
+
+

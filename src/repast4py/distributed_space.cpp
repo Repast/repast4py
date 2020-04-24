@@ -5,7 +5,7 @@
 namespace repast4py {
 
 
-CartesianTopology::CartesianTopology(MPI_Comm comm, MPI_Comm* cart_comm, int num_dims, const BoundingBox<R4Py_DiscretePoint>& global_bounds, bool periodic) : 
+CartesianTopology::CartesianTopology(MPI_Comm comm, MPI_Comm* cart_comm, int num_dims, const BoundingBox& global_bounds, bool periodic) : 
     num_dims_{num_dims},  procs_per_dim{nullptr}, periodic_{periodic}, bounds_(global_bounds), x_remainder{0},
     y_remainder{0}, z_remainder{0}, comm_{}
 {
@@ -32,7 +32,7 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, MPI_Comm* cart_comm, int num
 }
 
 CartesianTopology::CartesianTopology(MPI_Comm comm, MPI_Comm* cart_comm, const std::vector<int>& procs_per_dimension, 
-    const BoundingBox<R4Py_DiscretePoint>& global_bounds,bool periodic) :
+    const BoundingBox& global_bounds,bool periodic) :
     num_dims_{(int)procs_per_dimension.size()}, procs_per_dim{nullptr}, 
     periodic_{periodic}, bounds_(global_bounds), x_remainder{0},
     y_remainder{0}, z_remainder{0}, comm_{}
@@ -93,7 +93,7 @@ int CartesianTopology::getRank() {
     return rank;
 }
 
-void CartesianTopology::getBounds(int rank, BoundingBox<R4Py_DiscretePoint>& local_bounds) {
+void CartesianTopology::getBounds(int rank, BoundingBox& local_bounds) {
     int coords[num_dims_];
     MPI_Cart_coords(comm_, rank, num_dims_, coords);
     long x_extent = floor(bounds_.x_extent_ / procs_per_dim[0]);
@@ -121,7 +121,7 @@ void CartesianTopology::getBounds(int rank, BoundingBox<R4Py_DiscretePoint>& loc
 
 }
 
-void CartesianTopology::getBounds(BoundingBox<R4Py_DiscretePoint>& local_bounds) {
+void CartesianTopology::getBounds(BoundingBox& local_bounds) {
     int rank = getRank();
     getBounds(rank, local_bounds);
 }

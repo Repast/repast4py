@@ -27,6 +27,168 @@ def mp(x, y):
 def make_move(grid, agent, x, y, target, expected):
     grid.move(agent, space.DiscretePoint(x, y))
     expected[agent.uid] = (target, np.array([x, y, 0]))
+
+
+class SharedCSTests(unittest.TestCase):
+
+    long_message = True
+
+    def test_ops(self):
+        # make 2 rank comm
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+    
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            a1 = core.Agent(1, 0, rank)
+            a2 = core.Agent(2, 0, rank)
+
+            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+
+            cspace.add(a1)
+            cspace.add(a2)
+
+            if (rank == 0):
+                pt = space.ContinuousPoint(5.5, 15.7)
+                cspace.move(a1, pt)
+                self.assertEqual(a1, cspace.get_agent(pt))
+                self.assertEqual(pt, cspace.get_location(a1))
+
+                agents = cspace.get_agents(pt)
+                expected = [a1]
+                count  = 0
+                for i, agent in enumerate(agents):
+                    self.assertEqual(expected[i], agent)
+                    count += 1
+                self.assertEqual(1, count)
+
+                cspace.remove(a1)
+                self.assertIsNone(cspace.get_agent(pt))
+
+
+            if (rank == 1):
+                pt = space.ContinuousPoint(12, 38.2)
+                cspace.move(a2, pt)
+                self.assertEqual(a2, cspace.get_agent(pt))
+                self.assertEqual(pt, cspace.get_location(a2))
+
+                a3 = core.Agent(3, 0, rank)
+                cspace.add(a3)
+                cspace.move(a3, pt)
+
+                agents = cspace.get_agents(pt)
+                expected = [a2, a3]
+                count  = 0
+                for i, agent in enumerate(agents):
+                    self.assertEqual(expected[i], agent)
+                    count += 1
+                self.assertEqual(2, count)
+
+    def test_oob(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            a1 = core.Agent(1, 0, rank)
+            a2 = core.Agent(2, 0, rank)
+
+            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+
+            cspace.add(a1)
+            cspace.add(a2)
+
+            if (rank == 0):
+                pt = space.ContinuousPoint(5.5, 20)
+                cspace.move(a1, pt)
+                # move out of bounds
+                pt = space.ContinuousPoint(12.3, 22.75)
+                cspace.move(a1, pt)
+
+                expected = {(1, 0, 0) : (1, np.array([12.3, 22.75, 0]))}
+                for ob in cspace._get_oob():
+                    exp = expected.pop(ob[0])
+                    self.assertEqual(exp[0], ob[1])
+                    self.assertTrue(np.array_equal(exp[1], ob[2]))
+                self.assertEqual(0, len(expected))
+
+
+            if (rank == 1):
+                a3 = core.Agent(1, 0, rank)
+                cspace.add(a3)
+
+                pt = space.ContinuousPoint(12, 39)
+                cspace.move(a2, pt)
+                cspace.move(a3, pt)
+
+                cspace.move(a2, space.ContinuousPoint(0, 1))
+                cspace.move(a3, space.ContinuousPoint(8, 200))
+                
+                expected = {(2, 0, 1) : (0, np.array([0.0, 1.0, 0.0])),
+                    (1, 0, 1) : (0, np.array([8.0, 39.0, 0.0]))}
+                for ob in cspace._get_oob():
+                    exp = expected.pop(ob[0])
+                    self.assertEqual(exp[0], ob[1])
+                    self.assertTrue(np.array_equal(exp[1], ob[2]))
+                self.assertEqual(0, len(expected))
+
+    def test_oob_periodic(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            a1 = core.Agent(1, 0, rank)
+            a2 = core.Agent(2, 0, rank)
+
+            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Periodic, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+
+            cspace.add(a1)
+            cspace.add(a2)
+
+            if (rank == 0):
+                pt = space.ContinuousPoint(5, 20)
+                cspace.move(a1, pt)
+                # move out of bounds
+                pt = space.ContinuousPoint(-3.5, 22.2)
+                cspace.move(a1, pt)
+
+                expected = {(1, 0, 0) : (1, np.array([16.5, 22.2, 0]))}
+                for ob in cspace._get_oob():
+                    exp = expected.pop(ob[0])
+                    self.assertEqual(exp[0], ob[1])
+                    self.assertTrue(np.array_equal(exp[1], ob[2]))
+                self.assertEqual(0, len(expected))
+
+
+            if (rank == 1):
+                a3 = core.Agent(1, 0, rank)
+                cspace.add(a3)
+
+                pt = space.ContinuousPoint(12, 39)
+                cspace.move(a2, pt)
+                cspace.move(a3, pt)
+
+                cspace.move(a2, space.ContinuousPoint(25, -3.1))
+                cspace.move(a3, space.ContinuousPoint(21, 42))
+                
+                expected = {(2, 0, 1) : (0, np.array([5, 36.9, 0])),
+                    (1, 0, 1) : (0, np.array([1, 2, 0]))}
+                for ob in cspace._get_oob():
+                    exp = expected.pop(ob[0])
+                    self.assertEqual(exp[0], ob[1])
+                    self.assertTrue(np.array_equal(exp[1], ob[2]))
+                self.assertEqual(0, len(expected))
+
     
 class SharedGridTests(unittest.TestCase):
 
