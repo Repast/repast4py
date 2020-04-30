@@ -5,10 +5,91 @@
 #include <Python.h>
 
 #include "space.h"
+#include "SpatialTree.h"
 
 namespace repast4py {
 
-    class ICSpace {
+template<typename AccessorType, typename BorderType>
+class BaseCSpace : public BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType> {
+
+using BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::agent_map;
+using BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::location_map;
+using BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::borders;
+using BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::accessor;
+using BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::wpt;
+using BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::name_;
+
+private:
+    std::unique_ptr<CPSpatialTree> spatial_tree;
+
+
+public:
+    BaseCSpace(const std::string& name, const BoundingBox& bounds, int tree_threshold);
+    ~BaseCSpace();
+
+    void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
+    R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
+};
+
+template<typename AccessorType, typename BorderType>
+BaseCSpace<AccessorType, BorderType>::BaseCSpace(const std::string& name, const BoundingBox& bounds, int tree_threshold) : 
+    BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>(name, bounds), spatial_tree{} {
+
+    if (bounds.num_dims == 1) {
+        // TODO 
+    } else if (bounds.num_dims == 2) {
+        spatial_tree = std::unique_ptr<CPSpatialTree>(new CPSpatialTreeImpl<SpatialTree<Box2D, R4Py_ContinuousPoint>>(tree_threshold, bounds));
+    } else if (bounds.num_dims == 3) {
+        spatial_tree = std::unique_ptr<CPSpatialTree>(new CPSpatialTreeImpl<SpatialTree<Box3D, R4Py_ContinuousPoint>>(tree_threshold, bounds));
+    }
+}
+
+template<typename AccessorType, typename BorderType>
+BaseCSpace<AccessorType, BorderType>::~BaseCSpace() {}
+
+template<typename AccessorType, typename BorderType>
+void BaseCSpace<AccessorType, BorderType>::getAgentsWithin(const BoundingBox& bounds, 
+    std::shared_ptr<std::vector<R4Py_Agent*>>& agents) 
+{
+    spatial_tree->getObjectsWithin(bounds, agents);
+}
+
+template<typename AccessorType, typename BorderType>
+R4Py_ContinuousPoint* BaseCSpace<AccessorType, BorderType>::move(R4Py_Agent* agent, R4Py_ContinuousPoint* pt) {
+    // If this gets changed such that the argument pt is not a temp input arg then 
+    // we need to make sure that any move calls reflect that. 
+    auto iter = agent_map.find(agent->aid);
+    if (iter != agent_map.end()) {
+        borders.transform(pt, wpt);
+        if (!point_equals(iter->second->pt, wpt)) {
+            if (accessor.put(agent, location_map, wpt)) {
+                if (iter->second->pt) {
+                    spatial_tree->removeItem(iter->second);
+                    // if successful put, and agent is already located 
+                    // so need to remove
+                    Point<R4Py_ContinuousPoint> ppt;
+                    extract_coords(iter->second->pt, ppt);
+                    accessor.remove(agent, location_map, ppt);
+                    update_point(iter->second->pt, wpt);
+                    spatial_tree->addItem(iter->second);
+                }  else {
+                    iter->second->pt = create_point(Py_TYPE(pt), wpt);
+                    spatial_tree->addItem(iter->second);
+                }
+            } else {
+                return nullptr;
+            }
+        }
+        return iter->second->pt;
+
+    } else {
+        R4Py_AgentID* id = agent->aid;
+        throw std::invalid_argument("Error moving agent (" + std::to_string(id->id) + "," + 
+            std::to_string(id->type) + "): agent is not in " + name_);
+    }
+}
+
+class ICSpace {
 
 public:
     virtual ~ICSpace() = 0;
@@ -20,6 +101,7 @@ public:
     virtual AgentList getAgentsAt(R4Py_ContinuousPoint* pt) = 0;
     virtual R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
+    virtual void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
 };
 
 inline ICSpace::~ICSpace() {}
@@ -31,7 +113,7 @@ private:
     std::unique_ptr<DelegateType> delegate;
 
 public:
-    CSpace(const std::string& name, const BoundingBox& bounds);
+    CSpace(const std::string& name, const BoundingBox& bounds, int tree_threshold);
     virtual ~CSpace() {}
     bool add(R4Py_Agent* agent) override;
     bool remove(R4Py_Agent* agent) override;
@@ -40,11 +122,12 @@ public:
     AgentList getAgentsAt(R4Py_ContinuousPoint* pt) override;
     R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) override;
     R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
+    void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
 };
 
 template<typename DelegateType>
-CSpace<DelegateType>::CSpace(const std::string& name, const BoundingBox& bounds) : 
-    delegate{std::unique_ptr<DelegateType>(new DelegateType(name, bounds))} {}
+CSpace<DelegateType>::CSpace(const std::string& name, const BoundingBox& bounds, int tree_threshold) : 
+    delegate{std::unique_ptr<DelegateType>(new DelegateType(name, bounds, tree_threshold))} {}
 
 template<typename DelegateType>
 bool CSpace<DelegateType>::add(R4Py_Agent* agent) {
@@ -81,10 +164,15 @@ R4Py_ContinuousPoint* CSpace<DelegateType>::move(R4Py_Agent* agent, R4Py_Continu
     return delegate->move(agent, to);
 }
 
+template<typename DelegateType>
+void CSpace<DelegateType>::getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) {
+    delegate->getAgentsWithin(box, agents);
+}
+
 // aliases for  CSpace with multi occupancy and sticky borders
 using ContinuousMOType = MultiOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint>, R4Py_ContinuousPoint>;
-using MOSCSpace = BaseSpace<R4Py_ContinuousPoint, ContinuousMOType, CSStickyBorders>;
-using MOPCSpace = BaseSpace<R4Py_ContinuousPoint, ContinuousMOType, CSPeriodicBorders>;
+using MOSCSpace = BaseCSpace<ContinuousMOType, CSStickyBorders>;
+using MOPCSpace = BaseCSpace<ContinuousMOType, CSPeriodicBorders>;
 
 template<>
 struct is_periodic<MOSCSpace> {

@@ -1,10 +1,3 @@
-/*
- * NetworkTests.cpp
- *
- *  Created on: Nov 2, 2015
- *      Author: nick
- */
-
 #include "gtest/gtest.h"
 #include "mpi.h"
 

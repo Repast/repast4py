@@ -7,10 +7,12 @@
 #include <list>
 #include <memory>
 #include <algorithm>
+#include <vector>
 
 #include "geometry.h"
 #include "occupancy.h"
 #include "core.h"
+#include "space_types.h"
 
 namespace repast4py {
 
@@ -28,13 +30,6 @@ namespace repast4py {
 
 
 template<typename PointType>
-struct SpaceItem {
-    PointType* pt;
-    R4Py_Agent* agent;
-};
-
-
-template<typename PointType>
 using AgentMapType = std::map<R4Py_AgentID*, std::shared_ptr<SpaceItem<PointType>>, agent_id_comp>;
 
 template<typename PointType>
@@ -43,7 +38,7 @@ using LocationMapType = std::map<Point<PointType>, AgentList, PointComp<PointTyp
 template<typename PointType, typename AccessorType, typename BorderType>
 class BaseSpace {
 
-private:
+protected:
     AgentMapType<PointType> agent_map;
     LocationMapType<PointType> location_map;
     AccessorType accessor;
@@ -61,9 +56,8 @@ public:
     R4Py_Agent* getAgentAt(PointType* pt);
     AgentList getAgentsAt(PointType* pt);
     PointType* getLocation(R4Py_Agent* agent);
-    PointType* move(R4Py_Agent* agent, PointType* to);
-
-
+    virtual void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
+    virtual PointType* move(R4Py_Agent* agent, PointType* to) = 0;
 };
 
 template<typename PointType, typename AccessorType, typename BorderType>
@@ -71,7 +65,7 @@ BaseSpace<PointType,AccessorType, BorderType>::BaseSpace(const std::string& name
     agent_map{}, location_map{}, accessor{}, borders{bounds}, wpt{0, 0, 0}, name_{name} {}
 
 template<typename PointType, typename AccessorType, typename BorderType>
-BaseSpace<PointType, AccessorType,  BorderType>::~BaseSpace() {
+BaseSpace<PointType, AccessorType, BorderType>::~BaseSpace() {
     for (auto kv : agent_map) {
         // pt may be null if agent added but never
         // moved
@@ -89,7 +83,7 @@ BaseSpace<PointType, AccessorType,  BorderType>::~BaseSpace() {
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
-bool BaseSpace<PointType, AccessorType,  BorderType>::add(R4Py_Agent* agent) {
+bool BaseSpace<PointType, AccessorType, BorderType>::add(R4Py_Agent* agent) {
     auto item = std::make_shared<SpaceItem<PointType>>();
     item->agent = agent;
     Py_INCREF(agent);
@@ -100,7 +94,7 @@ bool BaseSpace<PointType, AccessorType,  BorderType>::add(R4Py_Agent* agent) {
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
-bool BaseSpace<PointType, AccessorType,  BorderType>::remove(R4Py_AgentID* aid) {
+bool BaseSpace<PointType, AccessorType, BorderType>::remove(R4Py_AgentID* aid) {
     auto iter = agent_map.find(aid);
     bool ret_val = false;
     if (iter != agent_map.end()) {
@@ -116,61 +110,29 @@ bool BaseSpace<PointType, AccessorType,  BorderType>::remove(R4Py_AgentID* aid) 
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
-bool BaseSpace<PointType, AccessorType,  BorderType>::remove(R4Py_Agent* agent) {
+bool BaseSpace<PointType, AccessorType, BorderType>::remove(R4Py_Agent* agent) {
     return remove(agent->aid);
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
-R4Py_Agent* BaseSpace<PointType, AccessorType,  BorderType>::getAgentAt(PointType* pt) {
+R4Py_Agent* BaseSpace<PointType, AccessorType, BorderType>::getAgentAt(PointType* pt) {
     extract_coords(pt, wpt);
     return accessor.get(location_map, wpt);
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
-AgentList BaseSpace<PointType, AccessorType,  BorderType>::getAgentsAt(PointType* pt) {
+AgentList BaseSpace<PointType, AccessorType, BorderType>::getAgentsAt(PointType* pt) {
     extract_coords(pt, wpt);
     return accessor.getAll(location_map, wpt);
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
-PointType* BaseSpace<PointType, AccessorType,  BorderType>::getLocation(R4Py_Agent* agent) {
+PointType* BaseSpace<PointType, AccessorType, BorderType>::getLocation(R4Py_Agent* agent) {
     auto iter = agent_map.find(agent->aid);
     if (iter != agent_map.end()) {
         return iter->second->pt;
     }
     return nullptr;
-}
-
-template<typename PointType, typename AccessorType, typename BorderType>
-PointType* BaseSpace<PointType, AccessorType,  BorderType>::move(R4Py_Agent* agent, PointType* pt) {
-    // If this gets changed such that the argument pt is not a temp input arg then 
-    // we need to make sure that any move calls reflect that. 
-    auto iter = agent_map.find(agent->aid);
-    if (iter != agent_map.end()) {
-        borders.transform(pt, wpt);
-        if (!point_equals(iter->second->pt, wpt)) {
-            if (accessor.put(agent, location_map, wpt)) {
-                if (iter->second->pt) {
-                    // if successful put, and agent is already located 
-                    // so need to remove
-                    Point<PointType> ppt;
-                    extract_coords(iter->second->pt, ppt);
-                    accessor.remove(agent, location_map, ppt);
-                    update_point(iter->second->pt, wpt);
-                }  else {
-                    iter->second->pt = create_point(Py_TYPE(pt), wpt);
-                }
-            } else {
-                return nullptr;
-            }
-        }
-        return iter->second->pt;
-
-    } else {
-        R4Py_AgentID* id = agent->aid;
-        throw std::invalid_argument("Error moving agent (" + std::to_string(id->id) + "," + 
-            std::to_string(id->type) + "): agent is not in " + name_);
-    }
 }
 
 template<typename BorderType>

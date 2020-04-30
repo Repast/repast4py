@@ -46,7 +46,7 @@ class SharedCSTests(unittest.TestCase):
 
             box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
-                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
             cspace.add(a1)
             cspace.add(a2)
@@ -99,7 +99,7 @@ class SharedCSTests(unittest.TestCase):
 
             box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
-                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
             cspace.add(a1)
             cspace.add(a2)
@@ -150,7 +150,7 @@ class SharedCSTests(unittest.TestCase):
 
             box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Periodic, 
-                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
             cspace.add(a1)
             cspace.add(a2)

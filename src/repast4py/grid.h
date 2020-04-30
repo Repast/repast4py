@@ -1,13 +1,76 @@
 #ifndef R4PY_SRC_GRID_H
 #define R4PY_SRC_GRID_H
 
+#include <vector>
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-
 
 #include "space.h"
 
 namespace repast4py {
+
+template<typename AccessorType, typename BorderType>
+class BaseGrid : public BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType> {
+
+using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::agent_map;
+using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::location_map;
+using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::borders;
+using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::accessor;
+using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::wpt;
+using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::name_;
+
+public:
+    BaseGrid(const std::string& name, const BoundingBox& bounds);
+    ~BaseGrid();
+
+    void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
+    R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
+};
+
+template<typename AccessorType, typename BorderType>
+BaseGrid<AccessorType, BorderType>::BaseGrid(const std::string& name, const BoundingBox& bounds) : 
+    BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>(name, bounds) {}
+
+template<typename AccessorType, typename BorderType>
+BaseGrid<AccessorType, BorderType>::~BaseGrid() {}
+
+template<typename AccessorType, typename BorderType>
+void BaseGrid<AccessorType, BorderType>::getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) {
+
+}
+
+template<typename AccessorType, typename BorderType>
+R4Py_DiscretePoint* BaseGrid<AccessorType, BorderType>::move(R4Py_Agent* agent, R4Py_DiscretePoint* pt) {
+    // If this gets changed such that the argument pt is not a temp input arg then 
+    // we need to make sure that any move calls reflect that. 
+    auto iter = agent_map.find(agent->aid);
+    if (iter != agent_map.end()) {
+        borders.transform(pt, wpt);
+        if (!point_equals(iter->second->pt, wpt)) {
+            if (accessor.put(agent, location_map, wpt)) {
+                if (iter->second->pt) {
+                    // if successful put, and agent is already located 
+                    // so need to remove
+                    Point<R4Py_DiscretePoint> ppt;
+                    extract_coords(iter->second->pt, ppt);
+                    accessor.remove(agent, location_map, ppt);
+                    update_point(iter->second->pt, wpt);
+                }  else {
+                    iter->second->pt = create_point(Py_TYPE(pt), wpt);
+                }
+            } else {
+                return nullptr;
+            }
+        }
+        return iter->second->pt;
+
+    } else {
+        R4Py_AgentID* id = agent->aid;
+        throw std::invalid_argument("Error moving agent (" + std::to_string(id->id) + "," + 
+            std::to_string(id->type) + "): agent is not in " + name_);
+    }
+}
 
 class IGrid {
 
@@ -84,8 +147,8 @@ R4Py_DiscretePoint* Grid<DelegateType>::move(R4Py_Agent* agent, R4Py_DiscretePoi
 
 // typedefs for Discrete Grid with multi occupancy and sticky borders
 using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint>, R4Py_DiscretePoint>;
-using MOSGrid = BaseSpace<R4Py_DiscretePoint, DiscreteMOType, GridStickyBorders>;
-using MOPGrid = BaseSpace<R4Py_DiscretePoint, DiscreteMOType, GridPeriodicBorders>;
+using MOSGrid = BaseGrid<DiscreteMOType, GridStickyBorders>;
+using MOPGrid = BaseGrid<DiscreteMOType, GridPeriodicBorders>;
 
 template<>
 struct is_periodic<MOSGrid> {

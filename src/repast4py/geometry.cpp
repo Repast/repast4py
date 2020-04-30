@@ -78,7 +78,11 @@ std::ostream& operator<<(std::ostream& os, const BoundingBox& box) {
 BoundingBox::BoundingBox(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
             coord_type zmin, coord_type z_extent) : xmin_{xmin}, xmax_{xmin + x_extent}, ymin_{ymin},
             ymax_{ymin + y_extent}, zmin_{zmin}, zmax_{zmin + z_extent}, x_extent_{x_extent}, y_extent_{y_extent},
-            z_extent_{z_extent} {
+            z_extent_{z_extent}, num_dims{1} {
+
+    if (y_extent_ > 0) num_dims = 2;
+    if (z_extent_ > 0) num_dims = 3;
+
 }
 
 BoundingBox::BoundingBox(const BoundingBox& other) : xmin_{other.xmin_}, 
@@ -146,8 +150,8 @@ bool BoundingBox::contains(const Point<R4Py_DiscretePoint>& pt) const {
 }
 
  bool BoundingBox::contains(const R4Py_ContinuousPoint* pt) const {
-     using pt_type = typename TypeSelector<R4Py_ContinuousPoint>::type;
-     pt_type* data = (pt_type*)PyArray_DATA(pt->coords);
+    using pt_type = typename TypeSelector<R4Py_ContinuousPoint>::type;
+    pt_type* data = (pt_type*)PyArray_DATA(pt->coords);
 
     bool y_contains = true;
     bool z_contains = true;

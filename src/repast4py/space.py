@@ -99,8 +99,8 @@ class SharedGrid(_SharedGrid):
 
 class SharedCSpace(_SharedContinuousSpace):
 
-    def __init__(self, name, bounds, borders, occupancy, buffersize, comm):
-        super().__init__(name, bounds, borders, occupancy, buffersize, comm)
+    def __init__(self, name, bounds, borders, occupancy, buffersize, comm, tree_threshold):
+        super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
     
     def synchronize_buffer(self, create_agent):
         pass

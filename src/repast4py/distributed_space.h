@@ -73,6 +73,8 @@ private:
 public:
     DistributedCartesianSpace(const std::string& name, const BoundingBox& bounds, 
         unsigned int buffer_size, MPI_Comm comm);
+    DistributedCartesianSpace(const std::string& name, const BoundingBox& bounds, 
+        unsigned int buffer_size, MPI_Comm comm, int tree_threshold);
     virtual ~DistributedCartesianSpace();
 
     bool add(R4Py_Agent* agent);
@@ -132,6 +134,51 @@ DistributedCartesianSpace<BaseSpaceType, PointType>::DistributedCartesianSpace(c
             calcBufferBounds(ngh, offsets, dims);
         }
     }
+}
+
+template<typename BaseSpaceType, typename PointType>
+DistributedCartesianSpace<BaseSpaceType, PointType>::DistributedCartesianSpace(const std::string& name, const BoundingBox& bounds, 
+        unsigned int buffer_size, MPI_Comm comm, int tree_threshold) : base_space {std::unique_ptr<BaseSpaceType>(new BaseSpaceType(name, bounds, tree_threshold))}, 
+        local_bounds{0, 0, 0, 0}, out_of_bounds_agents{std::make_shared<AIDPyObjMapT>()}, 
+        buffer_size_{buffer_size}, cart_comm{}, nghs{std::make_shared<std::vector<CTNeighbor>>()}, rank{-1}
+{
+    int dims = 1;
+    if (bounds.y_extent_ > 0) ++dims;
+    if (bounds.z_extent_ > 0) ++dims;
+    CartesianTopology ct(comm, &cart_comm, dims, bounds, is_periodic<BaseSpaceType>::value);
+    rank = ct.getRank();
+    ct.getBounds(local_bounds);
+    ct.getNeighbors(*nghs);
+    std::vector<int> coords;
+    ct.getCoords(coords);
+
+
+    int offsets[3] = {0, 0, 0};
+
+    if (dims == 1) {
+        for (auto& ngh : (*nghs)) {
+            offsets[0] = ngh.cart_coord_x - coords[0];
+            calcBufferBounds(ngh, offsets, dims);
+        }
+    } else if (dims == 2) {
+        for (auto& ngh : (*nghs)) {
+            offsets[0] = ngh.cart_coord_x - coords[0];
+            offsets[1] = ngh.cart_coord_y - coords[1];
+            calcBufferBounds(ngh, offsets, dims);
+        }
+    } else if (dims == 3) {
+        for (auto& ngh : (*nghs)) {
+            offsets[0] = ngh.cart_coord_x - coords[0];
+            offsets[1] = ngh.cart_coord_y - coords[1];
+            offsets[2] = ngh.cart_coord_z - coords[2];
+            // if (rank == 0) {
+            //     printf("Offsets: %d - %d, %d, %d\n", ngh.rank, offsets[0], offsets[1], offsets[2]);
+            // }
+            calcBufferBounds(ngh, offsets, dims);
+        }
+    }
+
+
 }
 
 template<typename BaseSpaceType, typename PointType>
@@ -432,7 +479,7 @@ private:
 
 public:
     SharedContinuousSpace(const std::string& name, const BoundingBox& bounds, 
-        unsigned int buffer_size, MPI_Comm comm);
+        unsigned int buffer_size, MPI_Comm comm, int tree_threshold);
     virtual ~SharedContinuousSpace() {}
     bool add(R4Py_Agent* agent) override;
     bool remove(R4Py_Agent* agent) override;
@@ -451,8 +498,8 @@ public:
 
 template<typename DelegateType>
 SharedContinuousSpace<DelegateType>::SharedContinuousSpace(const std::string& name, const BoundingBox& bounds, 
-        unsigned int buffer_size, MPI_Comm comm) : 
-    delegate{std::unique_ptr<DelegateType>(new DelegateType(name, bounds, buffer_size, comm))} {}
+        unsigned int buffer_size, MPI_Comm comm, int tree_threshold) : 
+    delegate{std::unique_ptr<DelegateType>(new DelegateType(name, bounds, buffer_size, comm, tree_threshold))} {}
 
 template<typename DelegateType>
 bool SharedContinuousSpace<DelegateType>::add(R4Py_Agent* agent) {

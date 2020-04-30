@@ -1,6 +1,7 @@
 import sys
 import os
 import numpy as np
+import random
 
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
@@ -289,7 +290,7 @@ class CSpaceTests(unittest.TestCase):
         a1 = core.Agent(1, 0)
 
         box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
-        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple)
+        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple, tree_threshold=100)
 
         cspace.add(a1)
 
@@ -364,7 +365,7 @@ class CSpaceTests(unittest.TestCase):
         a1 = core.Agent(1, 0)
 
         box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
-        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Periodic, occupancy=OccupancyType.Multiple)
+        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Periodic, occupancy=OccupancyType.Multiple, tree_threshold=100)
 
         cspace.add(a1)
 
@@ -442,7 +443,7 @@ class CSpaceTests(unittest.TestCase):
 
     def test_remove(self):
         box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=0, zextent=0)
-        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple)
+        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple, tree_threshold=100)
         agent = cspace.get_agent(space.ContinuousPoint(0, 0))
         self.assertIsNone(agent)
 
@@ -465,7 +466,7 @@ class CSpaceTests(unittest.TestCase):
 
     def test_get(self):
         box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
-        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple)
+        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple, tree_threshold=100)
         
         agent = cspace.get_agent(space.ContinuousPoint(0, 0))
         self.assertIsNone(agent)
@@ -531,6 +532,95 @@ class CSpaceTests(unittest.TestCase):
         agent = cspace.get_agent(pt)
         self.assertEqual(agent, a1)
 
+    def get_random_pt(self, box):
+        x = random.uniform(box.xmin, box.xextent)
+        y = random.uniform(box.ymin, box.yextent)
+        z = 0
+        if box.zextent > 0:
+            z = random.uniform(box.zmin, box.zextent)
+        
+        return space.ContinuousPoint(x, y, z)
+
+    def get_random_bounds(self, box):
+        x1 = random.randint(box.xmin, box.xextent - 1)
+        y1 = random.randint(box.ymin, box.yextent - 1)
+        x2 = random.randint(x1 + 1, box.xextent)
+        y2 = random.randint(y1 + 1, box.yextent)
+        z1 = z2 = 0
+       
+        if box.zextent > 0:
+            z1 = random.randint(box.zmin, box.zextent - 1)
+            z2 = random.randint(z1 + 1, box.zextent)
+
+        return space.BoundingBox(min(x1, x2), abs(x1 - x2), min(y1, y2), abs(y1 - y2), 
+            min(z1, z2), abs(z1 - z2))
+
+    def within(self, pt, bounds):
+        r = pt.x >= bounds.xmin and pt.x < bounds.xmin + bounds.xextent and pt.y >= bounds.ymin and pt.y < bounds.ymin + bounds.yextent
+        
+        if bounds.zextent > 0:
+            return r and pt.z >= bounds.zmin and pt.z < bounds.zmin + bounds.zextent
+        return r
+
+    def within_test(self, box, cspace, pt_map):
+        bounds = self.get_random_bounds(box)
+        actual = set([a.uid for a in cspace.get_agents_within(bounds)])
+
+        exp_within = []
+        for aid, v in pt_map.items():
+            if self.within(v[0], bounds):
+                exp_within.append(aid)
+        expected = set(exp_within)
+
+        if len(expected) != len(actual):
+            for a in (expected - actual):
+                print(cspace.get_location(pt_map[a][1]))
+            
+        self.assertEqual(len(expected), len(actual))
+        self.assertEqual(0, len(expected - actual))
+
+    def test_within2D(self):
+        random.seed(42)
+        pt_map = {}
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=10, zextent=0)
+        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple, tree_threshold=10)
+
+        agents = []
+        for i in range(10000):
+            a = core.Agent(i, 0)
+            agents.append(a)
+            cspace.add(a)
+        for i in range(100):
+            for a in agents:
+                pt = self.get_random_pt(box)
+                pt1 = cspace.move(a, pt)
+                pt_map[a.uid] = (pt1, a)
+                loc = cspace.get_location(a)
+
+            self.within_test(box, cspace, pt_map)
+            pt_map.clear()
+
+    def test_within3D(self):
+        random.seed(42)
+        pt_map = {}
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=0, zextent=40)
+        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple, tree_threshold=10)
+
+        agents = []
+        for i in range(10000):
+            a = core.Agent(i, 0)
+            agents.append(a)
+            cspace.add(a)
+        for i in range(100):
+            for a in agents:
+                pt = self.get_random_pt(box)
+                pt1 = cspace.move(a, pt)
+                pt_map[a.uid] = (pt1, a)
+                loc = cspace.get_location(a)
+
+            self.within_test(box, cspace, pt_map)
+            pt_map.clear()
+        
 
 
 if __name__ == "__main__":

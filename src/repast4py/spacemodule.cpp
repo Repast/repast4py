@@ -912,14 +912,14 @@ static PyObject* CSpace_new(PyTypeObject* type, PyObject* args, PyObject* kwds) 
 static int CSpace_init(R4Py_CSpace* self, PyObject* args, PyObject* kwds) {
     // bounds=box, border=BorderType.Sticky, occupancy=OccupancyType.Multiple
     static char* kwlist[] = {(char*)"name",(char*)"bounds", (char*)"borders",
-        (char*)"occupancy", NULL};
+        (char*)"occupancy", (char*)"tree_threshold", NULL};
 
     const char* name;
     PyObject* bounds;
-    int border_type, occ_type;
+    int border_type, occ_type, tree_threshold;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO!ii", kwlist, &name, &PyTuple_Type, &bounds,
-        &border_type, &occ_type)) 
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO!iii", kwlist, &name, &PyTuple_Type, &bounds,
+        &border_type, &occ_type, &tree_threshold)) 
     {
         return -1;
     }
@@ -935,7 +935,7 @@ static int CSpace_init(R4Py_CSpace* self, PyObject* args, PyObject* kwds) {
     BoundingBox box(xmin, width, ymin, height, zmin, depth);
     if (border_type == 0) {
         if (occ_type == 0) {
-            self->space = new CSpace<MOSCSpace>(name, box);
+            self->space = new CSpace<MOSCSpace>(name, box, tree_threshold);
 
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
@@ -943,7 +943,7 @@ static int CSpace_init(R4Py_CSpace* self, PyObject* args, PyObject* kwds) {
         }
     } else if (border_type == 1) {
         if (occ_type == 0) {
-            self->space = new CSpace<MOPCSpace>(name, box);
+            self->space = new CSpace<MOPCSpace>(name, box, tree_threshold);
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
@@ -1048,13 +1048,39 @@ static PyObject* CSpace_getAgents(PyObject* self, PyObject* args) {
     return (PyObject*)agent_iter;
 }
 
+static PyObject* CSpace_getAgentsWithin(PyObject* self, PyObject* args) {
+    PyObject* bounds;
+    if (!PyArg_ParseTuple(args, "O!", &PyTuple_Type, &bounds)) {
+        return NULL;
+    }
+
+    long xmin, width;
+    long ymin, height;
+    long zmin, depth;
+
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) {
+        return NULL;
+    }
+
+    BoundingBox box(xmin, width, ymin, height, zmin, depth);
+    std::shared_ptr<std::vector<R4Py_Agent*>> agents = std::make_shared<std::vector<R4Py_Agent*>>();
+    ((R4Py_CSpace*)self)->space->getAgentsWithin(box, agents);
+    R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
+    agent_iter->iter = new TAgentIter<std::vector<R4Py_Agent*>>(agents);
+    // not completely sure why this is necessary but without it
+    // the iterator is decrefed out of existence after first call to __iter__
+    Py_INCREF(agent_iter);
+    return (PyObject*)agent_iter;
+}
+
 static PyMethodDef CSpace_methods[] = {
-    {"add", CSpace_add, METH_VARARGS, "Adds the specified agent to this grid projection"},
-    {"remove", CSpace_remove, METH_VARARGS, "Removes the specified agent from this grid projection"},
-    {"move", CSpace_move, METH_VARARGS, "Moves the specified agent to the specified location in this grid projection"},
-    {"get_location", CSpace_getLocation, METH_VARARGS, "Gets the location of the specified agent in this grid projection"},
-    {"get_agent", CSpace_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this grid projection"},
-    {"get_agents", CSpace_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this grid projection"},
+    {"add", CSpace_add, METH_VARARGS, "Adds the specified agent to this continuous space projection"},
+    {"remove", CSpace_remove, METH_VARARGS, "Removes the specified agent from this continuous space projection"},
+    {"move", CSpace_move, METH_VARARGS, "Moves the specified agent to the specified location in this continuous space projection"},
+    {"get_location", CSpace_getLocation, METH_VARARGS, "Gets the location of the specified agent in this continuous space projection"},
+    {"get_agent", CSpace_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this continuous space projection"},
+    {"get_agents", CSpace_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this continuous space projection"},
+    {"get_agents_within", CSpace_getAgentsWithin, METH_VARARGS, "Gets all the agents within the specified bounding box in this continuous space"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -1123,16 +1149,16 @@ static PyObject* SharedCSpace_new(PyTypeObject* type, PyObject* args, PyObject* 
 static int SharedCSpace_init(R4Py_SharedCSpace* self, PyObject* args, PyObject* kwds) {
     // bounds=box, border=BorderType.Sticky, occupancy=OccupancyType.Multiple
     static char* kwlist[] = {(char*)"name",(char*)"bounds", (char*)"borders",
-        (char*)"occupancy", (char*)"buffersize", (char*)"comm", NULL};
+        (char*)"occupancy", (char*)"buffersize", (char*)"comm", (char*)"tree_threshold", NULL};
 
     const char* name;
     PyObject* bounds;
-    int border_type, occ_type, buffer_size;
+    int border_type, occ_type, buffer_size, tree_threshold;
     PyObject* py_comm;
 
     //
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO!iiiO!", kwlist, &name, &PyTuple_Type, &bounds,
-        &border_type, &occ_type, &buffer_size, &PyMPIComm_Type, &py_comm)) 
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO!iiiO!i", kwlist, &name, &PyTuple_Type, &bounds,
+        &border_type, &occ_type, &buffer_size, &PyMPIComm_Type, &py_comm, &tree_threshold)) 
     {
         return -1;
     }
@@ -1154,7 +1180,7 @@ static int SharedCSpace_init(R4Py_SharedCSpace* self, PyObject* args, PyObject* 
     if (border_type == 0) {
         if (occ_type == 0) {
             self->space = new SharedContinuousSpace<DistributedCartesianSpace<MOSCSpace, R4Py_ContinuousPoint>>(name, box, buffer_size, 
-            *comm_p);
+            *comm_p, tree_threshold);
 
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
@@ -1163,7 +1189,7 @@ static int SharedCSpace_init(R4Py_SharedCSpace* self, PyObject* args, PyObject* 
     } else if (border_type == 1) {
         if (occ_type == 0) {
             self->space = new SharedContinuousSpace<DistributedCartesianSpace<MOPCSpace, R4Py_ContinuousPoint>>(name, box, buffer_size, 
-            *comm_p);
+            *comm_p, tree_threshold);
 
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
@@ -1363,17 +1389,17 @@ static PyMemberDef SharedCSpace_members[] = {
 };
 
 static PyMethodDef SharedCSpace_methods[] = {
-    {"add", SharedCSpace_add, METH_VARARGS, "Adds the specified agent to this shared grid projection"},
-    {"remove", SharedCSpace_remove, METH_VARARGS, "Removes the specified agent from this shared grid projection"},
-    {"move", SharedCSpace_move, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection"},
-    {"_move_buffer_agent", SharedCSpace_moveBufferAgent, METH_VARARGS, "Moves the specified agent to the specified buffer location in this shared grid projection"},
-    {"get_location", SharedCSpace_getLocation, METH_VARARGS, "Gets the location of the specified agent in this shared grid projection"},
-    {"get_agent", SharedCSpace_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this shared grid projection"},
-    {"get_agents", SharedCSpace_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this shared grid projection"},
-    {"_get_oob", SharedCSpace_getOOBData, METH_VARARGS, "Gets the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
-    {"_clear_oob", SharedCSpace_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
-    {"get_local_bounds", SharedCSpace_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared grid projection"},
-    {"_synch_move", SharedCSpace_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection as part of a movement synchronization"},
+    {"add", SharedCSpace_add, METH_VARARGS, "Adds the specified agent to this shared continuous space projection"},
+    {"remove", SharedCSpace_remove, METH_VARARGS, "Removes the specified agent from this shared continuous space projection"},
+    {"move", SharedCSpace_move, METH_VARARGS, "Moves the specified agent to the specified location in this shared continuous space projection"},
+    {"_move_buffer_agent", SharedCSpace_moveBufferAgent, METH_VARARGS, "Moves the specified agent to the specified buffer location in this shared continuous space projection"},
+    {"get_location", SharedCSpace_getLocation, METH_VARARGS, "Gets the location of the specified agent in this shared continuous space projection"},
+    {"get_agent", SharedCSpace_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this shared continuous space projection"},
+    {"get_agents", SharedCSpace_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this shared continuous space projection"},
+    {"_get_oob", SharedCSpace_getOOBData, METH_VARARGS, "Gets the out of bounds data for any agents that are out of the local bounds in this shared continuous space projection"},
+    {"_clear_oob", SharedCSpace_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared continuous space projection"},
+    {"get_local_bounds", SharedCSpace_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared continuous space projection"},
+    {"_synch_move", SharedCSpace_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared continuous space projection as part of a movement synchronization"},
     {"_get_buffer_data", SharedCSpace_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared grid projetion"},
     {NULL, NULL, 0, NULL}
 };

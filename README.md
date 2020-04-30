@@ -20,7 +20,7 @@ There are 3 types of python unit tests:
 
 `mpirun -n 9 python -m unittest tests.shared_obj_tests`
 
-1. Multiprocess (18 procs) mpi tests for 3D spaces. Run with:
+3. Multiprocess (18 procs) mpi tests for 3D spaces. Run with:
 
 `mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d`
 `mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic`

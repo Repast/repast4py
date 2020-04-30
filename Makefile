@@ -1,4 +1,4 @@
-src = distributed_space.cpp
+src = distributed_space.cpp spatial_tree_tests.cpp
 test_src = 
 
 CXX = mpicxx
