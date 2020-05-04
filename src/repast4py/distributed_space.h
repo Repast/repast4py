@@ -90,6 +90,7 @@ public:
     void clearOOBData();
     BoundingBox getLocalBounds() const;
     MPI_Comm getCartesianCommunicator();
+    void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents);
 
 };
 
@@ -177,8 +178,6 @@ DistributedCartesianSpace<BaseSpaceType, PointType>::DistributedCartesianSpace(c
             calcBufferBounds(ngh, offsets, dims);
         }
     }
-
-
 }
 
 template<typename BaseSpaceType, typename PointType>
@@ -253,13 +252,18 @@ R4Py_Agent* DistributedCartesianSpace<BaseSpaceType, PointType>::getAgentAt(Poin
 }
 
 template<typename BaseSpaceType, typename PointType>
-AgentList DistributedCartesianSpace<BaseSpaceType,  PointType>::getAgentsAt(PointType* pt) {
+AgentList DistributedCartesianSpace<BaseSpaceType, PointType>::getAgentsAt(PointType* pt) {
     return base_space->getAgentsAt(pt);
 }
 
 template<typename BaseSpaceType, typename PointType>
-PointType* DistributedCartesianSpace<BaseSpaceType,  PointType>::getLocation(R4Py_Agent* agent) {
+PointType* DistributedCartesianSpace<BaseSpaceType, PointType>::getLocation(R4Py_Agent* agent) {
     return base_space->getLocation(agent);
+}
+
+template<typename BaseSpaceType, typename PointType>
+void DistributedCartesianSpace<BaseSpaceType, PointType>::getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) {
+    base_space->getAgentsWithin(bounds, agents);
 }
 
 template<typename BaseSpaceType, typename PointType>
@@ -465,8 +469,7 @@ public:
     virtual void clearOOBData() = 0;
     virtual BoundingBox getLocalBounds() const = 0;
     virtual MPI_Comm getCartesianCommunicator() = 0;
-    
-    
+    virtual void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
 };
 
 inline ISharedContinuousSpace::~ISharedContinuousSpace() {}
@@ -494,6 +497,7 @@ public:
     void clearOOBData() override;
     BoundingBox getLocalBounds() const override;
     MPI_Comm getCartesianCommunicator() override;
+    void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
 };
 
 template<typename DelegateType>
@@ -564,6 +568,11 @@ BoundingBox SharedContinuousSpace<DelegateType>::getLocalBounds() const {
 template<typename DelegateType>
 MPI_Comm SharedContinuousSpace<DelegateType>::getCartesianCommunicator() {
     return delegate->getCartesianCommunicator();
+}
+
+template<typename DelegateType>
+void SharedContinuousSpace<DelegateType>::getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) {
+    delegate->getAgentsWithin(bounds, agents);
 }
 
 struct R4Py_SharedCSpace {

@@ -101,8 +101,43 @@ class SharedCSpace(_SharedContinuousSpace):
 
     def __init__(self, name, bounds, borders, occupancy, buffersize, comm, tree_threshold):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
-    
+        self.buffered_agents = []
+
+    def _clear_buffer(self):
+        for agent in self.buffered_agents:
+            self.remove(agent)
+        self.buffered_agents.clear()
+
+    def _fill_send_data(self):
+        send_data = [[] for i in range(self._cart_comm.size)]
+        # bd: (rank, (ranges)) e.g., (1, (8, 10, 0, 0, 0, 0))
+
+        for bd in self._get_buffer_data():
+            data_list = send_data[bd[0]]
+            box = bd[1]
+            bounds = BoundingBox(box[0], box[1] - box[0], box[2], box[3] - box[2], 
+                box[4], box[5] - box[4])
+            for a in self.get_agents_within(bounds):
+                pt = self.get_location(a)
+                data_list.append((a.save(), (pt.x, pt.y, pt.z)))
+
+        return send_data
+
+    def _process_recv_data(self, recv_data, create_agent):
+        pt = ContinuousPoint(0, 0, 0)
+        for data_list in recv_data:
+            for agent_data, pt_data in data_list:
+                agent = create_agent(agent_data)
+                self.buffered_agents.append(agent)
+                self.add(agent)
+                pt._reset(pt_data)
+                self.move(agent, pt)
+
     def synchronize_buffer(self, create_agent):
-        pass
+        self._clear_buffer()
+        send_data = self._fill_send_data()
+        recv_data = self._cart_comm.alltoall(send_data)
+        self._process_recv_data(recv_data, create_agent)
+        
 
 

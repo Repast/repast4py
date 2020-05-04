@@ -229,7 +229,7 @@ static PyGetSetDef Agent_get_setters[] = {
 };
 
 static PyObject* Agent_repr(R4Py_Agent* self) {
-    return PyUnicode_FromFormat("Agent(%ld, %d)", self->aid->id, self->aid->type);
+    return PyUnicode_FromFormat("Agent(%ld, %d, %d)", self->aid->id, self->aid->type, self->aid->rank);
 }
 
 

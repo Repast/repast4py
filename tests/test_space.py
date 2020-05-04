@@ -332,7 +332,7 @@ class CSpaceTests(unittest.TestCase):
 
         cspace.move(a1, space.ContinuousPoint(21.2, 12))
         pt = cspace.get_location(a1)
-        self.assertEqual(19, pt.x)
+        self.assertEqual(19.99999999, pt.x)
         self.assertEqual(12, pt.y)
         self.assertEqual(0, pt.z)
 
@@ -345,7 +345,7 @@ class CSpaceTests(unittest.TestCase):
         cspace.move(a1, space.ContinuousPoint(5, 25.1))
         pt = cspace.get_location(a1)
         self.assertEqual(5, pt.x)
-        self.assertEqual(24, pt.y)
+        self.assertEqual(24.99999999, pt.y)
         self.assertEqual(0, pt.z)
 
         cspace.move(a1, space.ContinuousPoint(5, 10, -1.2))
@@ -358,7 +358,7 @@ class CSpaceTests(unittest.TestCase):
         pt = cspace.get_location(a1)
         self.assertEqual(5.1, pt.x)
         self.assertEqual(10.34, pt.y)
-        self.assertEqual(3.0, pt.z)
+        self.assertEqual(3.99999999, pt.z)
 
     
     def test_periodic_move(self):

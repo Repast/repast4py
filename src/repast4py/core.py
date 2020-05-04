@@ -52,8 +52,9 @@ class SharedContext:
                 send_data[ngh_rank].append([data, (pid, pt)])
 
             proj._clear_oob()
-            removed_agents.clear()
 
+        removed_agents.clear()
+        
         return send_data
     
     def _process_recv_data(self, recv_data, create_agent):
@@ -63,19 +64,18 @@ class SharedContext:
                 agent_data = data[0]
                 proj_data = data[1]
 
-                if agent_data[0] in self._local_agents:
-                    # already been added probably via previous projection
-                    # print("Already added", agent_data)
+                if len(agent_data) == 1:
                     agent = self._local_agents[agent_data[0]]
                 else:
-                    # print("New agent", agent_data)
+                    #print("New agent", agent_data)
                     agent = create_agent(agent_data)
                 
                     # print("Adding", agent.id)
                     self.add(agent)
 
-                # add to the projection
+                    # add to the projection
                 self.projections[proj_data[0]]._synch_move(agent, proj_data[1])
+
     
     def synchronize(self, create_agent):
         send_data = self._fill_send_data()

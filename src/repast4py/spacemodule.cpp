@@ -1383,6 +1383,31 @@ static PyObject* SharedCSpace_getLocalBounds(PyObject* self, PyObject* args) {
     return box;
 }
 
+static PyObject* SharedCSpace_getAgentsWithin(PyObject* self, PyObject* args) {
+    PyObject* bounds;
+    if (!PyArg_ParseTuple(args, "O!", &PyTuple_Type, &bounds)) {
+        return NULL;
+    }
+
+    long xmin, width;
+    long ymin, height;
+    long zmin, depth;
+
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) {
+        return NULL;
+    }
+
+    BoundingBox box(xmin, width, ymin, height, zmin, depth);
+    std::shared_ptr<std::vector<R4Py_Agent*>> agents = std::make_shared<std::vector<R4Py_Agent*>>();
+    ((R4Py_SharedCSpace*)self)->space->getAgentsWithin(box, agents);
+    R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
+    agent_iter->iter = new TAgentIter<std::vector<R4Py_Agent*>>(agents);
+    // not completely sure why this is necessary but without it
+    // the iterator is decrefed out of existence after first call to __iter__
+    Py_INCREF(agent_iter);
+    return (PyObject*)agent_iter;
+}
+
 static PyMemberDef SharedCSpace_members[] = {
     {(char* const)"_cart_comm", T_OBJECT_EX, offsetof(R4Py_SharedCSpace, cart_comm), READONLY, (char* const)"The cartesian communicator for this shared grid"},
     {NULL}
@@ -1400,7 +1425,8 @@ static PyMethodDef SharedCSpace_methods[] = {
     {"_clear_oob", SharedCSpace_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared continuous space projection"},
     {"get_local_bounds", SharedCSpace_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared continuous space projection"},
     {"_synch_move", SharedCSpace_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared continuous space projection as part of a movement synchronization"},
-    {"_get_buffer_data", SharedCSpace_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared grid projetion"},
+    {"_get_buffer_data", SharedCSpace_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared continuous projection"},
+    {"get_agents_within", SharedCSpace_getAgentsWithin, METH_VARARGS, "Gets all the agents within the specified bounding box in this shared continuous space projection"},
     {NULL, NULL, 0, NULL}
 };
 

@@ -7,7 +7,7 @@ core_module = Extension('repast4py._core', sources = ['src/repast4py/coremodule.
 space_module = Extension('repast4py._space', sources = ['src/repast4py/spacemodule.cpp', 
     'src/repast4py/geometry.cpp', 'src/repast4py/distributed_space.cpp', 'src/repast4py/SpatialTree.cpp'], language='c++',
     extra_compile_args=["-std=c++11"], depends=['space.h', 'grid.h', 'cspace.h', 'space_types.h', 
-        'geometry.h', 'distributed_space.h'])
+        'geometry.h', 'distributed_space.h', 'borders.h'])
 
 setup(
     name = 'repast4py',

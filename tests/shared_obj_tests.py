@@ -2,11 +2,16 @@ import sys
 import os
 from mpi4py import MPI
 import numpy as np
+import random
+import math
 
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
 import unittest
 from repast4py import core, space
+
+from repast4py.space import ContinuousPoint as CPt
+from repast4py.space import DiscretePoint as DPt
 from repast4py.space import BorderType, OccupancyType
 
 # run with -n 9
@@ -23,6 +28,9 @@ from repast4py.space import BorderType, OccupancyType
 
 def mp(x, y):
     return space.DiscretePoint(x, y)
+
+def cp(x, y):
+    return space.ContinuousPoint(x, y)
 
 def make_move(grid, agent, x, y, target, expected):
     grid.move(agent, space.DiscretePoint(x, y))
@@ -131,11 +139,11 @@ class SharedCSTests(unittest.TestCase):
                 cspace.move(a3, space.ContinuousPoint(8, 200))
                 
                 expected = {(2, 0, 1) : (0, np.array([0.0, 1.0, 0.0])),
-                    (1, 0, 1) : (0, np.array([8.0, 39.0, 0.0]))}
+                    (1, 0, 1) : (0, np.array([8.0, 39.99999999, 0.0]))}
                 for ob in cspace._get_oob():
                     exp = expected.pop(ob[0])
                     self.assertEqual(exp[0], ob[1])
-                    self.assertTrue(np.array_equal(exp[1], ob[2]))
+                    self.assertTrue(np.array_equal(exp[1], ob[2]), msg='{}, {}'.format(exp[1], ob[2]))
                 self.assertEqual(0, len(expected))
 
     def test_oob_periodic(self):
@@ -188,6 +196,63 @@ class SharedCSTests(unittest.TestCase):
                     self.assertEqual(exp[0], ob[1])
                     self.assertTrue(np.array_equal(exp[1], ob[2]))
                 self.assertEqual(0, len(expected))
+
+        def test_buffer_data(self):
+            new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+            comm = MPI.COMM_WORLD.Create_group(new_group)
+
+            if comm != MPI.COMM_NULL:
+                rank = comm.Get_rank()
+
+                box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+                cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Periodic, 
+                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+
+                if rank == 0:
+                    a01 = core.Agent(1, 0, rank)
+                    a02 = core.Agent(2, 0, rank)
+                    a03 = core.Agent(3, 0, rank)
+                    cspace.add(a01)
+                    cspace.add(a02)
+                    cspace.add(a03)
+
+                    pt = space.ContinuousPoint(8, 20)
+                    cspace.move(a01, pt)
+                    pt = space.ContinuousPoint(9, 15)
+                    cspace.move(a02, pt)
+                    pt = space.ContinuousPoint(1, 15)
+                    cspace.move(a03, pt)
+
+                    expected = (1, (8, 10, 0, 40, 0, 0))
+                    count = 0
+                    for bd in cspace._get_buffer_data():
+                        self.assertEqual(expected, bd)
+                        count += 1
+                    self.assertEqual(1, count)
+
+
+                if rank == 1:
+                    a11 = core.Agent(1, 0, rank)
+                    a12 = core.Agent(2, 0, rank)
+                    a13 = core.Agent(3, 0, rank)
+
+                    cspace.add(a11)
+                    cspace.add(a12)
+                    cspace.add(a13)
+
+                    pt = space.ContinuousPoint(10, 20)
+                    cspace.move(a11, pt)
+                    pt = space.ContinuousPoint(11, 15)
+                    cspace.move(a12, pt)
+                    pt = space.ContinuousPoint(15, 15)
+                    cspace.move(a13, pt)
+
+                    expected = (0, (10, 12, 0, 40, 0, 0))
+                    count = 0
+                    for bd in cspace._get_buffer_data():
+                        self.assertEqual(expected, bd)
+                        count += 1
+                    self.assertEqual(1, count)    
 
     
 class SharedGridTests(unittest.TestCase):
@@ -808,7 +873,7 @@ def create_agent(agent_data):
     return EAgent(uid[0], uid[1], uid[2], agent_data[1])
 
 
-class SharedContextTests(unittest.TestCase):
+class SharedContextTests1(unittest.TestCase):
 
     long_message = True
 
@@ -1147,3 +1212,489 @@ class SharedContextTests(unittest.TestCase):
             self.assertIsNotNone(agent, (e, rank))
             self.assertEqual(uid, agent.uid, (e, rank))
                 
+class SharedContextTests2(unittest.TestCase):
+
+    long_message = True
+
+    def test_add_remove(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+
+            context = core.SharedContext(comm)
+            context.add_projection(cspace)
+
+            # test that adding to context 
+            # adds to projection
+            if rank == 0:
+                a1 = core.Agent(1, 0, rank)
+                context.add(a1)
+                pt = space.ContinuousPoint(0, 5)
+                cspace.move(a1, pt)
+                self.assertEqual(a1, cspace.get_agent(pt))
+                self.assertEqual(pt, cspace.get_location(a1))
+
+                context.remove(a1)
+                self.assertIsNone(cspace.get_agent(pt))
+
+            else:
+                a2 = core.Agent(2, 0, rank)
+                context.add(a2)
+                pt = space.ContinuousPoint(12, 30)
+                cspace.move(a2, pt)
+                self.assertEqual(a2, cspace.get_agent(pt))
+                self.assertEqual(pt, cspace.get_location(a2))
+                count = 0
+                for agent in context.agents():
+                    count += 1
+                    self.assertEqual(a2, agent)
+                self.assertEqual(1, count)
+
+    def test_synch(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            grid = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+
+            context = core.SharedContext(comm)
+            context.add_projection(grid)
+
+            # test that adding to context 
+            # adds to projection
+            if rank == 0:
+                a1 = EAgent(1, 0, rank, 12)
+                context.add(a1)
+                # oob
+                pt = space.ContinuousPoint(12, 5)
+                grid.move(a1, pt)
+
+            else:
+                a2 = EAgent(2, 0, rank, 3)
+                a3 = EAgent(3, 0, rank, 2)
+                context.add(a2)
+                context.add(a3)
+                # oob
+                pt = space.ContinuousPoint(5, 30)
+                grid.move(a2, pt)
+                grid.move(a3, space.ContinuousPoint(3, 20))
+
+            context.synchronize(create_agent)
+
+            if rank == 0:
+                # should now have a2 and a3
+                self.assertEqual(2, len(context._local_agents))
+                # a2
+                agent = context._local_agents[(2, 0, 1)]
+                self.assertEqual((2, 0, 1), agent.uid)
+                self.assertEqual(3, agent.energy)
+                pt = space.ContinuousPoint(5, 30)
+                self.assertEqual(agent, grid.get_agent(pt))
+                self.assertEqual(pt, grid.get_location(agent))
+
+                # a3
+                agent = context._local_agents[(3, 0, 1)]
+                self.assertEqual((3, 0, 1), agent.uid)
+                self.assertEqual(2, agent.energy)
+                pt = space.ContinuousPoint(3, 20)
+                self.assertEqual(agent, grid.get_agent(pt))
+                self.assertEqual(pt, grid.get_location(agent))
+
+            else:
+                # should now have a1
+                self.assertEqual(1, len(context._local_agents))
+                agent = context._local_agents[(1, 0, 0)]
+                self.assertEqual((1, 0, 0), agent.uid)
+                self.assertEqual(12, agent.energy)
+                pt = space.ContinuousPoint(12, 5)
+                self.assertEqual(agent, grid.get_agent(pt))
+                self.assertEqual(pt, grid.get_location(agent))
+
+            if rank == 0:
+                pt = space.ContinuousPoint(5, 30)
+                agent = grid.get_agent(pt)
+                grid.move(agent, space.ContinuousPoint(12, 38))
+                agent.energy = -10
+            
+            context.synchronize(create_agent)
+
+            if rank == 0:
+                self.assertEqual(1, len(context._local_agents))
+                # a3
+                agent = context._local_agents[(3, 0, 1)]
+                self.assertEqual((3, 0, 1), agent.uid)
+                self.assertEqual(2, agent.energy)
+                pt = space.ContinuousPoint(3, 20)
+                self.assertEqual(agent, grid.get_agent(pt))
+                self.assertEqual(pt, grid.get_location(agent))
+
+            if rank == 1:
+                # a2 now back in 1
+                self.assertEqual(2, len(context._local_agents))
+                agent = context._local_agents[(2, 0, 1)]
+                self.assertEqual((2, 0, 1), agent.uid)
+                self.assertEqual(-10, agent.energy)
+                pt = space.ContinuousPoint(12, 38)
+                self.assertEqual(agent, grid.get_agent(pt))
+                self.assertEqual(pt, grid.get_location(agent))
+
+                agent = context._local_agents[(1, 0, 0)]
+                self.assertEqual((1, 0, 0), agent.uid)
+                self.assertEqual(12, agent.energy)
+                pt = space.ContinuousPoint(12, 5)
+                self.assertEqual(agent, grid.get_agent(pt))
+                self.assertEqual(pt, grid.get_location(agent))
+
+
+
+    def test_buffer(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+
+            context = core.SharedContext(comm)
+            context.add_projection(grid)
+
+            if rank == 0:
+                a01 = EAgent(1, 0, rank, 1)
+                a02 = EAgent(2, 0, rank, 2)
+                a03 = EAgent(3, 0, rank, 3)
+                context.add(a01)
+                context.add(a02)
+                context.add(a03)
+
+                pt = space.ContinuousPoint(8, 20)
+                grid.move(a01, pt)
+                pt = space.ContinuousPoint(9, 15)
+                grid.move(a02, pt)
+                pt = space.ContinuousPoint(9, 15)
+                grid.move(a03, pt)
+
+            if rank == 1:
+                a11 = EAgent(1, 0, rank, 11)
+                a12 = EAgent(2, 0, rank, 12)
+                a13 = EAgent(3, 0, rank, 13)
+
+                context.add(a11)
+                context.add(a12)
+                context.add(a13)
+
+                pt = space.ContinuousPoint(10, 20)
+                grid.move(a11, pt)
+                pt = space.ContinuousPoint(11, 15)
+                grid.move(a12, pt)
+                pt = space.ContinuousPoint(15, 15)
+                grid.move(a13, pt)
+
+            context.synchronize(create_agent)
+            grid.synchronize_buffer(create_agent)
+
+            if rank == 0:
+                pt = space.ContinuousPoint(10, 20)
+                agent = grid.get_agent(pt)
+                self.assertIsNotNone(agent)
+                self.assertEqual((1, 0, 1), agent.uid)
+                self.assertEqual(11, agent.energy)
+
+                pt = space.ContinuousPoint(11, 15)
+                agent = grid.get_agent(pt)
+                self.assertIsNotNone(agent)
+                self.assertEqual((2, 0, 1), agent.uid)
+                self.assertEqual(12, agent.energy)
+
+                self.assertEqual(3, len(context._local_agents))
+
+                # moves these agents out of the buffer zone
+                pt = space.ContinuousPoint(9, 15)
+                for a in grid.get_agents(pt):
+                    grid.move(a, space.ContinuousPoint(5, 5))
+
+
+            if rank == 1:
+                pt = space.ContinuousPoint(8, 20)
+                agent = grid.get_agent(pt)
+                self.assertIsNotNone(agent)
+                self.assertEqual((1, 0, 0), agent.uid)
+                self.assertEqual(1, agent.energy)
+
+                pt = space.ContinuousPoint(9, 15)
+                expected = {(2,0,0) : 2, (3, 0, 0) : 3}
+                for a in grid.get_agents(pt):
+                    energy = expected.pop(a.uid) 
+                    self.assertEqual(energy, a.energy)
+                self.assertEqual(0, len(expected))
+
+                self.assertEqual(3, len(context._local_agents))
+
+            grid.synchronize_buffer(create_agent)
+
+            if rank == 1:
+                pt = space.ContinuousPoint(8, 20)
+                agent = grid.get_agent(pt)
+                self.assertIsNotNone(agent)
+                self.assertEqual((1, 0, 0), agent.uid)
+                self.assertEqual(1, agent.energy)
+
+                # nothing at 9, 15 now
+                pt = space.ContinuousPoint(9, 15)
+                self.assertIsNone(grid.get_agent(pt))
+
+
+    def test_buffer_3x3(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        context = core.SharedContext(comm)
+
+        agents = {}
+        for a in [EAgent(1, 0, rank, 1), EAgent(2, 0, rank, 2), EAgent(3, 0, rank, 3),
+            EAgent(4, 0, rank, 4), EAgent(5, 0, rank, 5), EAgent(6, 0, rank, 6),
+            EAgent(7, 0, rank, 7), EAgent(8, 0, rank, 8)]:
+
+            agents[a.uid] = a
+            context.add(a)
+
+        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+        grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky, 
+            occupancy=OccupancyType.Multiple, buffersize=1, comm=comm, tree_threshold=100)
+        context.add_projection(grid)
+
+        data = {"0S" : ((1, 0, 0), cp(15, 39)), 
+                "0SE" : ((2, 0, 0), cp(29, 39)), 
+                "0E" : ((3, 0, 0), cp(29, 20)),
+
+                "1N" : ((1, 0, 1), cp(15, 40)),
+                "1S" : ((2, 0, 1), cp(15, 79)),
+                "1NE" : ((3, 0, 1), cp(29, 40)),
+                "1E" : ((4, 0, 1), cp(29, 45)),
+                "1SE" : ((5, 0, 1), cp(29, 79)),
+
+                '2N': ((1, 0, 2), cp(15, 80)),
+                '2NE' :((2, 0, 2), cp(29, 80)),
+                '2E' :((3, 0, 2), cp(29, 85)),
+
+                '3W' : ((1, 0, 3), cp(30, 15)),
+                '3SW' : ((2, 0, 3), cp(30, 39)),
+                '3S' : ((3, 0, 3), cp(35, 39)),
+                '3SE' : ((4, 0, 3), cp(59, 39)),
+                '3E' : ((5, 0, 3), cp(59, 15)),
+
+                '4NW' : ((1, 0, 4), cp(30, 40)),
+                '4W' : ((2, 0, 4), cp(30, 45)),
+                '4SW' : ((3, 0, 4), cp(30, 79)),
+                '4S' : ((4, 0, 4), cp(35, 79)),
+                '4SE' : ((5, 0, 4), cp(59, 79)),
+                '4E' : ((6, 0, 4), cp(59, 45)),
+                '4NE' : ((7, 0, 4), cp(59, 40)),
+                '4N' : ((8, 0, 4), cp(35, 40)),
+
+                '5NW' : ((1, 0, 5), cp(30, 80)),
+                '5W' : ((3, 0, 5), cp(30, 85)),
+                '5E' : ((4, 0, 5), cp(59, 85)),
+                '5NE' : ((5, 0, 5), cp(59, 80)),
+                '5N' : ((6, 0, 5), cp(35, 80)),
+
+                '6W' : ((1, 0, 6), cp(60, 15)),
+                '6SW' : ((2, 0, 6), cp(60, 39)),
+                '6S' : ((3, 0, 6), cp(65, 39)),
+
+                '7N' : ((1, 0, 7), cp(65, 40)),
+                '7NW' : ((3, 0, 7), cp(60, 40)),
+                '7W' : ((4, 0, 7), cp(60, 45)),
+                '7SW' : ((5, 0, 7), cp(60, 79)),
+                '7S' : ((6, 0, 7), cp(65, 79)),
+
+                '8N' : ((1, 0, 8), cp(65, 80)),
+                '8NW' : ((3, 0, 8), cp(60, 80)),
+                '8W' : ((4, 0, 8), cp(60, 85))
+        }
+
+        for k, v in data.items():
+            if k.startswith(str(rank)):
+                grid.move(agents[v[0]], v[1])
+
+        grid.synchronize_buffer(create_agent)
+
+        exp = [
+            ['1N', '3W', '4NW'],
+            ['0S', '2N', '5NW', '4W', '3SW'],
+            ['1S', '5W', '4SW'],
+            ['0E', '1NE', '4N', '7NW', '6W'],
+            ['0SE', '1E', '2NE', '5N', '8NW', '7W', '6SW', '3S'],
+            ['1SE', '2E', '4S', '7SW', '8W'],
+            ['3E', '4NE', '7N'],
+            ['6S', '3SE', '4E', '5NE', '8N'],
+            ['7S', '4SE', '5E']
+        ]
+        
+        for e in exp[rank]:
+            uid, pt = data[e]
+            agent = grid.get_agent(pt)
+            self.assertIsNotNone(agent, (e, rank))
+            self.assertEqual(uid, agent.uid, (e, rank))
+
+def get_random_pts(box):
+        x = random.uniform(box.xmin, box.xmin + box.xextent)
+        y = random.uniform(box.ymin, box.ymin + box.yextent)
+        return(CPt(x, y), DPt(math.floor(x), math.floor(y)))
+
+class TempAgent(core.Agent):
+
+    def __init__(self, uid):
+        super().__init__(id=uid[0], type=uid[1], rank=uid[2])
+
+class SharedContextTests3(unittest.TestCase):
+
+    long_message = True
+                
+    def test_multi_proj(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+
+        context = core.SharedContext(comm)
+
+        agents = []
+        for i in range(100):
+            a = EAgent(i, 0, rank, 1)
+            agents.append(a)
+            context.add(a)
+
+        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+        cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
+            occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+        grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
+            occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+        context.add_projection(cspace)
+        context.add_projection(grid)
+
+        g_moved = [[] for i in range(grid._cart_comm.size)]
+        c_moved = [[] for i in range(grid._cart_comm.size)]
+
+        gm = []
+        cm = []
+
+        if rank == 0:
+            b = grid.get_local_bounds()
+            box = space.BoundingBox(b.xmin + b.xextent, 2, b.ymin, b.yextent, 0, 0)
+            for i, a in enumerate(agents[0:30]):
+                cp, gp = get_random_pts(box)
+                gp = grid.move(a, gp)
+                cp = cspace.move(a, cp)
+                gm.append(gp)
+                cm.append(cp)
+                g_moved[3].append((gp.coordinates, a.uid))
+                c_moved[3].append((cp.coordinates, a.uid))
+
+        if rank == 4:
+            b = grid.get_local_bounds()
+            box = space.BoundingBox(b.xmin - 4, 2, b.ymin, b.yextent, 0, 0)
+            for i, a in enumerate(agents[0:4]):
+                cp, gp = get_random_pts(box)
+                gp = grid.move(a, gp)
+                cp = cspace.move(a, cp)
+                gm.append(gp)
+                cm.append(cp)
+                g_moved[1].append((gp.coordinates, a.uid))
+                c_moved[1].append((cp.coordinates, a.uid))
+
+            box = space.BoundingBox(b.xmin, b.xextent, b.ymin + b.yextent, 2, 0, 0)
+            for i, a in enumerate(agents[4:15]):
+                cp, gp = get_random_pts(box)
+                gp = grid.move(a, gp)
+                cp = cspace.move(a, cp)
+                gm.append(gp)
+                cm.append(cp)
+                g_moved[5].append((gp.coordinates, a.uid))
+                c_moved[5].append((cp.coordinates, a.uid))
+
+        if rank == 7:
+            b = grid.get_local_bounds()
+            pts = [CPt(60.2, 44.3, 0), CPt(61.5, 55.6, 0), CPt(60.1, 40.2, 0), CPt(89.1, 41.5)]
+            for i, a in enumerate(agents[0:4]):
+                pt = pts[i]
+                cspace.move(a, pt)
+                grid.move(a, DPt(math.floor(pt.x), math.floor(pt.y), 0))
+               
+
+        context.synchronize(create_agent)
+        # In real model create_agent here should cache
+        # buffer created agents and return cached ones for
+        # cspace
+        grid.synchronize_buffer(create_agent)
+        cspace.synchronize_buffer(create_agent)
+
+        recv_g_moved = grid._cart_comm.alltoall(g_moved)
+        recv_c_moved = cspace._cart_comm.alltoall(c_moved)
+        
+        for l in recv_g_moved:
+            dp = DPt(0, 0, 0)
+            for pt, uid in l:
+                dp._reset(tuple(pt))
+                a = TempAgent(uid)
+                gp = grid.get_location(a)
+                self.assertEqual(dp, gp)
+
+        for l in recv_c_moved:
+            dp = CPt(0, 0, 0)
+            for pt, uid in l:
+                dp._reset(tuple(pt))
+                a = TempAgent(uid)
+                gp = cspace.get_location(a)
+                self.assertEqual(dp, gp)
+
+        if rank == 4:
+            # agents buffered from 7
+            pts = [CPt(60.2, 44.3, 0), CPt(61.5, 55.6, 0), CPt(60.1, 40.2, 0)]
+            for i, pt in enumerate(pts):
+                dp = DPt(math.floor(pt.x), math.floor(pt.y), 0)
+                a = cspace.get_agent(pt)
+                self.assertIsNotNone(a)
+                self.assertEqual((i, 0, 7), a.uid)
+                a = grid.get_agent(dp)
+                self.assertIsNotNone(a)
+                self.assertEqual((i, 0, 7), a.uid)
+
+        if rank == 3 or rank == 6 or rank == 7:
+            # buffered from 7
+            pts = [CPt(60.1, 40.2, 0)]
+            for pt in pts:
+                dp = DPt(math.floor(pt.x), math.floor(pt.y), 0)
+                a = cspace.get_agent(pt)
+                self.assertIsNotNone(a)
+                self.assertEqual((2, 0, 7), a.uid)
+                a = grid.get_agent(dp)
+                self.assertIsNotNone(a)
+                self.assertEqual((2, 0, 7), a.uid)
+        
+        if rank == 7:
+            # buffered from 7
+            pts = [CPt(89.1, 41.5)]
+            for pt in pts:
+                dp = DPt(math.floor(pt.x), math.floor(pt.y), 0)
+                a = cspace.get_agent(pt)
+                self.assertIsNotNone(a, msg="{}".format(rank))
+                self.assertEqual((3, 0, 7), a.uid)
+                a = grid.get_agent(dp)
+                self.assertIsNotNone(a)
+                self.assertEqual((3, 0, 7), a.uid)
+
+
+

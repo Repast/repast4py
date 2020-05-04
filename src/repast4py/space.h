@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "geometry.h"
+#include "borders.h"
 #include "occupancy.h"
 #include "core.h"
 #include "space_types.h"
