@@ -85,13 +85,49 @@ static PyObject* DiscretePoint_reset3D(PyObject* self, PyObject* args) {
 static PyObject* DiscretePoint_reset(PyObject* self, PyObject* args) {
     long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
     PyTupleObject* pt;
-    if (!PyArg_ParseTuple(args, "O", &pt)) {
+    if (!PyArg_ParseTuple(args, "O!", &PyTuple_Type, &pt)) {
         return NULL;
     }
 
     d[0] = PyLong_AsLong(PyTuple_GET_ITEM(pt, 0));
     d[1] = PyLong_AsLong(PyTuple_GET_ITEM(pt, 1));
     d[2] = PyLong_AsLong(PyTuple_GET_ITEM(pt, 2));
+
+    Py_RETURN_NONE;
+}
+
+static PyObject* DiscretePoint_reset_from_array(PyObject* self, PyObject* args) {
+    PyArrayObject* arr;
+    if (!PyArg_ParseTuple(args, "O!", &PyArray_Type, &arr)) {
+        return NULL;
+    }
+
+    // check -- must be 1 dimension, then shape [0] will give number
+    int ndim = PyArray_NDIM(arr);
+    if (ndim != 1) {
+        PyErr_SetString(PyExc_RuntimeError, "R4Py_DiscretePoint can only be reset from a 1D numpy array");
+        return NULL;
+    }
+
+    npy_intp* shape = PyArray_SHAPE(arr);
+    npy_int c = shape[0];
+    
+    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    int typ = PyArray_TYPE(arr);
+    if (typ == NPY_LONG) {
+        long* o = (long*)PyArray_DATA(arr);
+        for (int i = 0; i < c && i < 3; ++i) {
+            d[i] = o[i];
+        }
+    } else if (typ == NPY_INT) {
+        int* o = (int*)PyArray_DATA(arr);
+        for (int i = 0; i < c && i < 3; ++i) {
+            d[i] = o[i];
+        }
+    } else {
+        PyErr_SetString(PyExc_RuntimeError, "R4Py_DiscretePoint can only be reset from numpy array of integers");
+        return NULL;
+    }
 
     Py_RETURN_NONE;
 }
@@ -127,6 +163,8 @@ static PyMethodDef DiscretePoint_methods[] = {
     {"_reset2D", DiscretePoint_reset2D, METH_VARARGS, ""},
     {"_reset3D", DiscretePoint_reset3D, METH_VARARGS, ""},
     {"_reset", DiscretePoint_reset, METH_VARARGS, ""},
+    {"_reset_from_array", DiscretePoint_reset_from_array, METH_VARARGS, ""},
+
     {NULL, NULL, 0, NULL}
 };
 
@@ -258,13 +296,49 @@ static PyObject* ContinuousPoint_reset3D(PyObject* self, PyObject* args) {
 static PyObject* ContinuousPoint_reset(PyObject* self, PyObject* args) {
     double* d = (double*)PyArray_DATA(((R4Py_ContinuousPoint*)self)->coords);
     PyTupleObject* pt;
-    if (!PyArg_ParseTuple(args, "O", &pt)) {
+    if (!PyArg_ParseTuple(args, "O!", &PyTuple_Type, &pt)) {
         return NULL;
     }
 
     d[0] = PyFloat_AsDouble(PyTuple_GET_ITEM(pt, 0));
     d[1] = PyFloat_AsDouble(PyTuple_GET_ITEM(pt, 1));
     d[2] = PyFloat_AsDouble(PyTuple_GET_ITEM(pt, 2));
+
+    Py_RETURN_NONE;
+}
+
+static PyObject* ContinuousPoint_reset_from_array(PyObject* self, PyObject* args) {
+    PyArrayObject* arr;
+    if (!PyArg_ParseTuple(args, "O!", &PyArray_Type, &arr)) {
+        return NULL;
+    }
+
+    // check -- must be 1 dimension, then shape [0] will give number
+    int ndim = PyArray_NDIM(arr);
+    if (ndim != 1) {
+        PyErr_SetString(PyExc_RuntimeError, "R4Py_ContinuousPoint can only be reset from a 1D numpy array");
+        return NULL;
+    }
+
+    npy_intp* shape = PyArray_SHAPE(arr);
+    npy_int c = shape[0];
+    
+    double* d = (double*)PyArray_DATA(((R4Py_ContinuousPoint*)self)->coords);
+    int typ = PyArray_TYPE(arr);
+    if (typ == NPY_DOUBLE) {
+        double* o = (double*)PyArray_DATA(arr);
+        for (int i = 0; i < c && i < 3; ++i) {
+            d[i] = o[i];
+        }
+    } else if (typ == NPY_FLOAT) {
+        float* o = (float*)PyArray_DATA(arr);
+        for (int i = 0; i < c && i < 3; ++i) {
+            d[i] = o[i];
+        }
+    } else {
+        PyErr_SetString(PyExc_RuntimeError, "R4Py_ContinuousPoint can only be reset from numpy array of floats");
+        return NULL;
+    }
 
     Py_RETURN_NONE;
 }
@@ -300,6 +374,7 @@ static PyMethodDef ContinuousPoint_methods[] = {
     {"_reset2D", ContinuousPoint_reset2D, METH_VARARGS, ""},
     {"_reset3D", ContinuousPoint_reset3D, METH_VARARGS, ""},
     {"_reset", ContinuousPoint_reset, METH_VARARGS, ""},
+    {"_reset_from_array", ContinuousPoint_reset_from_array, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 
@@ -523,6 +598,15 @@ static PyObject* Grid_getAgents(PyObject* self, PyObject* args) {
     return (PyObject*)agent_iter;
 }
 
+static PyObject* Grid_getName(PyObject* self, PyObject* args) {
+    return PyUnicode_FromString(((R4Py_Grid*)self)->grid->name().c_str());
+}
+
+static PyGetSetDef Grid_get_setters[] = {
+    {(char*)"name", (getter)Grid_getName, NULL, (char*)"grid name", NULL},
+    {NULL}
+};
+
 static PyMethodDef Grid_methods[] = {
     {"add", Grid_add, METH_VARARGS, "Adds the specified agent to this grid projection"},
     {"remove", Grid_remove, METH_VARARGS, "Removes the specified agent from this grid projection"},
@@ -563,7 +647,7 @@ static PyTypeObject R4Py_GridType = {
     0,                                        /* tp_iternext */
     Grid_methods,                                      /* tp_methods */
     0,                                      /* tp_members */
-    0,                                        /* tp_getset */
+    Grid_get_setters,                                        /* tp_getset */
     0,                                        /* tp_base */
     0,                                        /* tp_dict */
     0,                                        /* tp_descr_get */
@@ -793,9 +877,9 @@ static PyObject* SharedGrid_getAgents(PyObject* self, PyObject* args) {
 }
 
 static PyObject* SharedGrid_getOOBData(PyObject* self, PyObject* args) {
-    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> oob = ((R4Py_SharedGrid*)self)->grid->getOOBData();
+    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>> oob = ((R4Py_SharedGrid*)self)->grid->getOOBData();
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
-    obj_iter->iter = new ValueIter<std::map<R4Py_AgentID*, PyObject*>>(oob);
+    obj_iter->iter = new ValueIter<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>>(oob);
     // not completely sure why this is necessary but without it
     // the iterator is decrefed out of existence after first call to __iter__
     Py_INCREF(obj_iter);
@@ -851,6 +935,15 @@ static PyMethodDef SharedGrid_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
+static PyObject* SharedGrid_getName(PyObject* self, PyObject* args) {
+    return PyUnicode_FromString(((R4Py_SharedGrid*)self)->grid->name().c_str());
+}
+
+static PyGetSetDef SharedGrid_get_setters[] = {
+    {(char*)"name", (getter)SharedGrid_getName, NULL, (char*)"grid name", NULL},
+    {NULL}
+};
+
 static PyTypeObject R4Py_SharedGridType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
     "_space.SharedGrid",                          /* tp_name */
@@ -881,7 +974,7 @@ static PyTypeObject R4Py_SharedGridType = {
     0,                                        /* tp_iternext */
     SharedGrid_methods,                                      /* tp_methods */
     SharedGrid_members,                                      /* tp_members */
-    0,                                        /* tp_getset */
+    SharedGrid_get_setters,                                        /* tp_getset */
     0,                                        /* tp_base */
     0,                                        /* tp_dict */
     0,                                        /* tp_descr_get */
@@ -1073,6 +1166,15 @@ static PyObject* CSpace_getAgentsWithin(PyObject* self, PyObject* args) {
     return (PyObject*)agent_iter;
 }
 
+static PyObject* CSpace_getName(PyObject* self, PyObject* args) {
+    return PyUnicode_FromString(((R4Py_CSpace*)self)->space->name().c_str());
+}
+
+static PyGetSetDef CSpace_get_setters[] = {
+    {(char*)"name", (getter)CSpace_getName, NULL, (char*)"space name", NULL},
+    {NULL}
+};
+
 static PyMethodDef CSpace_methods[] = {
     {"add", CSpace_add, METH_VARARGS, "Adds the specified agent to this continuous space projection"},
     {"remove", CSpace_remove, METH_VARARGS, "Removes the specified agent from this continuous space projection"},
@@ -1114,7 +1216,7 @@ static PyTypeObject R4Py_CSpaceType = {
     0,                                        /* tp_iternext */
     CSpace_methods,                                      /* tp_methods */
     0,                                      /* tp_members */
-    0,                                        /* tp_getset */
+    CSpace_get_setters,                                        /* tp_getset */
     0,                                        /* tp_base */
     0,                                        /* tp_dict */
     0,                                        /* tp_descr_get */
@@ -1346,9 +1448,9 @@ static PyObject* SharedCSpace_getAgents(PyObject* self, PyObject* args) {
 }
 
 static PyObject* SharedCSpace_getOOBData(PyObject* self, PyObject* args) {
-    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> oob = ((R4Py_SharedCSpace*)self)->space->getOOBData();
+    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>> oob = ((R4Py_SharedCSpace*)self)->space->getOOBData();
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
-    obj_iter->iter = new ValueIter<std::map<R4Py_AgentID*, PyObject*>>(oob);
+    obj_iter->iter = new ValueIter<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>>(oob);
     // not completely sure why this is necessary but without it
     // the iterator is decrefed out of existence after first call to __iter__
     Py_INCREF(obj_iter);
@@ -1408,6 +1510,15 @@ static PyObject* SharedCSpace_getAgentsWithin(PyObject* self, PyObject* args) {
     return (PyObject*)agent_iter;
 }
 
+static PyObject* SharedCSpace_getName(PyObject* self, PyObject* args) {
+    return PyUnicode_FromString(((R4Py_SharedCSpace*)self)->space->name().c_str());
+}
+
+static PyGetSetDef SharedCSpace_get_setters[] = {
+    {(char*)"name", (getter)SharedCSpace_getName, NULL, (char*)"space name", NULL},
+    {NULL}
+};
+
 static PyMemberDef SharedCSpace_members[] = {
     {(char* const)"_cart_comm", T_OBJECT_EX, offsetof(R4Py_SharedCSpace, cart_comm), READONLY, (char* const)"The cartesian communicator for this shared grid"},
     {NULL}
@@ -1460,7 +1571,7 @@ static PyTypeObject R4Py_SharedCSpaceType = {
     0,                                        /* tp_iternext */
     SharedCSpace_methods,                                      /* tp_methods */
     SharedCSpace_members,                                      /* tp_members */
-    0,                                        /* tp_getset */
+    SharedCSpace_get_setters,                                        /* tp_getset */
     0,                                        /* tp_base */
     0,                                        /* tp_dict */
     0,                                        /* tp_descr_get */

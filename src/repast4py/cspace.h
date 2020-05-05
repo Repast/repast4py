@@ -28,6 +28,8 @@ public:
     ~BaseCSpace();
 
     void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
+    virtual bool remove(R4Py_Agent* agent) override;
+    virtual bool remove(R4Py_AgentID* aid) override;
     R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
 };
 
@@ -52,6 +54,20 @@ void BaseCSpace<AccessorType, BorderType>::getAgentsWithin(const BoundingBox& bo
     std::shared_ptr<std::vector<R4Py_Agent*>>& agents) 
 {
     spatial_tree->getObjectsWithin(bounds, agents);
+}
+
+template<typename AccessorType, typename BorderType>
+bool BaseCSpace<AccessorType, BorderType>::remove(R4Py_Agent* agent) {
+    return remove(agent->aid);
+}
+
+template<typename AccessorType, typename BorderType>
+bool BaseCSpace<AccessorType, BorderType>::remove(R4Py_AgentID* aid) {
+    auto iter = agent_map.find(aid);
+    if (iter != agent_map.end()) {
+        spatial_tree->removeItem(iter->second);
+    }
+    return BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::remove(aid);
 }
 
 template<typename AccessorType, typename BorderType>
@@ -102,6 +118,7 @@ public:
     virtual R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
     virtual void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
+    virtual const std::string name() const = 0;
 };
 
 inline ICSpace::~ICSpace() {}
@@ -123,6 +140,7 @@ public:
     R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) override;
     R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
     void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
+    const std::string name() const override;
 };
 
 template<typename DelegateType>
@@ -167,6 +185,11 @@ R4Py_ContinuousPoint* CSpace<DelegateType>::move(R4Py_Agent* agent, R4Py_Continu
 template<typename DelegateType>
 void CSpace<DelegateType>::getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) {
     delegate->getAgentsWithin(box, agents);
+}
+
+template<typename DelegateType>
+const std::string CSpace<DelegateType>::name() const {
+    return delegate->name();
 }
 
 // aliases for  CSpace with multi occupancy and sticky borders

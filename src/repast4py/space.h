@@ -52,13 +52,14 @@ public:
     virtual ~BaseSpace();
 
     bool add(R4Py_Agent* agent);
-    bool remove(R4Py_Agent* agent);
-    bool remove(R4Py_AgentID* aid);
+    virtual bool remove(R4Py_Agent* agent);
+    virtual bool remove(R4Py_AgentID* aid);
     R4Py_Agent* getAgentAt(PointType* pt);
     AgentList getAgentsAt(PointType* pt);
     PointType* getLocation(R4Py_Agent* agent);
     virtual void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
     virtual PointType* move(R4Py_Agent* agent, PointType* to) = 0;
+    const std::string name() const;
 };
 
 template<typename PointType, typename AccessorType, typename BorderType>
@@ -135,6 +136,12 @@ PointType* BaseSpace<PointType, AccessorType, BorderType>::getLocation(R4Py_Agen
     }
     return nullptr;
 }
+
+template<typename PointType, typename AccessorType, typename BorderType>
+const std::string BaseSpace<PointType, AccessorType, BorderType>::name() const {
+    return name_;
+}
+
 
 template<typename BorderType>
 struct is_periodic {

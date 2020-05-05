@@ -10,9 +10,9 @@ from repast4py import core, space
 from repast4py.space import BorderType, OccupancyType
 
 
-class ContinuousPointTests(unittest.TestCase):
+class PointTests(unittest.TestCase):
 
-    def test_ops(self):
+    def test_cp_ops(self):
         # test z default to 0
         pt = space.ContinuousPoint(1, 2)
         self.assertEqual(1.0, pt.x)
@@ -42,6 +42,47 @@ class ContinuousPointTests(unittest.TestCase):
         self.assertEqual(-134.1, pt.y)
         self.assertEqual(10.1, pt.z)
 
+        arr = np.array([23.31, 43.3, 423.34])
+        pt._reset_from_array(arr)
+        self.assertEqual(23.31, pt.x)
+        self.assertEqual(43.3, pt.y)
+        self.assertEqual(423.34, pt.z)
+
+    def test_dp_ops(self):
+        # test z default to 0
+        pt = space.DiscretePoint(1, 2)
+        self.assertEqual(1, pt.x)
+        self.assertEqual(2, pt.y)
+        self.assertEqual(0, pt.z)
+
+        pt = space.DiscretePoint(2, 34, 11)
+        self.assertEqual(2, pt.x)
+        self.assertEqual(34, pt.y)
+        self.assertEqual(11, pt.z)
+        self.assertTrue(np.array_equal(np.array([2, 34, 11]), pt.coordinates))
+
+        pt._reset1D(12)
+        self.assertEqual(12, pt.x)
+
+        pt._reset2D(10, -1)
+        self.assertEqual(10, pt.x)
+        self.assertEqual(-1, pt.y)
+
+        pt._reset3D(0, -11, 11111) 
+        self.assertEqual(0, pt.x)
+        self.assertEqual(-11, pt.y)
+        self.assertEqual(11111, pt.z)
+
+        pt._reset((1, -134, 10))
+        self.assertEqual(1, pt.x)
+        self.assertEqual(-134, pt.y)
+        self.assertEqual(10, pt.z)
+
+        arr = np.array([23, 43, 423])
+        pt._reset_from_array(arr)
+        self.assertEqual(23, pt.x)
+        self.assertEqual(43, pt.y)
+        self.assertEqual(423, pt.z)
 
 
 class GridTests(unittest.TestCase):
@@ -51,6 +92,7 @@ class GridTests(unittest.TestCase):
 
         box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
         grid = space.Grid("grid", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple)
+        self.assertEqual('grid', grid.name)
 
         grid.add(a1)
 
@@ -291,6 +333,7 @@ class CSpaceTests(unittest.TestCase):
 
         box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
         cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple, tree_threshold=100)
+        self.assertEqual('cspace', cspace.name)
 
         cspace.add(a1)
 

@@ -84,6 +84,7 @@ public:
     virtual AgentList getAgentsAt(R4Py_DiscretePoint* pt) = 0;
     virtual R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
+    virtual const std::string name() const = 0;
 };
 
 inline IGrid::~IGrid() {}
@@ -104,6 +105,7 @@ public:
     AgentList getAgentsAt(R4Py_DiscretePoint* pt) override;
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) override;
     R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
+    const std::string name() const override;
 };
 
 template<typename DelegateType>
@@ -144,6 +146,12 @@ template<typename DelegateType>
 R4Py_DiscretePoint* Grid<DelegateType>::move(R4Py_Agent* agent, R4Py_DiscretePoint* to) {
     return delegate->move(agent, to);
 }
+
+template<typename DelegateType>
+const std::string Grid<DelegateType>::name() const {
+    return delegate->name();
+}
+
 
 // typedefs for Discrete Grid with multi occupancy and sticky borders
 using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint>, R4Py_DiscretePoint>;

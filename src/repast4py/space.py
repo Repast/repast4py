@@ -27,7 +27,8 @@ class SharedGrid(_SharedGrid):
     def __init__(self, name, bounds, borders, occupancy, buffersize, comm):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm)
         self.buffered_agents = []
-        
+        self.rank = comm.Get_rank()
+
         self.gather = self._gather_1d
         if bounds.yextent > 0:
             self.gather = self._gather_2d
@@ -58,13 +59,12 @@ class SharedGrid(_SharedGrid):
                 self.move(agent, pt)
 
 
-    def _clear_buffer(self):
+    def clear_buffer(self):
         for agent in self.buffered_agents:
             self.remove(agent)
         self.buffered_agents.clear()
 
     def synchronize_buffer(self, create_agent):
-        self._clear_buffer()
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
         self._process_recv_data(recv_data, create_agent)
@@ -103,7 +103,7 @@ class SharedCSpace(_SharedContinuousSpace):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
         self.buffered_agents = []
 
-    def _clear_buffer(self):
+    def clear_buffer(self):
         for agent in self.buffered_agents:
             self.remove(agent)
         self.buffered_agents.clear()
@@ -134,7 +134,6 @@ class SharedCSpace(_SharedContinuousSpace):
                 self.move(agent, pt)
 
     def synchronize_buffer(self, create_agent):
-        self._clear_buffer()
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
         self._process_recv_data(recv_data, create_agent)

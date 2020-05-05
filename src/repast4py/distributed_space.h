@@ -53,7 +53,7 @@ public:
 };
 
 
-using AIDPyObjMapT = std::map<R4Py_AgentID*, PyObject*>;
+using AIDPyObjMapT = std::map<R4Py_AgentID*, PyObject*, agent_id_comp>;
 
 template<typename BaseSpaceType, typename PointType>
 class DistributedCartesianSpace {
@@ -85,12 +85,13 @@ public:
     PointType* getLocation(R4Py_Agent* agent);
     PointType* move(R4Py_Agent* agent, PointType* to);
     PointType* moveBufferAgent(R4Py_Agent* agent, PointType* to);
-    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData();
+    std::shared_ptr<AIDPyObjMapT> getOOBData();
     std::shared_ptr<std::vector<CTNeighbor>> getNeighborData();
     void clearOOBData();
     BoundingBox getLocalBounds() const;
     MPI_Comm getCartesianCommunicator();
     void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents);
+    const std::string name() const;
 
 };
 
@@ -238,11 +239,12 @@ bool DistributedCartesianSpace<BaseSpaceType, PointType>::add(R4Py_Agent* agent)
 
 template<typename BaseSpaceType, typename PointType>
 bool DistributedCartesianSpace<BaseSpaceType, PointType>::remove(R4Py_Agent* agent) {
-    return base_space->remove(agent);
+    return this->remove(agent->aid);
 }
 
 template<typename BaseSpaceType, typename PointType>
 bool DistributedCartesianSpace<BaseSpaceType, PointType>::remove(R4Py_AgentID* aid) {
+    out_of_bounds_agents->erase(aid);
     return base_space->remove(aid);
 }
 
@@ -300,7 +302,7 @@ PointType* DistributedCartesianSpace<BaseSpaceType, PointType>::move(R4Py_Agent*
 }
 
 template<typename BaseSpaceType, typename PointType>
-std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> DistributedCartesianSpace<BaseSpaceType, PointType>::getOOBData() {
+std::shared_ptr<AIDPyObjMapT> DistributedCartesianSpace<BaseSpaceType, PointType>::getOOBData() {
     return out_of_bounds_agents;
 }
 
@@ -324,6 +326,11 @@ MPI_Comm DistributedCartesianSpace<BaseSpaceType, PointType>::getCartesianCommun
     return cart_comm;
 }
 
+template<typename BaseSpaceType, typename PointType>
+const std::string DistributedCartesianSpace<BaseSpaceType, PointType>::name() const {
+    return base_space->name();
+}
+
 class ISharedGrid {
 
 public:
@@ -337,12 +344,12 @@ public:
     virtual R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
     virtual R4Py_DiscretePoint* moveBufferAgent(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
-    virtual std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData() = 0;
+    virtual std::shared_ptr<AIDPyObjMapT> getOOBData() = 0;
     virtual std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() = 0;
     virtual void clearOOBData() = 0;
     virtual BoundingBox getLocalBounds() const = 0;
     virtual MPI_Comm getCartesianCommunicator() = 0;
-    
+    virtual const std::string name() const = 0;
     
 };
 
@@ -366,11 +373,12 @@ public:
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) override;
     R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
     R4Py_DiscretePoint* moveBufferAgent(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
-    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData() override;
+    std::shared_ptr<AIDPyObjMapT> getOOBData() override;
     std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() override;
     void clearOOBData() override;
     BoundingBox getLocalBounds() const override;
     MPI_Comm getCartesianCommunicator() override;
+    const std::string name() const override;
 };
 
 template<typename DelegateType>
@@ -419,7 +427,7 @@ R4Py_DiscretePoint* SharedGrid<DelegateType>::moveBufferAgent(R4Py_Agent* agent,
 }
 
 template<typename DelegateType>
-std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> SharedGrid<DelegateType>::getOOBData() {
+std::shared_ptr<AIDPyObjMapT> SharedGrid<DelegateType>::getOOBData() {
     return delegate->getOOBData();
 }
 
@@ -443,6 +451,11 @@ MPI_Comm SharedGrid<DelegateType>::getCartesianCommunicator() {
     return delegate->getCartesianCommunicator();
 }
 
+template<typename DelegateType>
+const std::string SharedGrid<DelegateType>::name() const {
+    return delegate->name();
+}
+
 struct R4Py_SharedGrid {
     PyObject_HEAD
     ISharedGrid* grid;
@@ -464,12 +477,13 @@ public:
     virtual R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
     virtual R4Py_ContinuousPoint* moveBufferAgent(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
-    virtual std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData() = 0;
+    virtual std::shared_ptr<AIDPyObjMapT> getOOBData() = 0;
     virtual std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() = 0;
     virtual void clearOOBData() = 0;
     virtual BoundingBox getLocalBounds() const = 0;
     virtual MPI_Comm getCartesianCommunicator() = 0;
     virtual void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
+    virtual const std::string name() const = 0;
 };
 
 inline ISharedContinuousSpace::~ISharedContinuousSpace() {}
@@ -492,12 +506,13 @@ public:
     R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) override;
     R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
     R4Py_ContinuousPoint* moveBufferAgent(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
-    std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> getOOBData() override;
+    std::shared_ptr<AIDPyObjMapT> getOOBData() override;
     std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() override;
     void clearOOBData() override;
     BoundingBox getLocalBounds() const override;
     MPI_Comm getCartesianCommunicator() override;
     void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
+    const std::string name() const;
 };
 
 template<typename DelegateType>
@@ -546,7 +561,7 @@ R4Py_ContinuousPoint* SharedContinuousSpace<DelegateType>::moveBufferAgent(R4Py_
 }
 
 template<typename DelegateType>
-std::shared_ptr<std::map<R4Py_AgentID*, PyObject*>> SharedContinuousSpace<DelegateType>::getOOBData() {
+std::shared_ptr<AIDPyObjMapT> SharedContinuousSpace<DelegateType>::getOOBData() {
     return delegate->getOOBData();
 }
 
@@ -574,6 +589,12 @@ template<typename DelegateType>
 void SharedContinuousSpace<DelegateType>::getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) {
     delegate->getAgentsWithin(bounds, agents);
 }
+
+template<typename DelegateType>
+const std::string SharedContinuousSpace<DelegateType>::name() const {
+    return delegate->name();
+}
+
 
 struct R4Py_SharedCSpace {
     PyObject_HEAD

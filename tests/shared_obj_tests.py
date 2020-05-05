@@ -55,6 +55,7 @@ class SharedCSTests(unittest.TestCase):
             box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+            self.assertEqual('shared_space', cspace.name)
 
             cspace.add(a1)
             cspace.add(a2)
@@ -272,6 +273,7 @@ class SharedGridTests(unittest.TestCase):
             box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+            self.assertEqual('shared_grid', grid.name)
 
             grid.add(a1)
             grid.add(a2)
@@ -1065,7 +1067,8 @@ class SharedContextTests1(unittest.TestCase):
                 pt = space.DiscretePoint(15, 15)
                 grid.move(a13, pt)
 
-            context.synchronize(create_agent)
+            grid.clear_buffer()
+            context.synchronize(create_agent, False)
             grid.synchronize_buffer(create_agent)
 
             if rank == 0:
@@ -1105,6 +1108,7 @@ class SharedContextTests1(unittest.TestCase):
 
                 self.assertEqual(3, len(context._local_agents))
 
+            grid.clear_buffer()
             grid.synchronize_buffer(create_agent)
 
             if rank == 1:
@@ -1192,6 +1196,7 @@ class SharedContextTests1(unittest.TestCase):
             if k.startswith(str(rank)):
                 grid.move(agents[v[0]], v[1])
 
+        grid.clear_buffer()
         grid.synchronize_buffer(create_agent)
 
         exp = [
@@ -1291,7 +1296,7 @@ class SharedContextTests2(unittest.TestCase):
                 grid.move(a2, pt)
                 grid.move(a3, space.ContinuousPoint(3, 20))
 
-            context.synchronize(create_agent)
+            context.synchronize(create_agent, sync_buffer=False)
 
             if rank == 0:
                 # should now have a2 and a3
@@ -1328,7 +1333,7 @@ class SharedContextTests2(unittest.TestCase):
                 grid.move(agent, space.ContinuousPoint(12, 38))
                 agent.energy = -10
             
-            context.synchronize(create_agent)
+            context.synchronize(create_agent, sync_buffer=False)
 
             if rank == 0:
                 self.assertEqual(1, len(context._local_agents))
@@ -1405,7 +1410,6 @@ class SharedContextTests2(unittest.TestCase):
                 grid.move(a13, pt)
 
             context.synchronize(create_agent)
-            grid.synchronize_buffer(create_agent)
 
             if rank == 0:
                 pt = space.ContinuousPoint(10, 20)
@@ -1444,6 +1448,7 @@ class SharedContextTests2(unittest.TestCase):
 
                 self.assertEqual(3, len(context._local_agents))
 
+            grid.clear_buffer()
             grid.synchronize_buffer(create_agent)
 
             if rank == 1:
@@ -1531,6 +1536,7 @@ class SharedContextTests2(unittest.TestCase):
             if k.startswith(str(rank)):
                 grid.move(agents[v[0]], v[1])
 
+        grid.clear_buffer()
         grid.synchronize_buffer(create_agent)
 
         exp = [
@@ -1635,19 +1641,14 @@ class SharedContextTests3(unittest.TestCase):
                
 
         context.synchronize(create_agent)
-        # In real model create_agent here should cache
-        # buffer created agents and return cached ones for
-        # cspace
-        grid.synchronize_buffer(create_agent)
-        cspace.synchronize_buffer(create_agent)
-
+        
         recv_g_moved = grid._cart_comm.alltoall(g_moved)
         recv_c_moved = cspace._cart_comm.alltoall(c_moved)
         
         for l in recv_g_moved:
             dp = DPt(0, 0, 0)
             for pt, uid in l:
-                dp._reset(tuple(pt))
+                dp._reset_from_array(pt)
                 a = TempAgent(uid)
                 gp = grid.get_location(a)
                 self.assertEqual(dp, gp)
@@ -1655,7 +1656,7 @@ class SharedContextTests3(unittest.TestCase):
         for l in recv_c_moved:
             dp = CPt(0, 0, 0)
             for pt, uid in l:
-                dp._reset(tuple(pt))
+                dp._reset_from_array(pt)
                 a = TempAgent(uid)
                 gp = cspace.get_location(a)
                 self.assertEqual(dp, gp)
