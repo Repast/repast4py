@@ -33,3 +33,9 @@ Or for 3d tests if python >= 3.7:
 There also some C++ unitest. C++ tests can be compiled with makefile target 'tests' and run with:
 
 `mpirun -n 9 ./unit_tests`
+
+## Zombies ##
+
+Requires compiled repast4py.
+
+`PYTHONPATH=./src python src/zombies/zombies.py src/zombies/zombie_model.props`
