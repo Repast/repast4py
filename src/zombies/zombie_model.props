@@ -1,0 +1,8 @@
+random.seed = 42
+
+stop.at = 50
+
+human.count = 2000
+zombie.count = 100
+world.width = 200
+world.height = 200
