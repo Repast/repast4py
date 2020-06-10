@@ -265,11 +265,11 @@ class Model:
             if (self.rank == 0):
                 printf("Tick: {}, Human Count: {}, Zombie Count: {}".format(tick, hc, zc))
 
-        # self.grid.clear_buffer()
-        # self.space.clear_buffer()
+        self.grid.clear_buffer()
+        self.space.clear_buffer()
         self.context.synchronize(create_agent)
-        # self.grid.synchronize_buffer(create_agent)
-        # self.space.synchronize_buffer(create_agent)
+        self.grid.synchronize_buffer(create_agent)
+        self.space.synchronize_buffer(create_agent)
 
         timer.start_timer('z_step')
         for z in self.context.agents(Zombie.ID):
