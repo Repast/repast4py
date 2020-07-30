@@ -6,6 +6,7 @@ import numpy as np
 
 import numba
 from numba import int32
+from numba.experimental import jitclass
 
 from repast4py import core, space, util, schedule
 
@@ -47,10 +48,10 @@ spec = [
     ('xmin', int32),
     ('ymin', int32),
     ('ymax', int32),
-    ('xmax', int32),
+    ('xmax', int32)
 ]
 
-@numba.jitclass(spec)
+@jitclass(spec)
 class GridNghFinder:
 
     def __init__(self, xmin, ymin, xmax, ymax):
@@ -62,11 +63,14 @@ class GridNghFinder:
         self.ymin = ymin
         self.xmax = xmax
         self.ymax = ymax
+        #self.zs = np.zeros(9, dtype=np.int32)
 
     def find(self, x, y): # include_origin=False):
         #if include_origin:
         xs = self.mo + x
         ys = self.no + y
+        
+
         # else:
         #     xs = self.m + x
         #     ys = self.n + y
@@ -79,7 +83,7 @@ class GridNghFinder:
         xs = xs[yd]
         ys = ys[yd]
 
-        return np.stack((xs, ys), axis=-1)
+        return np.stack((xs, ys, np.zeros(len(ys), dtype=np.int32)), axis=-1)
 
 
 class Human(core.Agent):
@@ -106,10 +110,7 @@ class Human(core.Agent):
         alive = True
         if self.infected:
             self.infected_duration += 1
-            if self.infected_duration == 10:
-                model.remove_agent(self)
-                model.add_zombie(space_pt)
-                alive = False
+            alive = self.infected_duration < 10
 
         if alive:
             grid = model.grid
@@ -138,10 +139,12 @@ class Human(core.Agent):
 
 
             if not np.all(min_ngh == pt.coordinates):
-                direction = (min_ngh - pt.coordinates[:2]) * 0.5
+                direction = (min_ngh - pt.coordinates[:3]) * 0.5
                 timer.start_timer('human_move')
                 model.move(self, space_pt.x + direction[0], space_pt.y + direction[1])
                 timer.stop_timer('human_move')
+        
+        return (not alive, space_pt)
 
 
 class Zombie(core.Agent):
@@ -179,7 +182,7 @@ class Zombie(core.Agent):
         max_ngh = maximum[0][random.randint(0, len(maximum[0]) - 1)]
 
         if not np.all(max_ngh == pt.coordinates):
-            direction = (max_ngh - pt.coordinates[0:2]) * 0.25
+            direction = (max_ngh - pt.coordinates[0:3]) * 0.25
             pt = model.space.get_location(self)
             timer.start_timer('zombie_move')
             model.move(self, pt.x + direction[0], pt.y + direction[1])
@@ -273,8 +276,16 @@ class Model:
         timer.stop_timer('z_step')
 
         timer.start_timer('h_step')
+        dead_humans = []
         for h in self.context.agents(Human.ID):
-            h.step()
+            dead, pt = h.step()
+            if dead:
+                dead_humans.append(h)
+
+        for h in dead_humans:
+            model.remove_agent(h)
+            model.add_zombie(pt)
+
         timer.stop_timer('h_step')
 
     def run(self):
