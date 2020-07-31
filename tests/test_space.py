@@ -7,8 +7,8 @@ sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
 import unittest
 from repast4py import core, space
-from repast4py.space import BorderType, OccupancyType
-
+from repast4py.space import BorderType, OccupancyType, GridStickyBorders, GridPeriodicBorders
+from repast4py.space import DiscretePoint as DPt
 
 class PointTests(unittest.TestCase):
 
@@ -83,6 +83,54 @@ class PointTests(unittest.TestCase):
         self.assertEqual(23, pt.x)
         self.assertEqual(43, pt.y)
         self.assertEqual(423, pt.z)
+
+class BorderTests(unittest.TestCase):
+
+    def test_gsb_transform(self):
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0,
+                                yextent=25, zmin=-1, zextent=5)
+        borders = GridStickyBorders(box)
+        tpt = DPt(0, 0)
+        pt = DPt(2, 15, 3)
+        borders._transform(pt, tpt)
+        self.assertEqual(2, tpt.x)
+        self.assertEqual(15, tpt.y)
+        self.assertEqual(3, tpt.z)
+
+        pt._reset3D(-1, -2, -3)
+        borders._transform(pt, tpt)
+        self.assertEqual(0, tpt.x)
+        self.assertEqual(0, tpt.y)
+        self.assertEqual(-1, tpt.z)
+
+        pt._reset3D(25, 40, 33)
+        borders._transform(pt, tpt)
+        self.assertEqual(19, tpt.x)
+        self.assertEqual(24, tpt.y)
+        self.assertEqual(3, tpt.z)
+
+    def test_pb_transform(self):
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0,
+                                yextent=25, zmin=-1, zextent=5)
+        borders = GridPeriodicBorders(box)
+        tpt = DPt(0, 0)
+        pt = DPt(2, 15, 3)
+        borders._transform(pt, tpt)
+        self.assertEqual(2, tpt.x)
+        self.assertEqual(15, tpt.y)
+        self.assertEqual(3, tpt.z)
+
+        pt._reset3D(-1, -2, -3)
+        borders._transform(pt, tpt)
+        self.assertEqual(19, tpt.x)
+        self.assertEqual(23, tpt.y)
+        self.assertEqual(2, tpt.z)
+
+        pt._reset3D(25, 40, 34)
+        borders._transform(pt, tpt)
+        self.assertEqual(5, tpt.x)
+        self.assertEqual(15, tpt.y)
+        self.assertEqual(-1, tpt.z)
 
 
 class GridTests(unittest.TestCase):

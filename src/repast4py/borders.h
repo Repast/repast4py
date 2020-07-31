@@ -19,6 +19,7 @@ public:
     ~StickyBorders() {}
 
     void transform(const PointType* pt, Point<PointType>& transformed_pt);
+    void transform(const PointType* pt, PointType* transformed_pt);
 };
 
 template<typename PointType>
@@ -41,6 +42,25 @@ struct Offset<R4Py_ContinuousPoint> {
     constexpr static double value = 0.00000001;
 };
 
+template <typename PointType>
+void StickyBorders<PointType>::transform(const PointType* pt, PointType* transformed_pt) {
+    coord_type* data = (coord_type *)PyArray_DATA(pt->coords);
+    coord_type* t_data = (coord_type *)PyArray_DATA(transformed_pt->coords);
+
+
+    // coord_type v = (bounds_.xmax_ - 1) < data[0] ? (bounds_.xmax_ - 1) : data[0];
+    // transformed_pt.x = bounds_.xmin_ > v ? bounds_.xmin_ : v;
+
+    // v = (bounds_.ymax_ - 1) < data[1] ? (bounds_.ymax_ - 1) : data[1];
+    // transformed_pt.y = bounds_.ymin_ > v ? bounds_.ymin_ : v;
+
+    // v = (bounds_.zmax_ - 1) < data[2] ? (bounds_.zmax_ - 1) : data[2];
+    // transformed_pt.z = bounds_.zmin_ > v ? bounds_.zmin_ : v;
+
+    t_data[0] = std::max((coord_type)bounds_.xmin_, std::min((coord_type)bounds_.xmax_ - Offset<PointType>::value, data[0]));
+    t_data[1] = std::max((coord_type)bounds_.ymin_, std::min((coord_type)bounds_.ymax_ - Offset<PointType>::value, data[1]));
+    t_data[2] = std::max((coord_type)bounds_.zmin_, std::min((coord_type)bounds_.zmax_ - Offset<PointType>::value, data[2]));
+}
 
 template<typename PointType>
 void StickyBorders<PointType>::transform(const PointType* pt, Point<PointType>& transformed_pt) {
@@ -107,6 +127,7 @@ private:
 
     BoundingBox bounds_;
     trans_func transform_;
+    Point<PointType> temp_pt;
 
 public:
     using coord_type  = typename TypeSelector<PointType>::type;
@@ -115,11 +136,12 @@ public:
     ~PeriodicBorders() {}
 
     void transform(const PointType* pt, Point<PointType>& transformed_pt);
+    void transform(const PointType* pt, PointType* transformed_pt);
 };
 
 template<typename PointType>
 PeriodicBorders<PointType>::PeriodicBorders(const BoundingBox& bounds) : 
-    bounds_{bounds}
+    bounds_{bounds}, temp_pt{0, 0, 0}
 {
     if (bounds_.x_extent_ > 0 && bounds_.y_extent_ > 0 && bounds_.z_extent_ > 0) {
         transform_ = &transformXYZ<PointType>;
@@ -135,9 +157,31 @@ void PeriodicBorders<PointType>::transform(const PointType* pt, Point<PointType>
     transform_(pt, transformed_pt, bounds_);
 }
 
+template<typename PointType>
+void PeriodicBorders<PointType>::transform(const PointType* pt, PointType* transformed_pt) {
+    transform_(pt, temp_pt, bounds_);
+    coord_type* data = (coord_type *)PyArray_DATA(transformed_pt->coords);
+    data[0] = temp_pt.x;
+    data[1] = temp_pt.y;
+    data[2] = temp_pt.z;
+}
+
 using GridPeriodicBorders = PeriodicBorders<R4Py_DiscretePoint>;
 using CSPeriodicBorders = PeriodicBorders<R4Py_ContinuousPoint>;
 
-}
+struct R4Py_GridStickyBorders
+{
+    PyObject_HEAD
+    GridStickyBorders* borders;
+    
+};
 
+struct R4Py_GridPeriodicBorders
+{
+    PyObject_HEAD
+    GridPeriodicBorders* borders;
+    
+};
+
+}
 #endif

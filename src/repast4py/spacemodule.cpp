@@ -443,6 +443,207 @@ static PyTypeObject ContinuousPointType = {
 };
 /////////////////// Continuous Point End ///////
 
+/////////////////// GridStickyBorders ////////////
+
+static void GridStickyBorders_dealloc(R4Py_GridStickyBorders* self) {
+    delete self->borders;
+    Py_TYPE(self)->tp_free((PyObject *)self);
+}
+
+static PyObject *GridStickyBorders_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+    R4Py_GridStickyBorders *self = (R4Py_GridStickyBorders *)type->tp_alloc(type, 0);
+    if (self != NULL)
+    {
+        // maybe I should create it here, rather than in init??
+        self->borders = nullptr;
+    }
+    return (PyObject *)self;
+}
+
+static int GridStickyBorders_init(R4Py_GridStickyBorders* self, PyObject* args, PyObject* kwds) {
+    PyObject* bounds;
+    static char *kwlist[] = {(char *)"bounds", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", kwlist,&PyTuple_Type, &bounds)) {
+        return -1;
+    }
+
+    long xmin, width;
+    long ymin, height;
+    long zmin, depth;
+
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth))
+    {
+        return -1;
+    }
+
+    BoundingBox box(xmin, width, ymin, height, zmin, depth);
+    self->borders = new GridStickyBorders(box);
+
+    if (!self->borders) {
+        PyErr_SetString(PyExc_RuntimeError, "Error creating native code sticky grid borders");
+        return -1;
+    }
+    return 0;
+}
+
+static PyObject* GridStickyBorders_transform(PyObject* self, PyObject* args) {
+    PyObject* pt, *ret_pt;
+    if (!PyArg_ParseTuple(args, "O!O!", &DiscretePointType, &pt, &DiscretePointType, &ret_pt)) {
+        return NULL;
+    }
+    ((R4Py_GridStickyBorders*)self)->borders->transform((R4Py_DiscretePoint*)pt, (R4Py_DiscretePoint*)ret_pt);
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef GridStickyBorders_methods[] = {
+    {"_transform", GridStickyBorders_transform, METH_VARARGS, ""},
+     {NULL, NULL, 0, NULL}
+};
+
+static PyTypeObject R4Py_GridStickyBordersType = {
+    PyVarObject_HEAD_INIT(NULL, 0) 
+    "_space.GridStickyBorders",/* tp_name */
+    sizeof(R4Py_GridStickyBorders),                      /* tp_basicsize */
+    0,                                        /* tp_itemsize */
+    (destructor)GridStickyBorders_dealloc,                                         /* tp_dealloc */
+    0,                                        /* tp_print */
+    0,                                        /* tp_getattr */
+    0,                                        /* tp_setattr */
+    0,                                        /* tp_reserved */
+    0,                                      /* tp_repr */
+    0,                                        /* tp_as_number */
+    0,                                        /* tp_as_sequence */
+    0,                                        /* tp_as_mapping */
+    0,                                        /* tp_hash  */
+    0,                                        /* tp_call */
+    0,                                        /* tp_str */
+    0,                                        /* tp_getattro */
+    0,                                        /* tp_setattro */
+    0,                                        /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
+    "GridStickyBorders Object",                         /* tp_doc */
+    0,                                        /* tp_traverse */
+    0,                                        /* tp_clear */
+    0,                 /* tp_richcompare */
+    0,                                        /* tp_weaklistoffset */
+    0,                                        /* tp_iter */
+    0,                                        /* tp_iternext */
+    GridStickyBorders_methods,                                      /* tp_methods */
+    0,                                      /* tp_members */
+    0,                                        /* tp_getset */
+    0,                                        /* tp_base */
+    0,                                        /* tp_dict */
+    0,                                        /* tp_descr_get */
+    0,                                        /* tp_descr_set */
+    0,                                        /* tp_dictoffset */
+    (initproc)GridStickyBorders_init,                                         /* tp_init */
+    0,                                        /* tp_alloc */
+    GridStickyBorders_new                             /* tp_new */
+};
+
+/////////////////// GridStickyBorders End ////////////
+
+/////////////////// GridPeriodicBorders ////////////
+
+static void GridPeriodicBorders_dealloc(R4Py_GridPeriodicBorders* self) {
+    delete self->borders;
+    Py_TYPE(self)->tp_free((PyObject *)self);
+}
+
+static PyObject *GridPeriodicBorders_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+    R4Py_GridPeriodicBorders *self = (R4Py_GridPeriodicBorders *)type->tp_alloc(type, 0);
+    if (self != NULL)
+    {
+        // maybe I should create it here, rather than in init??
+        self->borders = nullptr;
+    }
+    return (PyObject *)self;
+}
+
+static int GridPeriodicBorders_init(R4Py_GridPeriodicBorders* self, PyObject* args, PyObject* kwds) {
+    PyObject* bounds;
+    static char *kwlist[] = {(char *)"bounds", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", kwlist,&PyTuple_Type, &bounds)) {
+        return -1;
+    }
+
+    long xmin, width;
+    long ymin, height;
+    long zmin, depth;
+
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth))
+    {
+        return -1;
+    }
+
+    BoundingBox box(xmin, width, ymin, height, zmin, depth);
+    self->borders = new GridPeriodicBorders(box);
+
+    if (!self->borders) {
+        PyErr_SetString(PyExc_RuntimeError, "Error creating native code Periodic grid borders");
+        return -1;
+    }
+    return 0;
+}
+
+static PyObject* GridPeriodicBorders_transform(PyObject* self, PyObject* args) {
+    PyObject* pt, *ret_pt;
+    if (!PyArg_ParseTuple(args, "O!O!", &DiscretePointType, &pt, &DiscretePointType, &ret_pt)) {
+        return NULL;
+    }
+    ((R4Py_GridPeriodicBorders*)self)->borders->transform((R4Py_DiscretePoint*)pt, (R4Py_DiscretePoint*)ret_pt);
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef GridPeriodicBorders_methods[] = {
+    {"_transform", GridPeriodicBorders_transform, METH_VARARGS, ""},
+     {NULL, NULL, 0, NULL}
+};
+
+static PyTypeObject R4Py_GridPeriodicBordersType = {
+    PyVarObject_HEAD_INIT(NULL, 0) 
+    "_space.GridPeriodicBorders",/* tp_name */
+    sizeof(R4Py_GridPeriodicBorders),                      /* tp_basicsize */
+    0,                                        /* tp_itemsize */
+    (destructor)GridPeriodicBorders_dealloc,                                         /* tp_dealloc */
+    0,                                        /* tp_print */
+    0,                                        /* tp_getattr */
+    0,                                        /* tp_setattr */
+    0,                                        /* tp_reserved */
+    0,                                      /* tp_repr */
+    0,                                        /* tp_as_number */
+    0,                                        /* tp_as_sequence */
+    0,                                        /* tp_as_mapping */
+    0,                                        /* tp_hash  */
+    0,                                        /* tp_call */
+    0,                                        /* tp_str */
+    0,                                        /* tp_getattro */
+    0,                                        /* tp_setattro */
+    0,                                        /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
+    "GridPeriodicBorders Object",                         /* tp_doc */
+    0,                                        /* tp_traverse */
+    0,                                        /* tp_clear */
+    0,                 /* tp_richcompare */
+    0,                                        /* tp_weaklistoffset */
+    0,                                        /* tp_iter */
+    0,                                        /* tp_iternext */
+    GridPeriodicBorders_methods,                                      /* tp_methods */
+    0,                                      /* tp_members */
+    0,                                        /* tp_getset */
+    0,                                        /* tp_base */
+    0,                                        /* tp_dict */
+    0,                                        /* tp_descr_get */
+    0,                                        /* tp_descr_set */
+    0,                                        /* tp_dictoffset */
+    (initproc)GridPeriodicBorders_init,                                         /* tp_init */
+    0,                                        /* tp_alloc */
+    GridPeriodicBorders_new                             /* tp_new */
+};
+
+/////////////////// GridPeriodicBorders End ////////////
 
 /////////////////// GRID ///////////////////////
 static void Grid_dealloc(R4Py_Grid* self) {
@@ -931,7 +1132,7 @@ static PyMethodDef SharedGrid_methods[] = {
     {"_clear_oob", SharedGrid_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
     {"get_local_bounds", SharedGrid_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared grid projection"},
     {"_synch_move", SharedGrid_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection as part of a movement synchronization"},
-    {"_get_buffer_data", SharedGrid_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared grid projetion"},
+    {"_get_buffer_data", SharedGrid_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared grid projetion - a list of tuples of the form info for where and what range, tuple: (rank, (xmin, xmax, ymin, ymax, zmin, zmax))"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -1617,6 +1818,8 @@ PyInit__space(void)
     if (PyType_Ready(&R4Py_CSpaceType) < 0) return NULL;
     if (PyType_Ready(&R4Py_SharedGridType) < 0) return NULL;
     if (PyType_Ready(&R4Py_SharedCSpaceType) < 0) return NULL;
+    if (PyType_Ready(&R4Py_GridStickyBordersType) < 0) return NULL;
+    if (PyType_Ready(&R4Py_GridPeriodicBordersType) < 0) return NULL;
 
 
     Py_INCREF(&DiscretePointType);
@@ -1675,6 +1878,31 @@ PyInit__space(void)
         Py_DECREF(&R4Py_SharedGridType);
         Py_DECREF(&R4Py_CSpaceType);
         Py_DECREF(&R4Py_SharedCSpaceType);
+        Py_DECREF(m);
+    }
+
+    Py_INCREF(&R4Py_GridStickyBordersType);
+    if (PyModule_AddObject(m, "GridStickyBorders", (PyObject*) &R4Py_GridStickyBordersType) < 0) {
+        Py_DECREF(&DiscretePointType);
+        Py_DECREF(&ContinuousPointType);
+        Py_DECREF(&R4Py_GridType);
+        Py_DECREF(&R4Py_SharedGridType);
+        Py_DECREF(&R4Py_CSpaceType);
+        Py_DECREF(&R4Py_SharedCSpaceType);
+        Py_DECREF(&R4Py_GridStickyBordersType);
+        Py_DECREF(m);
+    }
+
+    Py_INCREF(&R4Py_GridPeriodicBordersType);
+    if (PyModule_AddObject(m, "GridPeriodicBorders", (PyObject*) &R4Py_GridPeriodicBordersType) < 0) {
+        Py_DECREF(&DiscretePointType);
+        Py_DECREF(&ContinuousPointType);
+        Py_DECREF(&R4Py_GridType);
+        Py_DECREF(&R4Py_SharedGridType);
+        Py_DECREF(&R4Py_CSpaceType);
+        Py_DECREF(&R4Py_SharedCSpaceType);
+        Py_DECREF(&R4Py_GridStickyBordersType);
+        Py_DECREF(&R4Py_GridPeriodicBordersType);
         Py_DECREF(m);
     }
 
