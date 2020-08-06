@@ -29,6 +29,10 @@ struct GetBufferInfo {
     }
 };
 
+void compute_neighbor_buffers(std::vector<CTNeighbor>& nghs, std::vector<int>& cart_coords, 
+    BoundingBox& local_bounds, int num_dims, unsigned int buffer_size);
+
+
 class CartesianTopology {
 
 private:
@@ -52,6 +56,12 @@ public:
     void getNeighbors(std::vector<CTNeighbor>& neighbors);
 };
 
+struct R4Py_CartesianTopology {
+    PyObject_HEAD
+    CartesianTopology* topo;
+    PyObject* cart_comm;
+};
+
 
 using AIDPyObjMapT = std::map<R4Py_AgentID*, PyObject*, agent_id_comp>;
 
@@ -67,8 +77,6 @@ private:
     MPI_Comm cart_comm;
     std::shared_ptr<std::vector<CTNeighbor>> nghs;
     int rank;
-
-    void calcBufferBounds(CTNeighbor& ngh, int offsets[], int num_dims);
 
 public:
     DistributedCartesianSpace(const std::string& name, const BoundingBox& bounds, 
@@ -111,31 +119,7 @@ DistributedCartesianSpace<BaseSpaceType, PointType>::DistributedCartesianSpace(c
     std::vector<int> coords;
     ct.getCoords(coords);
 
-
-    int offsets[3] = {0, 0, 0};
-
-    if (dims == 1) {
-        for (auto& ngh : (*nghs)) {
-            offsets[0] = ngh.cart_coord_x - coords[0];
-            calcBufferBounds(ngh, offsets, dims);
-        }
-    } else if (dims == 2) {
-        for (auto& ngh : (*nghs)) {
-            offsets[0] = ngh.cart_coord_x - coords[0];
-            offsets[1] = ngh.cart_coord_y - coords[1];
-            calcBufferBounds(ngh, offsets, dims);
-        }
-    } else if (dims == 3) {
-        for (auto& ngh : (*nghs)) {
-            offsets[0] = ngh.cart_coord_x - coords[0];
-            offsets[1] = ngh.cart_coord_y - coords[1];
-            offsets[2] = ngh.cart_coord_z - coords[2];
-            // if (rank == 0) {
-            //     printf("Offsets: %d - %d, %d, %d\n", ngh.rank, offsets[0], offsets[1], offsets[2]);
-            // }
-            calcBufferBounds(ngh, offsets, dims);
-        }
-    }
+    compute_neighbor_buffers(*nghs, coords, local_bounds, dims, buffer_size_);
 }
 
 template<typename BaseSpaceType, typename PointType>
@@ -154,82 +138,12 @@ DistributedCartesianSpace<BaseSpaceType, PointType>::DistributedCartesianSpace(c
     std::vector<int> coords;
     ct.getCoords(coords);
 
-
-    int offsets[3] = {0, 0, 0};
-
-    if (dims == 1) {
-        for (auto& ngh : (*nghs)) {
-            offsets[0] = ngh.cart_coord_x - coords[0];
-            calcBufferBounds(ngh, offsets, dims);
-        }
-    } else if (dims == 2) {
-        for (auto& ngh : (*nghs)) {
-            offsets[0] = ngh.cart_coord_x - coords[0];
-            offsets[1] = ngh.cart_coord_y - coords[1];
-            calcBufferBounds(ngh, offsets, dims);
-        }
-    } else if (dims == 3) {
-        for (auto& ngh : (*nghs)) {
-            offsets[0] = ngh.cart_coord_x - coords[0];
-            offsets[1] = ngh.cart_coord_y - coords[1];
-            offsets[2] = ngh.cart_coord_z - coords[2];
-            // if (rank == 0) {
-            //     printf("Offsets: %d - %d, %d, %d\n", ngh.rank, offsets[0], offsets[1], offsets[2]);
-            // }
-            calcBufferBounds(ngh, offsets, dims);
-        }
-    }
+    compute_neighbor_buffers(*nghs, coords, local_bounds, dims, buffer_size_);
 }
 
 template<typename BaseSpaceType, typename PointType>
 DistributedCartesianSpace<BaseSpaceType, PointType>::~DistributedCartesianSpace() {
     MPI_Comm_free(&cart_comm);
-}
-
-
-template<typename BaseSpaceType, typename PointType>
-void DistributedCartesianSpace<BaseSpaceType, PointType>::calcBufferBounds(CTNeighbor& ngh, int offsets[], int num_dims) {
-    long xmin = local_bounds.xmin_, xmax = local_bounds.xmax_;
-    long ymin = 0, ymax = 0;
-    if (num_dims == 2) {
-        ymin = local_bounds.ymin_; 
-        ymax = local_bounds.ymax_;
-    }
-    long zmin = 0, zmax = 0;
-    if (num_dims == 3) {
-        ymin = local_bounds.ymin_; 
-        ymax = local_bounds.ymax_;
-
-        zmin = local_bounds.zmin_;
-        zmax = local_bounds.zmax_;
-    }
-
-    if (offsets[0] == -1 || offsets[0] == 2) {
-        xmin = local_bounds.xmin_;
-        xmax = xmin + buffer_size_;
-    } else if (offsets[0] == 1 || offsets[0] == -2) {
-        xmin = local_bounds.xmax_ - buffer_size_;
-        xmax = xmin + buffer_size_;
-    }
-
-    if (offsets[1] == -1 || offsets[1] == 2) {
-        ymin = local_bounds.ymin_;
-        ymax = ymin + buffer_size_;
-    } else if (offsets[1] == 1 || offsets[1] == -2) {
-        ymin = local_bounds.ymax_ - buffer_size_;
-        ymax = ymin + buffer_size_;
-    }
-
-    if (offsets[2] == -1 || offsets[2] == 2) {
-        zmin = local_bounds.zmin_;
-        zmax = zmin + buffer_size_;
-    } else if (offsets[2] == 1 || offsets[2] == -2) {
-        zmin = local_bounds.zmax_ - buffer_size_;
-        zmax = zmin + buffer_size_;
-    }
-
-    ngh.buffer_info = Py_BuildValue("(i(llllll))", ngh.rank, xmin, xmax, ymin, ymax,
-        zmin, zmax);
 }
 
 template<typename BaseSpaceType, typename PointType>

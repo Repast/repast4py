@@ -217,8 +217,52 @@ class ValueLayerTests(unittest.TestCase):
         for i, val in enumerate(vals):
             self.assertEqual(val, vl.get(dpt(pts[0][i], pts[1][i], 0)))
 
-        
+    def test_ngh_periodic(self):
+        bounds = BoundingBox(xmin=12, xextent=20, ymin=0,
+                             yextent=0, zmin=0, zextent=0)
+        vl = ValueLayer(bounds, BorderType.Periodic, 'random')
+        pt = dpt(14, 0, 0)
+        exp_pts = np.array([13, 14, 15])
+        vals, pts = vl.get_nghs(pt)
+        self.assertTrue(np.array_equal(pts, exp_pts), pts)
+        for i, val in enumerate(vals):
+            self.assertEqual(val, vl.get(dpt(pts[i], 0, 0)))
 
+        pt = dpt(12, 0, 0)
+        exp_pts = np.array([31, 12, 13])
+        vals, pts = vl.get_nghs(pt)
+        self.assertTrue(np.array_equal(pts, exp_pts))
+        for i, val in enumerate(vals):
+            self.assertEqual(val, vl.get(dpt(pts[i], 0, 0)))
+
+        pt = dpt(31, 0, 0)
+        exp_pts = np.array([30, 31, 12])
+        vals, pts = vl.get_nghs(pt)
+        self.assertTrue(np.array_equal(pts, exp_pts))
+        for i, val in enumerate(vals):
+            self.assertEqual(val, vl.get(dpt(pts[i], 0, 0)))
+
+        bounds = BoundingBox(xmin=12, xextent=20, ymin=-3,
+                             yextent=13, zmin=0, zextent=0)
+        vl = ValueLayer(bounds, BorderType.Periodic, 'random')
+        pt = dpt(14, -1, 0)
+        exp_pts = np.array([[13, 14, 15, 13, 14, 15, 13, 14, 15],
+                            [-2, -2, -2, -1, -1, -1, 0, 0, 0]])
+        vals, pts = vl.get_nghs(pt)
+        self.assertTrue(np.array_equal(pts, exp_pts), pts)
+        for i, val in enumerate(vals):
+            self.assertEqual(val, vl.get(dpt(pts[0][i], pts[1][i], 0)))
+
+        bounds = BoundingBox(xmin=12, xextent=20, ymin=-3,
+                             yextent=13, zmin=0, zextent=0)
+        vl = ValueLayer(bounds, BorderType.Periodic, 'random')
+        pt = dpt(31, 9, 0)
+        exp_pts = np.array([[30, 31, 12, 30, 31, 12, 30, 31, 12],
+                            [8, 8, 8, 9, 9, 9, -3, -3, -3]])
+        vals, pts = vl.get_nghs(pt)
+        self.assertTrue(np.array_equal(pts, exp_pts), pts)
+        for i, val in enumerate(vals):
+            self.assertEqual(val, vl.get(dpt(pts[0][i], pts[1][i], 0)))
 
         
         

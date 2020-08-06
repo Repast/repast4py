@@ -2,6 +2,7 @@ from mpi4py import MPI
 
 from ._space import Grid, DiscretePoint, ContinuousPoint, ContinuousSpace
 from ._space import GridStickyBorders, GridPeriodicBorders
+from ._space import CartesianTopology
 from ._space import SharedGrid as _SharedGrid
 from ._space import SharedContinuousSpace as _SharedContinuousSpace
 

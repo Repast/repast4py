@@ -1,42 +1,11 @@
 import torch
 import numpy as np
-import collections
 
 from . import geometry
 
-from .space import BorderType, GridStickyBorders, GridPeriodicBorders, BoundingBox
+from .space import BorderType, GridStickyBorders, GridPeriodicBorders, CartesianTopology, BoundingBox
 from .space import DiscretePoint as dpt
 
-
-VLImpl = collections.namedtuple('VLImpl', ['index', 'translation', 'ngh_translation', 'ngh_finder', 
-    'min_max'])
-
-def index_1D():
-    def get_idx(pt):
-        return pt[0]  
-
-    return get_idx
-
-def index_2D():
-    idx = np.array([[0], [0]])
-    def get_idx(pt):
-        idx[0, 0] = pt[1]
-        idx[1, 0] = pt[0]
-        return idx
-    
-    return get_idx
-    
-
-def index_3D():
-    idx = np.array([[0], [0], [0]])
-
-    def get_idx(pt):
-        idx[0, 0] = pt[1]
-        idx[1, 0] = pt[0]
-        idx[2, 0] = pt[2]
-        return idx
-
-    return get_idx
 
 class Impl1D:
 
@@ -201,10 +170,15 @@ class ValueLayer:
             self.impl = Impl2D(bounds, borders, init_value, dtype)
         else:
             self.impl = Impl3D(bounds, borders, init_value, dtype)
+        self.bounds = bounds
 
     @property
     def grid(self):
         return self.impl.grid
+
+    @property
+    def bounds(self):
+        return self.bounds
             
     def get(self, pt):
         return self.impl.get(pt)
@@ -219,3 +193,30 @@ class ValueLayer:
         """
         return self.impl.get_nghs(pt, extent)
         
+
+class SharedValueLayer(ValueLayer):
+
+    def __init__(self, comm, bounds, borders, buffer_size, init_value, dtype=torch.float64):
+        periodic = borders == BorderType.Periodic
+        ct = CartesianTopology(comm, bounds, periodic)
+        self.cart_comm = ct.cart_comm
+        # tuple of length dims
+        self.coords = ct.cart_coordinates
+        self.buffer_size = buffer_size
+        # bounds in as BoundingBox
+        local_bounds = ct.local_bounds
+        bxmin = local_bounds.xmin - buffer_size
+        bxexent = local_bounds.xextent + buffer_size
+        bymin = byexent = 0
+        if local_bounds.yexent > 0:
+            bymin = local_bounds.ymin - buffer_size
+            byexent = local_bounds.yexent + buffer_size
+        bzmin = bzexent = 0
+        if local_bounds.zexent > 0:
+            bzmin = local_bounds.zmin - buffer_size
+            bzexent = local_bounds.zexent + buffer_size
+        
+        buffered_bounds = BoundingBox(bxmin, bxexent, bymin, byexent, bzmin, bzexent)
+        super().__init__(buffered_bounds, borders, init_value, dtype)
+        # TODO NEIGHBORS
+

@@ -1786,6 +1786,180 @@ static PyTypeObject R4Py_SharedCSpaceType = {
 
 ///////////////////////// SharedContinuousSpace End /////////////////////////////
 
+//////////////////////// CartesianTopology Start ////////////////////////////////
+
+static void CartesianTopology_dealloc(R4Py_CartesianTopology* self) {
+    delete self->topo;
+    Py_XDECREF(self->cart_comm);
+    Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static PyObject* CartesianTopology_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
+    R4Py_CartesianTopology* self = (R4Py_CartesianTopology*)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->topo = nullptr;
+        self->cart_comm = nullptr;
+    }
+    return (PyObject*)self;
+}
+
+static int CartesianTopology_init(R4Py_CartesianTopology* self, PyObject* args, PyObject* kwds) {
+    static char* kwlist[] = {(char*)"comm", (char*)"global_bounds", (char*)"periodic", NULL};
+
+    PyObject* bounds;
+    PyObject* py_comm;
+    int periodic;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!O!p", kwlist, &PyMPIComm_Type, &py_comm, &PyTuple_Type, &bounds,
+        &periodic)) 
+    {
+        return -1;
+    }
+
+    long xmin, x_extent;
+    long ymin, y_extent;
+    long zmin, z_extent;
+
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent)) {
+        return -1;
+    }
+    BoundingBox box(xmin, x_extent, ymin, y_extent, zmin, z_extent);
+    MPI_Comm cart_comm;
+
+    int dims = 1;
+    if (box.y_extent_ > 0) ++dims;
+    if (box.z_extent_ > 0) ++dims;
+
+    Py_INCREF(py_comm);
+    MPI_Comm* comm_p = PyMPIComm_Get(py_comm);
+    self->topo = new CartesianTopology(*comm_p, &cart_comm, dims, box, (bool)periodic);
+    if (!self->topo) {
+        return -1;
+    }
+
+    self->cart_comm = PyMPIComm_New(cart_comm);
+    if (self->cart_comm == NULL) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static PyObject* CartesianTopology_getCartComm(PyObject* self, void* closure) {
+    PyObject* comm = ((R4Py_CartesianTopology*)self)->cart_comm;
+    Py_INCREF(comm);
+    return comm;
+}
+
+static PyObject* CartesianTopology_getLocalBounds(PyObject* self, void* args) {
+    BoundingBox bounds(0, 0, 0, 0, 0, 0);
+    ((R4Py_CartesianTopology*)self)->topo->getBounds(bounds);
+    PyObject* box_args = Py_BuildValue("(llllll)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
+        bounds.zmin_, bounds.z_extent_);
+    PyObject* pmod = PyImport_ImportModule("repast4py.space");
+    PyObject* bbox_class = PyObject_GetAttrString(pmod, "BoundingBox");
+    PyObject* box = PyObject_CallObject(bbox_class, box_args);
+
+    Py_DECREF(box_args);
+    Py_DECREF(pmod);
+    Py_DECREF(bbox_class);
+
+    return box;
+}
+
+static PyObject* CartesianTopology_getCartCoords(PyObject* self, void* closure) {
+    std::vector<int> coords;
+    ((R4Py_CartesianTopology*)self)->topo->getCoords(coords);
+    if (coords.size() == 1) {
+        return Py_BuildValue("(l)", coords[0]);
+    } else if (coords.size() == 2) {
+        return Py_BuildValue("(ll)", coords[0], coords[1]);
+    } else {
+        return Py_BuildValue("(lll)", coords[0], coords[1], coords[2]);
+    }
+}
+
+static PyObject* CartesianTopology_computeBufferData(PyObject* self, PyObject* args) {
+    //compute_neighbor_buffers(std::vector<CTNeighbor>& nghs, std::vector<int>& cart_coords, 
+    //BoundingBox& local_bounds, int num_dims, unsigned int buffer_size
+    int buffer_size;
+    if (!PyArg_ParseTuple(args, "i", &buffer_size)) {
+        return NULL;
+    }
+
+    std::vector<int> coords;
+    ((R4Py_CartesianTopology*)self)->topo->getCoords(coords);
+    std::shared_ptr<std::vector<CTNeighbor>> nghs;
+    ((R4Py_CartesianTopology*)self)->topo->getNeighbors(*nghs);
+    BoundingBox bounds(0, 0, 0, 0, 0, 0);
+    ((R4Py_CartesianTopology*)self)->topo->getBounds(bounds);
+    compute_neighbor_buffers(*nghs, coords, bounds, coords.size(), buffer_size);
+
+    R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
+    obj_iter->iter = new SequenceIter<std::vector<CTNeighbor>, GetBufferInfo>(nghs);
+    Py_INCREF(obj_iter);
+    return (PyObject*)obj_iter; 
+}
+
+static PyGetSetDef CartesianTopology_get_setters[] = {
+    {(char*)"comm", (getter)CartesianTopology_getCartComm, NULL, (char*)"The communicator over the Carteisan topology", NULL},
+    {(char*)"coordinates", (getter)CartesianTopology_getCartCoords, NULL, (char*)"The coordinates of the current rank within this topology", NULL},
+    {(char*)"local_bounds", (getter)CartesianTopology_getLocalBounds, NULL, (char*)"The local bounds of the current rank within this topology", NULL},
+    {NULL}
+};
+
+
+static PyMethodDef CartesianTopology_methods[] = {
+    {"compute_buffer_nghs", CartesianTopology_computeBufferData, METH_VARARGS, "Computes the buffer neighbor data for the current rank for the specified buffer size"},
+    {NULL, NULL, 0, NULL}
+};
+
+static PyTypeObject R4Py_CartesianTopologyType = {
+    PyVarObject_HEAD_INIT(NULL, 0) 
+    "_space.CartesianTopology",                          /* tp_name */
+    sizeof(R4Py_CartesianTopology),                      /* tp_basicsize */
+    0,                                        /* tp_itemsize */
+    (destructor)CartesianTopology_dealloc,                                         /* tp_dealloc */
+    0,                                        /* tp_print */
+    0,                                        /* tp_getattr */
+    0,                                        /* tp_setattr */
+    0,                                        /* tp_reserved */
+    0,                                        /* tp_repr */
+    0,                                        /* tp_as_number */
+    0,                                        /* tp_as_sequence */
+    0,                                        /* tp_as_mapping */
+    0,                                        /* tp_hash  */
+    0,                                        /* tp_call */
+    0,                                        /* tp_str */
+    0,                                        /* tp_getattro */
+    0,                                        /* tp_setattro */
+    0,                                        /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
+    "CartesianTopology Object",                         /* tp_doc */
+    0,                                        /* tp_traverse */
+    0,                                        /* tp_clear */
+    0,                                        /* tp_richcompare */
+    0,                                        /* tp_weaklistoffset */
+    0,                                        /* tp_iter */
+    0,                                        /* tp_iternext */
+    CartesianTopology_methods,                                      /* tp_methods */
+    0,                                      /* tp_members */
+    CartesianTopology_get_setters,                                        /* tp_getset */
+    0,                                        /* tp_base */
+    0,                                        /* tp_dict */
+    0,                                        /* tp_descr_get */
+    0,                                        /* tp_descr_set */
+    0,                                        /* tp_dictoffset */
+    (initproc)CartesianTopology_init,                                         /* tp_init */
+    0,                                        /* tp_alloc */
+    CartesianTopology_new                             /* tp_new */
+};
+
+
+
+//////////////////////// CartesianTopology End ////////////////////////////////
+
+
 static PyModuleDef spacemodule = {
     PyModuleDef_HEAD_INIT,
     .m_name = "repast4py._space",
@@ -1820,6 +1994,7 @@ PyInit__space(void)
     if (PyType_Ready(&R4Py_SharedCSpaceType) < 0) return NULL;
     if (PyType_Ready(&R4Py_GridStickyBordersType) < 0) return NULL;
     if (PyType_Ready(&R4Py_GridPeriodicBordersType) < 0) return NULL;
+    if (PyType_Ready(&R4Py_CartesianTopologyType) < 0) return NULL;
 
 
     Py_INCREF(&DiscretePointType);
@@ -1903,6 +2078,20 @@ PyInit__space(void)
         Py_DECREF(&R4Py_SharedCSpaceType);
         Py_DECREF(&R4Py_GridStickyBordersType);
         Py_DECREF(&R4Py_GridPeriodicBordersType);
+        Py_DECREF(m);
+    }
+
+    Py_INCREF(&R4Py_CartesianTopologyType);
+    if (PyModule_AddObject(m, "CartesianTopology", (PyObject*) &R4Py_CartesianTopologyType) < 0) {
+        Py_DECREF(&DiscretePointType);
+        Py_DECREF(&ContinuousPointType);
+        Py_DECREF(&R4Py_GridType);
+        Py_DECREF(&R4Py_SharedGridType);
+        Py_DECREF(&R4Py_CSpaceType);
+        Py_DECREF(&R4Py_SharedCSpaceType);
+        Py_DECREF(&R4Py_GridStickyBordersType);
+        Py_DECREF(&R4Py_GridPeriodicBordersType);
+        Py_DECREF(&R4Py_CartesianTopologyType);
         Py_DECREF(m);
     }
 

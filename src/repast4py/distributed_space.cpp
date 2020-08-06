@@ -4,6 +4,82 @@
 
 namespace repast4py {
 
+void compute_buffer_bounds(CTNeighbor& ngh, int offsets[], int num_dims, BoundingBox& local_bounds, 
+    unsigned int buffer_size) 
+{
+    long xmin = local_bounds.xmin_, xmax = local_bounds.xmax_;
+    long ymin = 0, ymax = 0;
+    if (num_dims == 2) {
+        ymin = local_bounds.ymin_; 
+        ymax = local_bounds.ymax_;
+    }
+    long zmin = 0, zmax = 0;
+    if (num_dims == 3) {
+        ymin = local_bounds.ymin_; 
+        ymax = local_bounds.ymax_;
+
+        zmin = local_bounds.zmin_;
+        zmax = local_bounds.zmax_;
+    }
+
+    if (offsets[0] == -1 || offsets[0] == 2) {
+        xmin = local_bounds.xmin_;
+        xmax = xmin + buffer_size;
+    } else if (offsets[0] == 1 || offsets[0] == -2) {
+        xmin = local_bounds.xmax_ - buffer_size;
+        xmax = xmin + buffer_size;
+    }
+
+    if (offsets[1] == -1 || offsets[1] == 2) {
+        ymin = local_bounds.ymin_;
+        ymax = ymin + buffer_size;
+    } else if (offsets[1] == 1 || offsets[1] == -2) {
+        ymin = local_bounds.ymax_ - buffer_size;
+        ymax = ymin + buffer_size;
+    }
+
+    if (offsets[2] == -1 || offsets[2] == 2) {
+        zmin = local_bounds.zmin_;
+        zmax = zmin + buffer_size;
+    } else if (offsets[2] == 1 || offsets[2] == -2) {
+        zmin = local_bounds.zmax_ - buffer_size;
+        zmax = zmin + buffer_size;
+    }
+
+    ngh.buffer_info = Py_BuildValue("(i(llllll))", ngh.rank, xmin, xmax, ymin, ymax,
+        zmin, zmax);
+
+}
+
+void compute_neighbor_buffers(std::vector<CTNeighbor>& nghs, std::vector<int>& cart_coords, 
+    BoundingBox& local_bounds, int num_dims, unsigned int buffer_size)
+{
+    int offsets[3] = {0, 0, 0};
+
+    if (num_dims == 1) {
+        for (auto& ngh : nghs) {
+            offsets[0] = ngh.cart_coord_x - cart_coords[0];
+            compute_buffer_bounds(ngh, offsets, num_dims, local_bounds, buffer_size);
+        }
+    } else if (num_dims == 2) {
+        for (auto& ngh : nghs) {
+            offsets[0] = ngh.cart_coord_x - cart_coords[0];
+            offsets[1] = ngh.cart_coord_y - cart_coords[1];
+            compute_buffer_bounds(ngh, offsets, num_dims, local_bounds, buffer_size);
+        }
+    } else if (num_dims == 3) {
+        for (auto& ngh : nghs) {
+            offsets[0] = ngh.cart_coord_x - cart_coords[0];
+            offsets[1] = ngh.cart_coord_y - cart_coords[1];
+            offsets[2] = ngh.cart_coord_z - cart_coords[2];
+            // if (rank == 0) {
+            //     printf("Offsets: %d - %d, %d, %d\n", ngh.rank, offsets[0], offsets[1], offsets[2]);
+            // }
+            compute_buffer_bounds(ngh, offsets, num_dims, local_bounds, buffer_size);
+        }
+    }
+}
+
 
 CartesianTopology::CartesianTopology(MPI_Comm comm, MPI_Comm* cart_comm, int num_dims, const BoundingBox& global_bounds, bool periodic) : 
     num_dims_{num_dims},  procs_per_dim{nullptr}, periodic_{periodic}, bounds_(global_bounds), x_remainder{0},
