@@ -1887,13 +1887,24 @@ static PyObject* CartesianTopology_computeBufferData(PyObject* self, PyObject* a
         return NULL;
     }
 
+    // {
+    //      volatile int i = 0;
+    //      char hostname[256];
+    //      gethostname(hostname, sizeof(hostname));
+    //      printf("PID %d on %s ready for attach\n", getpid(), hostname);
+    //      fflush(stdout);
+    //      while (0 == i)
+    //          sleep(5);
+    // }
+    
     std::vector<int> coords;
     ((R4Py_CartesianTopology*)self)->topo->getCoords(coords);
-    std::shared_ptr<std::vector<CTNeighbor>> nghs;
+    auto nghs = std::make_shared<std::vector<CTNeighbor>>();
     ((R4Py_CartesianTopology*)self)->topo->getNeighbors(*nghs);
     BoundingBox bounds(0, 0, 0, 0, 0, 0);
     ((R4Py_CartesianTopology*)self)->topo->getBounds(bounds);
-    compute_neighbor_buffers(*nghs, coords, bounds, coords.size(), buffer_size);
+    int num_dims = ((R4Py_CartesianTopology*)self)->topo->numDims();
+    compute_neighbor_buffers(*nghs, coords, bounds, num_dims, buffer_size);
 
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
     obj_iter->iter = new SequenceIter<std::vector<CTNeighbor>, GetBufferInfo>(nghs);

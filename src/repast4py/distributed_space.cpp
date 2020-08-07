@@ -48,7 +48,6 @@ void compute_buffer_bounds(CTNeighbor& ngh, int offsets[], int num_dims, Boundin
 
     ngh.buffer_info = Py_BuildValue("(i(llllll))", ngh.rank, xmin, xmax, ymin, ymax,
         zmin, zmax);
-
 }
 
 void compute_neighbor_buffers(std::vector<CTNeighbor>& nghs, std::vector<int>& cart_coords, 

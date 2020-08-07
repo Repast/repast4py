@@ -54,6 +54,9 @@ public:
     void getBounds(BoundingBox& local_bounds);    
     void getCoords(std::vector<int>& coords);
     void getNeighbors(std::vector<CTNeighbor>& neighbors);
+    int numDims() const {
+        return num_dims_;
+    }
 };
 
 struct R4Py_CartesianTopology {

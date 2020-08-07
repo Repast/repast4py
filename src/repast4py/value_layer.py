@@ -170,7 +170,7 @@ class ValueLayer:
             self.impl = Impl2D(bounds, borders, init_value, dtype)
         else:
             self.impl = Impl3D(bounds, borders, init_value, dtype)
-        self.bounds = bounds
+        self.bbounds = bounds
 
     @property
     def grid(self):
@@ -178,7 +178,7 @@ class ValueLayer:
 
     @property
     def bounds(self):
-        return self.bounds
+        return self.bbounds
             
     def get(self, pt):
         return self.impl.get(pt)
@@ -199,24 +199,26 @@ class SharedValueLayer(ValueLayer):
     def __init__(self, comm, bounds, borders, buffer_size, init_value, dtype=torch.float64):
         periodic = borders == BorderType.Periodic
         ct = CartesianTopology(comm, bounds, periodic)
-        self.cart_comm = ct.cart_comm
+        self.cart_comm = ct.comm
         # tuple of length dims
-        self.coords = ct.cart_coordinates
+        self.coords = ct.coordinates
         self.buffer_size = buffer_size
         # bounds in as BoundingBox
         local_bounds = ct.local_bounds
         bxmin = local_bounds.xmin - buffer_size
         bxexent = local_bounds.xextent + buffer_size
-        bymin = byexent = 0
-        if local_bounds.yexent > 0:
+        bymin = byextent = 0
+        if local_bounds.yextent > 0:
             bymin = local_bounds.ymin - buffer_size
-            byexent = local_bounds.yexent + buffer_size
-        bzmin = bzexent = 0
-        if local_bounds.zexent > 0:
+            byextent = local_bounds.yextent + buffer_size
+        bzmin = bzextent = 0
+        if local_bounds.zextent > 0:
             bzmin = local_bounds.zmin - buffer_size
-            bzexent = local_bounds.zexent + buffer_size
+            bzextent = local_bounds.zextent + buffer_size
+
+        self.local_bounds = local_bounds
         
-        buffered_bounds = BoundingBox(bxmin, bxexent, bymin, byexent, bzmin, bzexent)
+        buffered_bounds = BoundingBox(bxmin, bxexent, bymin, byextent, bzmin, bzextent)
         super().__init__(buffered_bounds, borders, init_value, dtype)
-        # TODO NEIGHBORS
+        self.buffer_nghs = [x for x in ct.compute_buffer_nghs(buffer_size)]
 
