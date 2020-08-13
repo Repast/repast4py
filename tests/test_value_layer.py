@@ -263,6 +263,4 @@ class ValueLayerTests(unittest.TestCase):
         self.assertTrue(np.array_equal(pts, exp_pts), pts)
         for i, val in enumerate(vals):
             self.assertEqual(val, vl.get(dpt(pts[0][i], pts[1][i], 0)))
-
-        
-        
+            
