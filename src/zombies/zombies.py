@@ -280,9 +280,9 @@ class Model:
         for h in self.context.agents(Human.ID):
             dead, pt = h.step()
             if dead:
-                dead_humans.append(h)
+                dead_humans.append((h, pt))
 
-        for h in dead_humans:
+        for h, pt in dead_humans:
             model.remove_agent(h)
             model.add_zombie(pt)
 
