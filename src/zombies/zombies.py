@@ -8,7 +8,7 @@ import json
 import time
 
 import numba
-from numba import int32
+from numba import int32, int64
 from numba.experimental import jitclass
 
 from repast4py import core, space, util, schedule
@@ -24,8 +24,7 @@ def printf(msg):
     print(msg)
     sys.stdout.flush()
 
-
-@numba.jit
+@numba.jit(nopython=True)
 def find_min_zombies(nghs, grid):
     minimum = [[], sys.maxsize]
     at = Dpt(0, 0, 0)
@@ -42,6 +41,10 @@ def find_min_zombies(nghs, grid):
             minimum[0].append(ngh)
 
     return minimum[0][random.randint(0, len(minimum[0]) - 1)]
+
+# @numba.jit((int64[:], int64[:]), nopython=True)
+def is_equal(a1, a2):
+    return a1[0] == a2[0] and a1[1] == a2[1]
 
 spec = [
     ('m', int32[:]),
@@ -110,7 +113,9 @@ class Human(core.Agent):
 
     # @profile
     def step(self):
+        timer.start_timer('s_get_location')
         space_pt = model.space.get_location(self)
+        timer.stop_timer('s_get_location')
         alive = True
         if self.infected:
             self.infected_duration += 1
@@ -118,6 +123,7 @@ class Human(core.Agent):
 
         if alive:
             grid = model.grid
+            timer.start_timer('g_get_location')
             pt = grid.get_location(self)
             #timer.start_timer('ngh_finder')
             nghs = model.ngh_finder.find(pt.x, pt.y) # include_origin=True)
@@ -147,7 +153,6 @@ class Human(core.Agent):
                 #timer.start_timer('human_move')
                 model.move(self, space_pt.x + direction[0], space_pt.y + direction[1])
                 #timer.stop_timer('human_move')
-        
         return (not alive, space_pt)
 
 
