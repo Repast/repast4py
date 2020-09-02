@@ -6,7 +6,6 @@ from . import geometry
 from .space import BorderType, GridStickyBorders, GridPeriodicBorders, CartesianTopology, BoundingBox
 from .space import DiscretePoint as dpt
 
-
 class Impl1D:
 
     def __init__(self, bounds, borders, init_value, dtype):
@@ -347,23 +346,23 @@ class SharedValueLayer(ValueLayer):
         ymin, yextent = 0, 0
         zmin, zextent = 0, 0
         # offsets from buffered grid into the local grid data
-        self.non_buff_grid_offsets = np.zeros(3, dtype=np.int32)
+        self.non_buff_grid_offsets = np.zeros(6, dtype=np.int32)
 
         if periodic:
-            self.non_buff_grid_offsets[0] = buffer_size
+            self.non_buff_grid_offsets[0:2] = buffer_size
             if self.local_bounds.xmin > bounds.xmin:
                 xmin = self.local_bounds.xmin - buffer_size
 
             # extent is x2 to create buffer on both sides
             xextent = self.local_bounds.xextent + (buffer_size * 2)
             if bounds.yextent > 0:
-                self.non_buff_grid_offsets[1] = buffer_size
+                self.non_buff_grid_offsets[2:4] = buffer_size
                 if self.local_bounds.ymin > bounds.ymin:
                     ymin = self.local_bounds.ymin - buffer_size
                 # extent is x2 to create buffer on both sides
                 yextent = self.local_bounds.yextent + (buffer_size * 2)
             if bounds.zextent > 0:
-                self.non_buff_grid_offsets[2] = buffer_size
+                self.non_buff_grid_offsets[4:6] = buffer_size
                 if self.local_bounds.zmin > bounds.zmin:
                     zmin = self.local_bounds.zmin - buffer_size
                 # extent is x2 to create buffer on both sides
@@ -377,39 +376,45 @@ class SharedValueLayer(ValueLayer):
                 if self.local_bounds.xmin + self.local_bounds.xextent < xmax:
                     # min is buffer_size less so need to increase extent to cover the space
                     xextent = self.local_bounds.xextent + (buffer_size * 2)
+                    self.non_buff_grid_offsets[1] = buffer_size
                 else:
                     xextent = self.local_bounds.xextent + buffer_size
             else:
                 if self.local_bounds.xmin + self.local_bounds.xextent < xmax:
                     xextent = self.local_bounds.xextent + buffer_size
-
+                    self.non_buff_grid_offsets[1] = buffer_size
+                    
             if bounds.yextent > 0:
                 ymax = bounds.ymin + bounds.yextent
                 if self.local_bounds.ymin > bounds.ymin:
                     ymin = self.local_bounds.ymin - buffer_size
-                    self.non_buff_grid_offsets[1] = buffer_size
+                    self.non_buff_grid_offsets[2] = buffer_size
                     if self.local_bounds.ymin + self.local_bounds.yextent < ymax:
                         # min is buffer_size less so need to increase extent to cover the space
                         yextent = self.local_bounds.yextent + (buffer_size * 2)
+                        self.non_buff_grid_offsets[3] = buffer_size
                     else:
                         yextent = self.local_bounds.yextent + buffer_size
                 else:
                     if self.local_bounds.ymin + self.local_bounds.yextent < ymax:
                         yextent = self.local_bounds.yextent + buffer_size
+                        self.non_buff_grid_offsets[3] = buffer_size
 
             if bounds.zextent > 0:
                 zmax = bounds.zmin + bounds.zextent
                 if self.local_bounds.zmin > bounds.zmin:
                     zmin = self.local_bounds.zmin - buffer_size
-                    self.non_buff_grid_offsets[2] = buffer_size
+                    self.non_buff_grid_offsets[4] = buffer_size
                     if self.local_bounds.zmin + self.local_bounds.zextent < zmax:
                         # min is buffer_size less so need to increase extent to cover the space
                         zextent = self.local_bounds.zextent + (buffer_size * 2)
+                        self.non_buff_grid_offsets[5] = buffer_size
                     else:
                         zextent = self.local_bounds.zextent + buffer_size
                 else:
                     if self.local_bounds.zmin + self.local_bounds.zextent < zmax:
                         zextent = self.local_bounds.zextent + buffer_size
+                        self.non_buff_grid_offsets[5] = buffer_size
 
         self.buffered_bounds = BoundingBox(xmin, xextent, ymin, yextent, zmin, zextent)
 
@@ -626,4 +631,48 @@ class SharedValueLayer(ValueLayer):
             disp = recv_displs[ngh_rank]
             self.grid[tslice] = torch.as_tensor(
                 recv_buf[disp: disp + size].reshape(shape))
+
+
+class BufferedSharedValueLayer:
+
+    def __init__(self, comm, bounds, borders, buffer_size, init_value, dtype=torch.float64):
+        self.read_layer = SharedValueLayer(comm, bounds, borders, buffer_size, init_value, dtype)
+        self.write_layer = SharedValueLayer(comm, bounds, borders, buffer_size, init_value, dtype)
+
+    def swap_layers(self):
+        self.read, self.write = self.write, self.read
+
+    def grid(self):
+        return self.impl.grid
+
+    @property
+    def bounds(self):
+        return self.read.bbounds
+
+    def get(self, pt):
+        return self.read.get(pt)
+
+    def set(self, pt, val):
+        self.write.set(pt, val)
+
+    def __getitem__(self, key):
+        return self.read.__getitem__(key)
+
+    def __setitem__(self, key, val):
+        self.write.__setitem__(key, val)
+
+    def get_nghs(self, pt, extent=1):
+        """ Gets the neighboring values and locations around the specified point.
+        :param pt: the point whose neighbors to get
+        :param extent: the extent of the neighborhood
+        """
+        return self.read.get_nghs(pt, extent)
+
+    # Required for the buffer space interface
+    def clear_buffer(self):
+        pass
+
+    def synchronize_buffer(self):
+        self.write.synchronize_buffer()
+        self.read.synchronize_buffer()
 

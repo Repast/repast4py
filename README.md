@@ -41,4 +41,12 @@ There also some C++ unitest. C++ tests can be compiled with makefile target 'tes
 
 Requires compiled repast4py.
 
+Run with: 
+
 `PYTHONPATH=./src python src/zombies/zombies.py src/zombies/zombie_model.props`
+
+Supplying a json string as a second argument will override the props in model.props
+
+`PYTHONPATH=./src python src/zombies/zombies.py src/zombies/zombie_model.props "{\"random.seed\" : 12, \"stop.at\" : 20, \"human.count\" : 10, \"zombie.count\" : 5, \"world.width\" : 10, \"world.height\" : 22, \"run.number\" : 2}"`
+
+
