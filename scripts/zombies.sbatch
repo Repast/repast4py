@@ -25,4 +25,4 @@ srun -n 360 python ./src/zombies/zombies.py ./src/zombies/zombie_model.props "{\
 # export PYTHONPATH=/lcrc/project/EMEWS/bebop/repos/repast4py/src
 # cd /lcrc/project/EMEWS/bebop/repos/repast4py
 
-# mpiexec -n 360 python ./src/zombies/zombies.py ./src/zombies/zombie_model.props "{\"stop.at\" : 100, \"human.count\" : 1000000, \"zombie.count\" : 2000, \"world.width\" : 1008, \"world.height\" : 1008}"
+# mpiexec -n 360 python ./src/zombies/zombies.py ./src/zombies/zombie_model.props "{\"stop.at\" : 100, \"human.count\" : 3000000, \"zombie.count\" : 6000, \"world.width\" : 1008, \"world.height\" : 1008}"
