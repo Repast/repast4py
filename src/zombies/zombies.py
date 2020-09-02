@@ -236,23 +236,31 @@ class Model:
         local_bounds = self.space.get_local_bounds()
         world_size = comm.Get_size()
 
-        human_count = int(int(props['human.count']) / world_size)
-        for i in range(human_count):
+        total_human_count = int(props['human.count'])
+        pp_human_count = int(total_human_count / world_size)
+        if self.rank < total_human_count % world_size:
+            pp_human_count += 1
+
+        for i in range(pp_human_count):
             h = Human(i, self.rank)
             self.context.add(h)
             x = random.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
             y = random.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
             self.move(h, x, y)
 
-        zombie_count = int(int(props['zombie.count']) / world_size)
-        for i in range(zombie_count):
+        total_zombie_count = int(props['zombie.count'])
+        pp_zombie_count = int(total_zombie_count / world_size)
+        if self.rank < total_zombie_count % world_size:
+            pp_zombie_count += 1
+
+        for i in range(pp_zombie_count):
             zo = Zombie(i, self.rank)
             self.context.add(zo)
             x = random.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
             y = random.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
             self.move(zo, x, y)
 
-        self.zombie_id = zombie_count
+        self.zombie_id = pp_zombie_count
 
         self.calc_counts()
 
@@ -357,7 +365,8 @@ if __name__ == "__main__":
     run(props)
     end_time = time.time()
     if MPI.COMM_WORLD.Get_rank() == 0:
-        line = '{},{},{}'.format(props['run.number'], props['random.seed'], end_time - start_time)
-        with open('runtimes_{}_{}.csv'.format(props['run.number'], props['random.seed']), 'w') as f_out:
+        size = MPI.COMM_WORLD.Get_size()
+        line = '{},{},{},{}'.format(size, props['run.number'], props['random.seed'], end_time - start_time)
+        with open('runtimes_{}p_{}_{}.csv'.format(size, props['run.number'], props['random.seed']), 'w') as f_out:
             print('Runtime: {}'.format(line))
             f_out.write('{}\n'.format(line))
