@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --time=01:00:00
-#SBATCH --nodes=5
+#SBATCH --nodes=10
 #SBATCH --ntasks-per-node=36
 #SBATCH --mem=128G
 #SBATCH --partition=dis
@@ -15,7 +15,7 @@ module load anaconda3/5.2.0
 export PYTHONPATH=/lcrc/project/EMEWS/bebop/repos/repast4py/src
 cd /lcrc/project/EMEWS/bebop/repos/repast4py
 
-srun -n 180 python ./src/zombies/zombies.py ./src/zombies/zombie_model.props "{\"stop.at\" : 100, \"human.count\" : 2000000, \"zombie.count\" : 5000, \"world.width\" : 1008, \"world.height\" : 1008}"
+srun -n 360 python ./src/zombies/zombies.py ./src/zombies/zombie_model.props "{\"stop.at\" : 100, \"human.count\" : 3000000, \"zombie.count\" : 6000, \"world.width\" : 1008, \"world.height\" : 1008}"
 
 # MPICH
 # module load gcc/8.2.0-g7hppkz

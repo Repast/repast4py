@@ -366,7 +366,7 @@ if __name__ == "__main__":
     end_time = time.time()
     if MPI.COMM_WORLD.Get_rank() == 0:
         size = MPI.COMM_WORLD.Get_size()
-        line = '{},{},{},{}'.format(size, props['run.number'], props['random.seed'], end_time - start_time)
-        with open('runtimes_{}p_{}_{}.csv'.format(size, props['run.number'], props['random.seed']), 'w') as f_out:
+        line = '{},{},{},{},{},{}'.format(size, props['human.count'], props['zombie.count'], props['run.number'], props['random.seed'], end_time - start_time)
+        with open('runtimes_{}p_{}h_{}z_{}_{}.csv'.format(size, props['human.count'], props['zombie.count'], props['run.number'], props['random.seed']), 'w') as f_out:
             print('Runtime: {}'.format(line))
             f_out.write('{}\n'.format(line))
