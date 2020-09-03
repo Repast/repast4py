@@ -336,11 +336,17 @@ class SharedValueLayer(ValueLayer):
 
         # add buffer to local bounds
         self.local_bounds = topo.local_bounds
-        self._init_buffered_bounds(bounds, buffer_size, periodic)
+        if comm.Get_size() > 1:
+            self._init_buffered_bounds(bounds, buffer_size, periodic)
+        else:
+            self.buffered_bounds = self.local_bounds
+            self.non_buff_grid_offsets = np.zeros(6, dtype=np.int32)
+        
         super().__init__(self.buffered_bounds, borders, init_value, dtype)
 
-        self._init_sync_data(topo, buffer_size)
-
+        if comm.Get_size() > 1:
+            self._init_sync_data(topo, buffer_size)
+            
     def _init_buffered_bounds(self, bounds, buffer_size, periodic):
         xmin, xextent = 0, 0
         ymin, yextent = 0, 0
@@ -633,14 +639,14 @@ class SharedValueLayer(ValueLayer):
                 recv_buf[disp: disp + size].reshape(shape))
 
 
-class BufferedSharedValueLayer:
+class ReadWriteValueLayer:
 
     def __init__(self, comm, bounds, borders, buffer_size, init_value, dtype=torch.float64):
         self.read_layer = SharedValueLayer(comm, bounds, borders, buffer_size, init_value, dtype)
         self.write_layer = SharedValueLayer(comm, bounds, borders, buffer_size, init_value, dtype)
 
     def swap_layers(self):
-        self.read, self.write = self.write, self.read
+        self.read_layer, self.write_layer = self.write_layer, self.read_layer
 
     def grid(self):
         return self.impl.grid
@@ -673,6 +679,9 @@ class BufferedSharedValueLayer:
         pass
 
     def synchronize_buffer(self):
-        self.write.synchronize_buffer()
-        self.read.synchronize_buffer()
+        self.write_layer.synchronize_buffer()
+        self.read_layer.synchronize_buffer()
+
+    def apply(self, func):
+        func(self)
 
