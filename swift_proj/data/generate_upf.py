@@ -1,14 +1,12 @@
-"""Generate UPF for the JCCM Model"""
+"""Generate UPF for the Zombies Model"""
 
 import json
 
-nodes = 1
-ppn = 36
 replicates = 30
 
-humans = 1000
-zombies = 50
-world_size = 20
+humans = 3000000
+zombies = 6000
+world_size = 1008
 stop_at = 100
 
 seed = 0
@@ -32,6 +30,6 @@ for r in range(0,replicates):
 
     run += 1
 
-with open('upf_01.txt', 'w') as f:
+with open('upf_weak_scaling.txt', 'w') as f:
     f.writelines(lines)
 

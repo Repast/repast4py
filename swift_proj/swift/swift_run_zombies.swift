@@ -10,6 +10,7 @@ string turbine_output = getenv("TURBINE_OUTPUT");
 
 string model_main = "%s/../src/zombies/zombies.py" % emews_root;
 string config_file = argv("config_file");
+int mproc = toint(argv("mproc"));
 string param_file = argv("f"); // e.g. -f="model_params.txt";
 
 //printf("Model Main = ");
@@ -46,17 +47,13 @@ params_line = json.dumps(params_json)
         string params_line = python_persist(code, "params_line");
         string params_line_wrapped = "'" + params_line + "'";
             
-        // Swift special environment vars
-        //string envs[] = ["swift_launcher=/usr/bin/srun"];
             
-        // JCCM args
+        // model args
         string args[] = [model_main, config_file, params_line_wrapped];
-        
-        // TODO get par from command line
-        
+         
         // TODO need to create output folder using swift because model ranks will collide trying to write folder
         
-        z[i] = @par=34 launch("python", args);
+        z[i] = @par=mproc launch("python", args);
         //z[i] = @par=2 launch_envs("python", args, envs);
         
         printf("z[i] = %i", z[i]);

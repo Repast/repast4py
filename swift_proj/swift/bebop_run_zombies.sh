@@ -20,23 +20,27 @@ export EXPID=$1
 export TURBINE_OUTPUT=$EMEWS_PROJECT_ROOT/experiments/$EXPID
 check_directory_exists
 
-# Edit the number of processes as required.
-export PROCS=36
+# MPROC is the MPI World size
+# Weak scaling MPROC  36,  72, 144, 288, 576, 1152, 2304, 4608
+# Weak scaling time  850, 400, 200, 115, 
+export MPROC=4608
 
+export ADLB_PAR_MOD=$MPROC
+export TURBINE_LAUNCHER=mpiexec
+
+# Edit the number of processes as required.
+export PROCS=$((MPROC + 4))
 
 # Edit QUEUE, WALLTIME, PPN, AND TURNBINE_JOBNAME
 # as required. Note that QUEUE, WALLTIME, PPN, AND TURNBINE_JOBNAME will
 # be ignored if the MACHINE variable (see below) is not set.
 #export QUEUE=bdwall
 #export PROJECT=emews
-export PROJECT=condo
-export QUEUE=dis
-export WALLTIME=01:30:00
-export PPN=36
+export PROJECT=emews
+export QUEUE=bdwall
+export WALLTIME=00:20:00
+export PPN=18
 export TURBINE_JOBNAME="${EXPID}_job"
-
-export ADLB_PAR_MOD=34
-export TURBINE_LAUNCHER=mpiexec
 
 # if R cannot be found, then these will need to be
 # uncommented and set correctly.
@@ -72,6 +76,7 @@ set -x
 
 swift-t -n $PROCS $MACHINE -p \
     $EMEWS_PROJECT_ROOT/swift/swift_run_zombies.swift \
-    -f="$EMEWS_PROJECT_ROOT/data/upf_01.txt" \
+    -f="$EMEWS_PROJECT_ROOT/data/upf_weak_scaling.txt" \
     -config_file=$CONFIG_FILE \
+    -mproc=$MPROC \
     $CMD_LINE_ARGS
