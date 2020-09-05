@@ -66,3 +66,6 @@ templates/scripts/archive/
 old_repast_py_src/
 Debug/
 notes_nc.txt
+
+# Include R4Py paper experiment data
+!paper_data/*
