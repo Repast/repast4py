@@ -4,9 +4,11 @@ import json
 
 replicates = 30
 
+agent_multiplier = 4*4*4
+world_multiplier = 2*2*2
 humans = 3000000
 zombies = 6000
-world_size = 1008
+world_size = world_multiplier * 1008
 stop_at = 100
 
 seed = 0
@@ -21,8 +23,8 @@ for r in range(0,replicates):
     param['run'] = run
     param['random.seed'] = seed
     param['stop.at'] = stop_at
-    param['human.count'] = humans
-    param['zombie.count'] = zombies
+    param['human.count'] = agent_multiplier * humans
+    param['zombie.count'] = agent_multiplier * zombies
     param['world.width'] = world_size
     param['world.height'] = world_size
 
@@ -30,6 +32,6 @@ for r in range(0,replicates):
 
     run += 1
 
-with open('upf_weak_scaling.txt', 'w') as f:
+with open('upf_weak_scaling_2304.txt', 'w') as f:
     f.writelines(lines)
 
