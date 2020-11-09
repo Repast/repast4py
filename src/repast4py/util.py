@@ -14,8 +14,9 @@ class Timer:
             self.times[name][0] = time.time()
 
     def stop_timer(self, name):
+        t = time.time()
         data = self.times[name]
-        data[1] = time.time()
+        data[1] = t
         data[2].append(data[1] - data[0])
 
     def print_times(self):
