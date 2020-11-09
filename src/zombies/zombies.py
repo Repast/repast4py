@@ -328,8 +328,7 @@ class Model:
     def calc_counts(self):
         human_count = np.zeros(1, dtype='int64')
         zombie_count = np.zeros(1, dtype='int64')
-        counts = {Human.ID : 0, Zombie.ID : 0}
-        self.context.count(counts)
+        counts = self.context.size([Human.ID, Zombie.ID])
         self.comm.Reduce(np.array([counts[Human.ID]], dtype='int64'), human_count, op=MPI.SUM, root=0)
         self.comm.Reduce(np.array([counts[Zombie.ID]], dtype='int64'), zombie_count, op=MPI.SUM, root=0)
 
