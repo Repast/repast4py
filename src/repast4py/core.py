@@ -122,7 +122,17 @@ class SharedContext:
                 self.projections[proj_data[0]]._synch_move(agent, proj_data[1])
 
     
-    def synchronize(self, create_agent, sync_buffer=True):
+    def synchronize(self, create_agent, sync_buffer: bool=True):
+        """Synchronizes the model state across processes by moving agents, filling 
+        projection buffers and so forth.
+
+        Args:
+            create_agent: a function that takes agent data and creates and returns an agent instance from
+            data. The daata is tuple consisting of the agent id tuple, and the serialized agent state
+            synch_buffer: if True, the buffered areas in any buffered projections and value layers associated
+            with this SharedContext are also synchronized. Defaults to True.
+        """
+
         if sync_buffer:
             for proj in self.buffered_projs:
                 proj.clear_buffer()
@@ -138,9 +148,9 @@ class SharedContext:
                 proj.synchronize_buffer(create_agent)
 
 
-    # TODO implement the shuffle -- values to list, and then shuffle that?
+    
     def agents(self, agent_type: int=None, shuffle: bool=False):
-        """Gets the agents in SharedContext, optionally of the specified type.
+        """Gets the agents in SharedContext, optionally of the specified type or shuffled.
 
         Args:
             agent_type: the type id of the agent, defaults to None.
@@ -153,7 +163,6 @@ class SharedContext:
 
             If the agent_type is not None then an iterable over agents of that type will be 
             returned.
-
         """
         if shuffle:
             if agent_type == None:
@@ -169,13 +178,13 @@ class SharedContext:
                 return self._local_agents.values().__iter__()
             else:
                 return self._agents_by_type[agent_type].values().__iter__()
-        
-    def count(self, agent_type_ids:list=None)-> dict:
-        """Gets a count of agents in this SharedContext by type.
+    
+    def size(self, agent_type_ids:list=None)-> dict:
+        """Gets the number of agents in this SharedContext, optionally by type.
 
         Args:
-            agent_type_ids: a list of the agent type ids identifying the agents types to count. If
-            this is None then all the agents will be counted.
+            agent_type_ids: a list of the agent type ids identifying the agent types to count. 
+            If this is None then the total size is returned with an id of 0.
 
         Returns:
             A dictionary containing the counts (the dict values) by type (the dict keys).
@@ -185,8 +194,7 @@ class SharedContext:
             for i in agent_type_ids:
                 counts[i] = len(self._agents_by_type[i])
         else:
-            for k, v in self._agents_by_type.items():
-                counts[k] = len(v)
+            counts[0] = len(self._local_agents)
 
         return counts
             
