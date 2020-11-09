@@ -8,7 +8,7 @@ import json
 import time
 
 import numba
-from numba import int32
+from numba import int32, int64
 from numba.experimental import jitclass
 
 from repast4py import core, space, util, schedule
@@ -17,15 +17,14 @@ from repast4py.space import ContinuousPoint as CPt
 from repast4py.space import DiscretePoint as DPt
 from repast4py.space import BorderType, OccupancyType
 
-# timer = util.Timer()
+timer = util.Timer()
 model = None
 
 def printf(msg):
     print(msg)
     sys.stdout.flush()
 
-
-@numba.jit
+@numba.jit(nopython=True)
 def find_min_zombies(nghs, grid):
     minimum = [[], sys.maxsize]
     at = Dpt(0, 0, 0)
@@ -42,6 +41,10 @@ def find_min_zombies(nghs, grid):
             minimum[0].append(ngh)
 
     return minimum[0][random.randint(0, len(minimum[0]) - 1)]
+
+# @numba.jit((int64[:], int64[:]), nopython=True)
+def is_equal(a1, a2):
+    return a1[0] == a2[0] and a1[1] == a2[1]
 
 spec = [
     ('m', int32[:]),
@@ -110,7 +113,9 @@ class Human(core.Agent):
 
     # @profile
     def step(self):
+        timer.start_timer('s_get_location')
         space_pt = model.space.get_location(self)
+        timer.stop_timer('s_get_location')
         alive = True
         if self.infected:
             self.infected_duration += 1
@@ -118,8 +123,10 @@ class Human(core.Agent):
 
         if alive:
             grid = model.grid
+            timer.start_timer('g_get_location')
             pt = grid.get_location(self)
-            #timer.start_timer('ngh_finder')
+            timer.stop_timer('g_get_location')
+            timer.start_timer('ngh_finder')
             nghs = model.ngh_finder.find(pt.x, pt.y) # include_origin=True)
             #timer.stop_timer('ngh_finder')
 
@@ -141,12 +148,16 @@ class Human(core.Agent):
             min_ngh = minimum[0][random.randint(0, len(minimum[0]) - 1)]
             #timer.stop_timer('zombie_finder')
 
-
-            if not np.all(min_ngh == pt.coordinates):
-                direction = (min_ngh - pt.coordinates[:3]) * 0.5
-                #timer.start_timer('human_move')
+            timer.start_timer('do_move')
+            # if not np.all(min_ngh == pt.coordinates):
+            # if min_ngh[0] != pt.coordinates[0] or min_ngh[1] != pt.coordinates[1]:
+            #if not np.array_equal(min_ngh, pt.coordinates):
+            if not is_equal(min_ngh, pt.coordinates):
+                direction = (min_ngh - pt.coordinates) * 0.5
+                timer.start_timer('human_move')
                 model.move(self, space_pt.x + direction[0], space_pt.y + direction[1])
-                #timer.stop_timer('human_move')
+                timer.stop_timer('human_move')
+            timer.stop_timer('do_move')
         
         return (not alive, space_pt)
 
