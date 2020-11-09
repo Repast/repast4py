@@ -879,10 +879,91 @@ class SharedContextTests1(unittest.TestCase):
 
     long_message = True
 
-    def test_add_remove(self):
+    # tests same named proj in context throws exception
+    def test_duplicate_projection(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
         
+
+        if comm != MPI.COMM_NULL:
+            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+
+            context = core.SharedContext(comm)
+            context.add_projection(grid)
+            with self.assertRaises(ValueError) as _:
+                context.add_projection(grid)
+
+    # tests adding / removing from context
+    def test_add_remove1(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            a1 = core.Agent(1, 0, rank)
+            a2 = core.Agent(2, 0, rank)
+            agents = [a1, a2]
+
+            context = core.SharedContext(comm)
+            context.add(a1)
+            context.add(a2)
+
+            count = 0
+            for i, ag in enumerate(context.agents()):
+                self.assertEqual(agents[i], ag)
+                self.assertEqual(agents[i].id, ag.id)
+                count += 1
+
+            self.assertEqual(2, count)
+
+            context.remove(a1)
+            count = 0
+            for ag in context.agents():
+                self.assertEqual(a2, ag)
+                count += 1
+            self.assertEqual(1, count)
+
+    # tests context.count
+    def test_counts(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            a1 = core.Agent(1, 1, rank)
+            a2 = core.Agent(2, 0, rank)
+            a3 = core.Agent(2, 1, rank)
+
+            context = core.SharedContext(comm)
+            context.add(a1)
+            context.add(a3)
+            context.add(a2)
+
+            counts = context.count()
+        
+            self.assertEqual(2, len(counts))
+            self.assertEqual(2, counts[1])
+            self.assertEqual(1, counts[0])
+
+            counts = context.count([1])
+            self.assertEqual(1, len(counts))
+            self.assertEqual(2, counts[1])
+
+            context.remove(a1)
+            counts = context.count()
+            self.assertEqual(2, len(counts))
+            self.assertEqual(1, counts[1])
+            self.assertEqual(1, counts[0])
+
+
+    # tests adding / removing from context, adds / removes from projection
+    def test_add_remove2(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -920,11 +1001,13 @@ class SharedContextTests1(unittest.TestCase):
                     self.assertEqual(a2, agent)
                 self.assertEqual(1, count)
 
+    # tests context synchronization in 2D 2 rank
+    # adds agents moves them oob in a grid and 
+    # tests if moved to correct location
     def test_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
         
-
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
 
@@ -1022,6 +1105,7 @@ class SharedContextTests1(unittest.TestCase):
 
 
 
+    # Tests that buffer is filled on synchronization in 2D, 2 rank world
     def test_buffer(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
@@ -1217,6 +1301,7 @@ class SharedContextTests1(unittest.TestCase):
             self.assertIsNotNone(agent, (e, rank))
             self.assertEqual(uid, agent.uid, (e, rank))
                 
+# Same tests as above but using continuous space
 class SharedContextTests2(unittest.TestCase):
 
     long_message = True
@@ -1567,10 +1652,16 @@ class TempAgent(core.Agent):
     def __init__(self, uid):
         super().__init__(id=uid[0], type=uid[1], rank=uid[2])
 
+# 9 ranks grid and cspace buffer and movement sync
 class SharedContextTests3(unittest.TestCase):
 
     long_message = True
                 
+    # Idea here is move agents into buffered areas
+    # and record their locations and ids. That 
+    # data is sent to rank where the agents are 
+    # also sent via synch, and we use that 
+    # as expected info.
     def test_multi_proj(self):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -1590,6 +1681,8 @@ class SharedContextTests3(unittest.TestCase):
             occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
         context.add_projection(cspace)
         context.add_projection(grid)
+
+        
 
         g_moved = [[] for i in range(grid._cart_comm.size)]
         c_moved = [[] for i in range(grid._cart_comm.size)]
