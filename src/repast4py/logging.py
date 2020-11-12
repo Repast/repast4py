@@ -179,3 +179,5 @@ class ReducingDataSet:
                             f_out.write(self._sep)
                             f_out.write(str(vals[i]))
                     f_out.write('\n')
+
+            self.ticks.clear()

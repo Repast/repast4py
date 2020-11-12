@@ -131,9 +131,37 @@ class LoggingTests(unittest.TestCase):
             self.assertEqual(11, row_count)
 
     def test_logging4(self):
-        # same as 1, but change buffer size to something small
-        pass
+        c = Counts()
+        rank = MPI.COMM_WORLD.Get_rank()
 
-    def test_logging5(self):
-        # call write explicitly
-        pass
+        fpath = './test_out/test_log.csv'
+        loggers = logging.create_loggers(c, names={'a': 'A', 'b': 'BValue', 'c': None}, op=MPI.SUM, rank=rank)
+        data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, fpath=fpath, buffer_size=1)
+
+        self.update(c, data_set, rank)
+        data_set.close()
+
+        if rank == 0:
+            expected = [['tick', 'A', 'BValue', 'c']]
+            w_size = MPI.COMM_WORLD.Get_size()
+
+            for j in range(10):
+                a, b, c = 0, 0, 0
+                for i in range(w_size):
+                    a += j * i
+                    b += (j + 0.1) * i
+                    c += (j + 0.2) * i
+                expected.append([j, round(a, 1), round(b, 1), round(c, 1)])
+
+            row_count = 0
+            with open(fpath) as f_in:
+                reader = csv.reader(f_in)
+                for i, row in enumerate(reader):
+                    row_count += 1
+                    exp = expected[i]
+                    if i > 0:
+                        row = [float(row[0]), int(row[1]), round(float(row[2]), 1), round(float(row[3]), 1)]
+                    self.assertEqual(exp, row)
+            self.assertEqual(11, row_count)
+
+    
