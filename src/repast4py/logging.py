@@ -2,23 +2,61 @@ import numpy as np
 from mpi4py import MPI
 import os
 
-from typing import List, Dict
+from typing import List, Dict, Any
+
+try:
+    from typing import Protocol
+except ImportError:
+    from typing_extensions import Protocol
 
 from dataclasses import dataclass, fields
+
+
+class DataSource(Protocol):
+
+    @property
+    def name(self) -> str:
+        """Gets the name of this DataSource.
+
+        Returns:
+            The name of this DataSource.
+        """
+        pass
+
+    @property
+    # int is acceptable when float is type
+    # https://stackoverflow.com/questions/50928592/mypy-type-hint-unionfloat-int-is-there-a-number-type
+    def value(self) -> float:
+        """Gets the value of this DataSource.
+
+        Returns:
+            The value of this DataSource.
+        """
+        pass
+
+    @property
+    def dtype(self) -> np.dtype:
+        """Gets the numpy dtype of this DataSource.
+
+        Returns:
+            The numpy dtype of this DataSource.
+        """
+        pass
 
 
 class ReducingDataLogger:
 
     ARRAY_SIZE = 500
 
-    def __init__(self, data_source, op, rank: int):
+    def __init__(self, data_source: DataSource, op, rank: int):
         """Creates a ReducingDataRecorder that gets its data from the
-        specified source, reduces using the specified op and running on
+        specified source, reduces using the specified op and runs on
         the specified rank.
 
         Args:
+            data_source: the source of the data to reduce.
             op: an mpi reduction operator, e.g. MPI.SUM
-
+            rank: the rank of this ReducingDataLogger
         """
         self._data = np.zeros(ReducingDataLogger.ARRAY_SIZE, dtype=data_source.dtype)
         self._data_source = data_source
@@ -28,14 +66,32 @@ class ReducingDataLogger:
 
     @property
     def name(self) -> str:
+        """Gets the name of this ReducingDataLogger. 
+        This is forwarded from the data source.
+
+        Returns:
+            The name of this ReducingDataLogger.
+        """
         return self._data_source.name
 
     @property
     def size(self) -> int:
+        """Gets the number of values this logger currently holds. This is
+        set back to 0 on a reduce.
+
+        Returns:
+            The number of values this logger currently holds.
+        """
         return self._idx
 
     @property
     def dtype(self):
+        """Gets the numpy dtype of this ReducingDataLogger. This
+        is forwarded from the data source.
+
+        Returns:
+            The numpy dtype of this ReducingDataLogger.
+        """
         return self._data_source.dtype
 
     def log(self):
@@ -49,6 +105,14 @@ class ReducingDataLogger:
         self._idx += 1
 
     def reduce(self, comm: MPI.Comm) -> np.array:
+        """Reduces the values on all processes within the specified
+        communicator to single values using the op specified in the
+        constructor. The reduction is performed on each logged value
+        at which point, the logged values are discarded.
+
+        Returns:
+            A numpy array containing the reduced values.
+        """
         recv_buf = None
         if self._rank == 0:
             recv_buf = np.empty(self._idx, dtype=self._data_source.dtype)
@@ -60,8 +124,24 @@ class ReducingDataLogger:
 
 # creates a datasource from a dataclass field
 class DCDataSource:
+    """A DCDataSource implements the :py:class logging.DataSource protocol for
+    :py:class dataclasses.dataclass objects. Each DCDataSource gets its returned
+    value from a dataclass field.
+    """
 
-    def __init__(self, data_class, field_name: str, ds_name: str=None):
+    def __init__(self, data_class: dataclass, field_name: str, ds_name: str=None):
+        """Creates a DCDataSource that will log the specified field of the
+        specified dataclass. By default field name will be used as the data source
+        name, but an optional data source name can be supplied. The data source
+        name will become the column header in the logged tabular data.
+
+        Args:
+            data_class: the dataclass containing the values to log
+            field_name: the name of the field in the dataclass to log
+            ds_name: an optional name that will be used as the column
+            header if supplied, otherwise the field_name will be
+            used.
+        """
         self.data_class = data_class
         self.field_name = field_name
         if ds_name is None:
@@ -80,22 +160,39 @@ class DCDataSource:
             raise ValueError('Field "{}" not found in dataclass {}'.format(field_name, data_class))
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """Gets the name of this DCDataSource.
+
+        Returns:
+            The name of this DataSource.
+        """
         return self.ds_name
 
     @property
-    def value(self):
+    # int is acceptable when float is type
+    # https://stackoverflow.com/questions/50928592/mypy-type-hint-unionfloat-int-is-there-a-number-type
+    def value(self) -> float:
+        """Gets the value of this DCDataSource.
+
+        Returns:
+            The value of this DataSource.
+        """
         return getattr(self.data_class, self.field_name)
 
     @property
     def dtype(self):
+        """Gets the numpy dtype of this DCDataSource.
+
+        Returns:
+            The numpy dtype of this DCDataSource.
+        """
         return self._dtype
 
 
 def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str]=None) -> List[ReducingDataLogger]:
     """Creates ReducingDataLogger-s from a dataclasses.dataclass, optionally
     constrainingthe loggers to log only from specified fields. By default the
-    names arg is None and all the dataclass fields will be logged. 
+    names argument is None and all the dataclass fields will be logged.
 
     Args:
         data_class: the dataclass to log
@@ -124,9 +221,26 @@ def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str]=N
 
 
 class ReducingDataSet:
+    """A ReducingDataSet represents a tabular data set where each column
+    is produced by a ReducingDataLogger and where name of each logger is
+    the name of the column. The produced tabular data is periodically
+    written to a file.
+    """
 
-    def __init__(self, data_loggers: List[ReducingDataLogger], comm,
+    def __init__(self, data_loggers: List[ReducingDataLogger], comm: MPI.Comm,
                  fpath: str, sep: str=',', buffer_size: int=1000):
+        """Creates a ReducingDataSet whose columns are produced from
+        the specified data loggers which are reduced across the specified
+        communicator.
+
+        Args:
+            data_loggers: a list of ReducingDataLoggers that will produce the tabular data,
+            one data_logger per column.
+            comm: the communicator to reduce over
+            fpath: the file to write the data to
+            sep: the seperator to use to seperate the column values
+            buffer_size: the number of values to log before writing to a file.
+        """
         self._data_loggers = data_loggers
         self._sep = sep
         self._comm = comm
@@ -151,9 +265,18 @@ class ReducingDataSet:
                 f_out.write('\n')
 
     def close(self):
+        """Closes this ReducingDataSet, writing any remaining
+        data to the file.
+        """
         self.write()
 
     def log(self, tick: float):
+        """Logs the data for the specified tick, by calling
+        log on each data logger contained in this ReducingDataSet.
+
+        Args:
+            tick: the tick (timestamp) for which the data is logged.
+        """
         if self._rank == 0:
             self.ticks.append(tick)
 
@@ -164,6 +287,10 @@ class ReducingDataSet:
             self.write()
 
     def write(self):
+        """Writes any currently logged, but not yet reduced
+        data to this ReducingDataSet's file, by reducing and then writing the
+        resulting data to the file.
+        """
         val_arrays = [x.reduce(self._comm) for x in self._data_loggers]
         if self._rank == 0:
             nrows = len(self.ticks)

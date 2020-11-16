@@ -16,6 +16,7 @@ There are 3 types of python unit tests:
 
 `python -m unittest discover tests` 
 
+
 2. Multiprocess (9 procs) mpi tests for 2D spaces. Run with:
 
 `mpirun -n 9 python -m unittest tests.shared_obj_tests`
@@ -31,6 +32,10 @@ There are 3 types of python unit tests:
 Or for 3d tests if python >= 3.7:
 
 `mpirun -n 18 python -m unittest -k tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d*`
+
+4. Multiprocess (4 procs) mpi tests for logging. Run with:
+
+`mpirun -n 4 python -m unittest tests.logging_tests`
 
 
 There also some C++ unitest. C++ tests can be compiled with makefile target 'tests' and run with:
