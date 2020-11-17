@@ -10,12 +10,15 @@ from enum import Enum
 from collections import namedtuple
 import sys
 
+
 class BorderType:
     Sticky = 0
     Periodic = 1
 
+
 class OccupancyType:
     Multiple = 0
+
 
 if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
     BoundingBox = namedtuple('BoundingBox', ['xmin', 'xextent', 'ymin', 'yextent', 'zmin', 'zextent'],
@@ -60,17 +63,16 @@ class SharedGrid(_SharedGrid):
                 pt._reset(pt_data)
                 self.move(agent, pt)
 
-
-    def clear_buffer(self):
+    def clear_ghosts(self):
         for agent in self.buffered_agents:
             self.remove(agent)
         self.buffered_agents.clear()
 
-    def synchronize_buffer(self, create_agent):
+    def synchronize_ghosts(self, create_agent):
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
         self._process_recv_data(recv_data, create_agent)
-    
+
     def _gather_1d(self, data_list, ranges):
         pt = DiscretePoint(0, 0, 0)
         for x in range(ranges[0], ranges[1]):
@@ -78,7 +80,7 @@ class SharedGrid(_SharedGrid):
             agents = self.get_agents(pt)
             for a in agents:
                 data_list.append((a.save(), (pt.x, pt.y, pt.z)))
-    
+
     def _gather_2d(self, data_list, ranges):
         pt = DiscretePoint(0, 0, 0)
         for x in range(ranges[0], ranges[1]):
@@ -105,7 +107,7 @@ class SharedCSpace(_SharedContinuousSpace):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
         self.buffered_agents = []
 
-    def clear_buffer(self):
+    def clear_ghosts(self):
         for agent in self.buffered_agents:
             self.remove(agent)
         self.buffered_agents.clear()
@@ -135,7 +137,7 @@ class SharedCSpace(_SharedContinuousSpace):
                 pt._reset(pt_data)
                 self.move(agent, pt)
 
-    def synchronize_buffer(self, create_agent):
+    def synchronize_ghosts(self, create_agent):
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
         self._process_recv_data(recv_data, create_agent)

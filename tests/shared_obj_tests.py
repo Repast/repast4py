@@ -1153,9 +1153,9 @@ class SharedContextTests1(unittest.TestCase):
                 pt = space.DiscretePoint(15, 15)
                 grid.move(a13, pt)
 
-            grid.clear_buffer()
+            grid.clear_ghosts()
             context.synchronize(create_agent, False)
-            grid.synchronize_buffer(create_agent)
+            grid.synchronize_ghosts(create_agent)
 
             if rank == 0:
                 pt = space.DiscretePoint(10, 20)
@@ -1194,8 +1194,8 @@ class SharedContextTests1(unittest.TestCase):
 
                 self.assertEqual(3, len(context._local_agents))
 
-            grid.clear_buffer()
-            grid.synchronize_buffer(create_agent)
+            grid.clear_ghosts()
+            grid.synchronize_ghosts(create_agent)
 
             if rank == 1:
                 pt = space.DiscretePoint(8, 20)
@@ -1282,8 +1282,8 @@ class SharedContextTests1(unittest.TestCase):
             if k.startswith(str(rank)):
                 grid.move(agents[v[0]], v[1])
 
-        grid.clear_buffer()
-        grid.synchronize_buffer(create_agent)
+        grid.clear_ghosts()
+        grid.synchronize_ghosts(create_agent)
 
         exp = [
             ['1N', '3W', '4NW'],
@@ -1535,8 +1535,8 @@ class SharedContextTests2(unittest.TestCase):
 
                 self.assertEqual(3, len(context._local_agents))
 
-            grid.clear_buffer()
-            grid.synchronize_buffer(create_agent)
+            grid.clear_ghosts()
+            grid.synchronize_ghosts(create_agent)
 
             if rank == 1:
                 pt = space.ContinuousPoint(8, 20)
@@ -1623,8 +1623,8 @@ class SharedContextTests2(unittest.TestCase):
             if k.startswith(str(rank)):
                 grid.move(agents[v[0]], v[1])
 
-        grid.clear_buffer()
-        grid.synchronize_buffer(create_agent)
+        grid.clear_ghosts()
+        grid.synchronize_ghosts(create_agent)
 
         exp = [
             ['1N', '3W', '4NW'],

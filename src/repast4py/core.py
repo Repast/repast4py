@@ -1,19 +1,69 @@
 import itertools
 import collections
+import numpy as np
 
 from ._core import Agent
 from .random import default_rng as rng
 
 from mpi4py import MPI
 
+from typing import Callable
+
+try:
+    from typing import Protocol, runtime_checkable
+except ImportError:
+    from typing_extensions import Protocol, runtime_checkable
+
+
+@runtime_checkable
+class SharedProjection(Protocol):
+
+    def synchronize_ghosts(self, create_agent: Callable):
+        """Synchronizes the ghosted part of this projection
+
+        Args:
+            create_agent: a callable that can create an agent instance from
+            an agent id and data.
+        """
+        pass
+
+    def clear_ghosts(self):
+        """Clears the ghosted part of this projection"""
+        pass
+
+
+@runtime_checkable
+class BoundedProjection(Protocol):
+
+    def _get_oob(self):
+        """Gets an Iterator over the out of bounds data for this BoundedProjection. 
+        out-of-bounds data is tuple ((aid.id, aid.type, aid.rank), ngh.rank, pt)
+        """
+        pass
+
+    def _clear_oob(self):
+        """Clears the out-of-bounds data
+        """
+        pass
+
+    def _synch_move(self, agent, location: np.array):
+        """Moves an agent to location in its new projection when
+        that agent moves out of bounds from a previous projection
+        
+        Args:
+            agent: the agent to move
+            location: the location for the agent to move to
+        """
+        pass
+
 
 class SharedContext:
     """Encapsulates a population of agents on a single process rank.
 
-    A SharedContext may have one or more projections associated with it to 
+    A SharedContext may have one or more projections associated with it to
     impose a relational structure on the agents in the context. It also
-    provides functionality for synchroizes agents across processes, moving 
-    agents from one processe to another and managing any ghosting strategy.    
+    provides functionality for synchroizes agents across processes, moving
+    agents from one processe to another and managing any ghosting strategy.
     """
     def __init__(self, comm):
         """Initializes this SharedContext with the specified communicator.
@@ -27,7 +77,8 @@ class SharedContext:
         self.projection_id = 0
         self.rank = comm.Get_rank()
         self.comm = comm
-        self.buffered_projs = []
+        self.ghosted_projs = []
+        self.bounded_projs = {}
 
     def add(self, agent: Agent):
         """Adds the specified agent to this SharedContext.
@@ -41,14 +92,14 @@ class SharedContext:
         self._agents_by_type.setdefault(agent.uid[1], collections.OrderedDict())[agent.uid] = agent
         for proj in self.projections.values():
             proj.add(agent)
-    
+
     def add_projection(self, projection):
         """Adds the specified projection to this SharedContext.
 
         If the projection has `clear_buffer` and `synchronize_buffer` attributes,
         then clear_buffer will be called prior to synchornization, and synchronize buffer
         durring synchronization in the SharedProjection.synchronize method. 
-        
+
         Any agents currently in this context will be added to the projection.
 
         Args:
@@ -59,12 +110,17 @@ class SharedContext:
                 raise ValueError('Context already contains the named projection "{}"'.format(prj.name))
 
         self.projections[self.projection_id] = projection
-        self.projection_id += 1
+        
         for a in self._local_agents.values():
             projection.add(a)
 
-        if hasattr(projection, 'clear_buffer') and hasattr(projection, 'synchronize_buffer'):
-            self.buffered_projs.append(projection)
+        if isinstance(projection, SharedProjection):
+            self.ghosted_projs.append(projection)
+
+        if isinstance(projection, BoundedProjection):
+            self.bounded_projs[self.projection_id] = projection
+        
+        self.projection_id += 1
 
     def remove(self, agent: Agent):
         """Removes the specified agent from this SharedContext
@@ -79,20 +135,19 @@ class SharedContext:
     def _fill_send_data(self):
         send_data = [[] for i in range(self.comm.size)]
         removed_agents = {}
-        # gather agents to send from the out of bounds (oob) sequence 
-        for pid, proj in self.projections.items():
+        # gather agents to send from the out of bounds (oob) sequence
+        for pid, proj in self.bounded_projs.items():
             for agent_id, ngh_rank, pt in proj._get_oob():
                 agent = self._local_agents.pop(agent_id, None)
-                if agent == None:
+                if agent is None:
                     data = ((agent_id),)
-                    # TODO use id
                     proj.remove(removed_agents[agent_id])
                 else:
                     removed_agents[agent_id] = agent
                     del self._agents_by_type[agent_id[1]][agent_id]
                     data = agent.save()
                     proj.remove(agent)
-               
+
                 # send to ngh rank a list of lists - inner list 
                 # is [(agent_id, agent_state), (projection id, and projection data)]
                 send_data[ngh_rank].append([data, (pid, pt)])
@@ -100,28 +155,28 @@ class SharedContext:
             proj._clear_oob()
 
         removed_agents.clear()
-        
+
         return send_data
-    
+
     def _process_recv_data(self, recv_data, create_agent):
         for data_list in recv_data:
             for data in data_list:
                 # agent_data: tuple - agent id tuple, and agent state
                 agent_data = data[0]
+                # (projection_id, new location as np.array)
                 proj_data = data[1]
 
                 if agent_data[0] in self._local_agents:
                     agent = self._local_agents[agent_data[0]]
                 else:
-                    #print("New agent", agent_data)
+                    # print("New agent", agent_data)
                     agent = create_agent(agent_data)
                     # print("Adding", agent.id)
                     self.add(agent)
 
                     # add to the projection
-                self.projections[proj_data[0]]._synch_move(agent, proj_data[1])
+                self.bounded_projs[proj_data[0]]._synch_move(agent, proj_data[1])
 
-    
     def synchronize(self, create_agent, sync_buffer: bool=True):
         """Synchronizes the model state across processes by moving agents, filling 
         projection buffers and so forth.
@@ -134,8 +189,8 @@ class SharedContext:
         """
 
         if sync_buffer:
-            for proj in self.buffered_projs:
-                proj.clear_buffer()
+            for proj in self.ghosted_projs:
+                proj.clear_ghosts()
 
         send_data = self._fill_send_data()
         # print('{}: send data - {}'.format(self.rank, send_data))
@@ -144,11 +199,9 @@ class SharedContext:
         self._process_recv_data(recv_data, create_agent)
 
         if sync_buffer:
-            for proj in self.buffered_projs:
-                proj.synchronize_buffer(create_agent)
+            for proj in self.ghosted_projs:
+                proj.synchronize_ghosts(create_agent)
 
-
-    
     def agents(self, agent_type: int=None, shuffle: bool=False):
         """Gets the agents in SharedContext, optionally of the specified type or shuffled.
 
