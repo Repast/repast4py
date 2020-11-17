@@ -283,7 +283,6 @@ class Impl3D:
         self.grid[self._compute_slice(key)] = val
     
 
-
 class ValueLayer:
 
     def __init__(self, bounds, borders, init_value, dtype=torch.float64):
@@ -341,12 +340,12 @@ class SharedValueLayer(ValueLayer):
         else:
             self.buffered_bounds = self.local_bounds
             self.non_buff_grid_offsets = np.zeros(6, dtype=np.int32)
-        
+
         super().__init__(self.buffered_bounds, borders, init_value, dtype)
 
         if comm.Get_size() > 1:
             self._init_sync_data(topo, buffer_size)
-            
+
     def _init_buffered_bounds(self, bounds, buffer_size, periodic):
         xmin, xextent = 0, 0
         ymin, yextent = 0, 0
@@ -373,7 +372,7 @@ class SharedValueLayer(ValueLayer):
                     zmin = self.local_bounds.zmin - buffer_size
                 # extent is x2 to create buffer on both sides
                 zextent = self.local_bounds.zextent + (buffer_size * 2)
-   
+
         else:
             xmax = bounds.xmin + bounds.xextent
             if self.local_bounds.xmin > bounds.xmin:
@@ -389,7 +388,7 @@ class SharedValueLayer(ValueLayer):
                 if self.local_bounds.xmin + self.local_bounds.xextent < xmax:
                     xextent = self.local_bounds.xextent + buffer_size
                     self.non_buff_grid_offsets[1] = buffer_size
-                    
+
             if bounds.yextent > 0:
                 ymax = bounds.ymin + bounds.yextent
                 if self.local_bounds.ymin > bounds.ymin:
@@ -401,10 +400,13 @@ class SharedValueLayer(ValueLayer):
                         self.non_buff_grid_offsets[3] = buffer_size
                     else:
                         yextent = self.local_bounds.yextent + buffer_size
-                else:
-                    if self.local_bounds.ymin + self.local_bounds.yextent < ymax:
+                elif self.local_bounds.ymin + self.local_bounds.yextent < ymax:
                         yextent = self.local_bounds.yextent + buffer_size
                         self.non_buff_grid_offsets[3] = buffer_size
+                else:
+                    # topology is 1D
+                    ymin = self.local_bounds.ymin
+                    yextent = self.local_bounds.yextent
 
             if bounds.zextent > 0:
                 zmax = bounds.zmin + bounds.zextent
@@ -608,12 +610,12 @@ class SharedValueLayer(ValueLayer):
             self._init_sync_data_3d(topo, buffer_size)
 
             
-    # Required for the buffer space interface
-    def clear_buffer(self):
+    # Required for the bounded space protocol
+    def clear_ghosts(self):
         pass
 
 
-    def synchronize_buffer(self):
+    def synchronize_ghosts(self):
         # self.send_data = ((send_buf, (send_counts, send_displs)), ngh_buffers)
         # self.recv_data = ((recv_buf, (recv_counts, recv_displs)), recv_buf_data)
         # ngh_buffers: (ngh_rank, size, shape, bounds, slice_tuple)
@@ -675,12 +677,12 @@ class ReadWriteValueLayer:
         return self.read.get_nghs(pt, extent)
 
     # Required for the buffer space interface
-    def clear_buffer(self):
+    def clear_ghosts(self):
         pass
 
-    def synchronize_buffer(self):
-        self.write_layer.synchronize_buffer()
-        self.read_layer.synchronize_buffer()
+    def synchronize_ghosts(self):
+        self.write_layer.synchronize_ghosts()
+        self.read_layer.synchronize_ghosts()
 
     def apply(self, func):
         func(self)

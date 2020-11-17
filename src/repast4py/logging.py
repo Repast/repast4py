@@ -2,7 +2,7 @@ import numpy as np
 from mpi4py import MPI
 import os
 
-from typing import List, Dict, Any
+from typing import List, Dict
 
 try:
     from typing import Protocol
