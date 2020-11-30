@@ -141,6 +141,3 @@ class SharedCSpace(_SharedContinuousSpace):
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
         self._process_recv_data(recv_data, create_agent)
-        
-
-

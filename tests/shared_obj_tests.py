@@ -851,9 +851,6 @@ class SharedGridTests(unittest.TestCase):
             self.assertEqual(0, len(expected))
 
         
-
-                    
-
 class EAgent(core.Agent):
 
     def __init__(self, id, agent_type, rank, energy):
@@ -1043,9 +1040,9 @@ class SharedContextTests1(unittest.TestCase):
 
             if rank == 0:
                 # should now have a2 and a3
-                self.assertEqual(2, len(context._local_agents))
+                self.assertEqual(2, len(context._agent_manager._local_agents))
                 # a2
-                agent = context._local_agents[(2, 0, 1)]
+                agent = context._agent_manager._local_agents[(2, 0, 1)]
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(3, agent.energy)
                 pt = space.DiscretePoint(5, 30)
@@ -1053,7 +1050,7 @@ class SharedContextTests1(unittest.TestCase):
                 self.assertEqual(pt, grid.get_location(agent))
 
                 # a3
-                agent = context._local_agents[(3, 0, 1)]
+                agent = context._agent_manager._local_agents[(3, 0, 1)]
                 self.assertEqual((3, 0, 1), agent.uid)
                 self.assertEqual(2, agent.energy)
                 pt = space.DiscretePoint(3, 20)
@@ -1062,8 +1059,8 @@ class SharedContextTests1(unittest.TestCase):
 
             else:
                 # should now have a1
-                self.assertEqual(1, len(context._local_agents))
-                agent = context._local_agents[(1, 0, 0)]
+                self.assertEqual(1, len(context._agent_manager._local_agents))
+                agent = context._agent_manager._local_agents[(1, 0, 0)]
                 self.assertEqual((1, 0, 0), agent.uid)
                 self.assertEqual(12, agent.energy)
                 pt = space.DiscretePoint(12, 5)
@@ -1079,9 +1076,9 @@ class SharedContextTests1(unittest.TestCase):
             context.synchronize(create_agent)
 
             if rank == 0:
-                self.assertEqual(1, len(context._local_agents))
+                self.assertEqual(1, len(context._agent_manager._local_agents))
                 # a3
-                agent = context._local_agents[(3, 0, 1)]
+                agent = context._agent_manager._local_agents[(3, 0, 1)]
                 self.assertEqual((3, 0, 1), agent.uid)
                 self.assertEqual(2, agent.energy)
                 pt = space.DiscretePoint(3, 20)
@@ -1090,15 +1087,15 @@ class SharedContextTests1(unittest.TestCase):
 
             if rank == 1:
                 # a2 now back in 1
-                self.assertEqual(2, len(context._local_agents))
-                agent = context._local_agents[(2, 0, 1)]
+                self.assertEqual(2, len(context._agent_manager._local_agents))
+                agent = context._agent_manager._local_agents[(2, 0, 1)]
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(-10, agent.energy)
                 pt = space.DiscretePoint(12, 38)
                 self.assertEqual(agent, grid.get_agent(pt))
                 self.assertEqual(pt, grid.get_location(agent))
 
-                agent = context._local_agents[(1, 0, 0)]
+                agent = context._agent_manager._local_agents[(1, 0, 0)]
                 self.assertEqual((1, 0, 0), agent.uid)
                 self.assertEqual(12, agent.energy)
                 pt = space.DiscretePoint(12, 5)
@@ -1170,7 +1167,7 @@ class SharedContextTests1(unittest.TestCase):
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(12, agent.energy)
 
-                self.assertEqual(3, len(context._local_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
 
                 # moves these agents out of the buffer zone
                 pt = space.DiscretePoint(9, 15)
@@ -1192,7 +1189,7 @@ class SharedContextTests1(unittest.TestCase):
                     self.assertEqual(energy, a.energy)
                 self.assertEqual(0, len(expected))
 
-                self.assertEqual(3, len(context._local_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
 
             grid.clear_ghosts()
             grid.synchronize_ghosts(create_agent)
@@ -1387,9 +1384,9 @@ class SharedContextTests2(unittest.TestCase):
 
             if rank == 0:
                 # should now have a2 and a3
-                self.assertEqual(2, len(context._local_agents))
+                self.assertEqual(2, len(context._agent_manager._local_agents))
                 # a2
-                agent = context._local_agents[(2, 0, 1)]
+                agent = context._agent_manager._local_agents[(2, 0, 1)]
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(3, agent.energy)
                 pt = space.ContinuousPoint(5, 30)
@@ -1397,7 +1394,7 @@ class SharedContextTests2(unittest.TestCase):
                 self.assertEqual(pt, grid.get_location(agent))
 
                 # a3
-                agent = context._local_agents[(3, 0, 1)]
+                agent = context._agent_manager._local_agents[(3, 0, 1)]
                 self.assertEqual((3, 0, 1), agent.uid)
                 self.assertEqual(2, agent.energy)
                 pt = space.ContinuousPoint(3, 20)
@@ -1406,8 +1403,8 @@ class SharedContextTests2(unittest.TestCase):
 
             else:
                 # should now have a1
-                self.assertEqual(1, len(context._local_agents))
-                agent = context._local_agents[(1, 0, 0)]
+                self.assertEqual(1, len(context._agent_manager._local_agents))
+                agent = context._agent_manager._local_agents[(1, 0, 0)]
                 self.assertEqual((1, 0, 0), agent.uid)
                 self.assertEqual(12, agent.energy)
                 pt = space.ContinuousPoint(12, 5)
@@ -1423,9 +1420,9 @@ class SharedContextTests2(unittest.TestCase):
             context.synchronize(create_agent, sync_buffer=False)
 
             if rank == 0:
-                self.assertEqual(1, len(context._local_agents))
+                self.assertEqual(1, len(context._agent_manager._local_agents))
                 # a3
-                agent = context._local_agents[(3, 0, 1)]
+                agent = context._agent_manager._local_agents[(3, 0, 1)]
                 self.assertEqual((3, 0, 1), agent.uid)
                 self.assertEqual(2, agent.energy)
                 pt = space.ContinuousPoint(3, 20)
@@ -1434,15 +1431,15 @@ class SharedContextTests2(unittest.TestCase):
 
             if rank == 1:
                 # a2 now back in 1
-                self.assertEqual(2, len(context._local_agents))
-                agent = context._local_agents[(2, 0, 1)]
+                self.assertEqual(2, len(context._agent_manager._local_agents))
+                agent = context._agent_manager._local_agents[(2, 0, 1)]
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(-10, agent.energy)
                 pt = space.ContinuousPoint(12, 38)
                 self.assertEqual(agent, grid.get_agent(pt))
                 self.assertEqual(pt, grid.get_location(agent))
 
-                agent = context._local_agents[(1, 0, 0)]
+                agent = context._agent_manager._local_agents[(1, 0, 0)]
                 self.assertEqual((1, 0, 0), agent.uid)
                 self.assertEqual(12, agent.energy)
                 pt = space.ContinuousPoint(12, 5)
@@ -1511,7 +1508,7 @@ class SharedContextTests2(unittest.TestCase):
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(12, agent.energy)
 
-                self.assertEqual(3, len(context._local_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
 
                 # moves these agents out of the buffer zone
                 pt = space.ContinuousPoint(9, 15)
@@ -1533,7 +1530,7 @@ class SharedContextTests2(unittest.TestCase):
                     self.assertEqual(energy, a.energy)
                 self.assertEqual(0, len(expected))
 
-                self.assertEqual(3, len(context._local_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
 
             grid.clear_ghosts()
             grid.synchronize_ghosts(create_agent)

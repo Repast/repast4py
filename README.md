@@ -28,12 +28,13 @@ There are 3 types of python unit tests:
 `mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_periodic`
 `mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_sticky`
 
-4. Multiprocess (4 procs) mpi tests for logging. Run with:
+4. Multiprocess (4 procs) mpi tests for logging and network support. Run with:
 
 `mpirun -n 4 python -m unittest tests.logging_tests`
+`mpirun -n 4 python -m unittest tests.shared_network_tests`
 
 
-There also some C++ unitest. C++ tests can be compiled with makefile target 'tests' and run with:
+There are also some C++ unitests. C++ tests can be compiled with makefile target 'tests' and run with:
 
 `mpirun -n 9 ./unit_tests`
 

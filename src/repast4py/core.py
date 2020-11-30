@@ -1,13 +1,8 @@
-import itertools
 import collections
 import numpy as np
-
 from ._core import Agent
 from .random import default_rng as rng
-
-from mpi4py import MPI
-
-from typing import Callable
+from typing import Callable, List
 
 try:
     from typing import Protocol, runtime_checkable
@@ -57,6 +52,48 @@ class BoundedProjection(Protocol):
         pass
 
 
+class AgentManager:
+    """Manages local and non-local (ghost) agents as they move
+    between processes
+    """
+
+    def __init__(self):
+        self._local_agents = collections.OrderedDict()
+        self._ghost_agents = {}
+        self._ghosted_agents = {}
+
+    def remove_local(self, agent_id) -> Agent:
+        """Removes the specified agent from the collection of local agents.
+
+        Args:
+            agent_id (agent_id tuple): the id of the agent to remove
+
+        Returns:
+            The removed agent or None if the agent does not exist
+        """
+        # TODO check if agent is ghosted and update accordingly
+        return self._local_agents.pop(agent_id, None)
+
+    def add_local(self, agent: Agent):
+        """Adds the specified agent as a local agent
+
+        Args:
+            agent: the agent to add
+        """
+        self._local_agents[agent.uid] = agent
+
+    def get_local(self, agent_id) -> Agent:
+        """Gets the specified agent from the local collection.
+
+        Args:
+            agent_id (agent_id tuple): the id of the agent to get.
+        Returns:
+            The agent with the specified id or None if no such agent is
+            in the local collection.
+        """
+        return self._local_agents.get(agent_id)
+
+
 class SharedContext:
     """Encapsulates a population of agents on a single process rank.
 
@@ -69,9 +106,10 @@ class SharedContext:
         """Initializes this SharedContext with the specified communicator.
 
         Args:
-            comm (mpi4py communicator): the communicator uses to communicate among SharedContexts in the distributed model
+            comm (mpi4py communicator): the communicator uses to communicate 
+            among SharedContexts in the distributed model
         """
-        self._local_agents = collections.OrderedDict()
+        self._agent_manager = AgentManager()
         self._agents_by_type = {}
         self.projections = {}
         self.projection_id = 0
@@ -88,7 +126,7 @@ class SharedContext:
         Args:
             agent: the agent to add
         """
-        self._local_agents[agent.uid] = agent
+        self._agent_manager.add_local(agent)
         self._agents_by_type.setdefault(agent.uid[1], collections.OrderedDict())[agent.uid] = agent
         for proj in self.projections.values():
             proj.add(agent)
@@ -111,7 +149,7 @@ class SharedContext:
 
         self.projections[self.projection_id] = projection
         
-        for a in self._local_agents.values():
+        for a in self._agent_manager._local_agents.values():
             projection.add(a)
 
         if isinstance(projection, SharedProjection):
@@ -127,7 +165,7 @@ class SharedContext:
 
         This agent is also removed from any projections associated with this SharedContext.
         """
-        del self._local_agents[agent.uid]
+        self._agent_manager.remove_local(agent.uid)
         del self._agents_by_type[agent.uid[1]][agent.uid]
         for proj in self.projections.values():
             proj.remove(agent)
@@ -138,8 +176,9 @@ class SharedContext:
         # gather agents to send from the out of bounds (oob) sequence
         for pid, proj in self.bounded_projs.items():
             for agent_id, ngh_rank, pt in proj._get_oob():
-                agent = self._local_agents.pop(agent_id, None)
+                agent = self._agent_manager.remove_local(agent_id)
                 if agent is None:
+                    # already removed
                     data = ((agent_id),)
                     proj.remove(removed_agents[agent_id])
                 else:
@@ -166,9 +205,8 @@ class SharedContext:
                 # (projection_id, new location as np.array)
                 proj_data = data[1]
 
-                if agent_data[0] in self._local_agents:
-                    agent = self._local_agents[agent_data[0]]
-                else:
+                agent = self._agent_manager.get_local(agent_data[0])
+                if not agent:
                     # print("New agent", agent_data)
                     agent = create_agent(agent_data)
                     # print("Adding", agent.id)
@@ -182,8 +220,8 @@ class SharedContext:
         projection buffers and so forth.
 
         Args:
-            create_agent: a function that takes agent data and creates and returns an agent instance from
-            data. The daata is tuple consisting of the agent id tuple, and the serialized agent state
+            create_agent: a callable that takes agent data and creates and returns an agent instance from
+            data. The data is a tuple consisting of the agent id tuple, and the serialized agent state
             synch_buffer: if True, the buffered areas in any buffered projections and value layers associated
             with this SharedContext are also synchronized. Defaults to True.
         """
@@ -218,8 +256,8 @@ class SharedContext:
             returned.
         """
         if shuffle:
-            if agent_type == None:
-                l = list(self._local_agents.values())
+            if agent_type is None:
+                l = list(self._agent_manager._local_agents.values())
                 rng.shuffle(l)
                 return l
             else:
@@ -227,12 +265,12 @@ class SharedContext:
                 rng.shuffle(l)
                 return l
         else:
-            if agent_type == None:
-                return self._local_agents.values().__iter__()
+            if agent_type is None:
+                return self._agent_manager._local_agents.values().__iter__()
             else:
                 return self._agents_by_type[agent_type].values().__iter__()
-    
-    def size(self, agent_type_ids:list=None)-> dict:
+
+    def size(self, agent_type_ids:List[int]=None) -> dict:
         """Gets the number of agents in this SharedContext, optionally by type.
 
         Args:
@@ -247,10 +285,6 @@ class SharedContext:
             for i in agent_type_ids:
                 counts[i] = len(self._agents_by_type[i])
         else:
-            counts[0] = len(self._local_agents)
+            counts[0] = len(self._agent_manager._local_agents)
 
         return counts
-            
-
-        
-    
