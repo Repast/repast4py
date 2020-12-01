@@ -5,6 +5,7 @@ from ._space import GridStickyBorders, GridPeriodicBorders
 from ._space import CartesianTopology
 from ._space import SharedGrid as _SharedGrid
 from ._space import SharedContinuousSpace as _SharedContinuousSpace
+from .core import AgentManager
 
 from enum import Enum
 from collections import namedtuple
@@ -51,27 +52,31 @@ class SharedGrid(_SharedGrid):
 
         return send_data
 
-    def _process_recv_data(self, recv_data, create_agent):
+    def _process_recv_data(self, recv_data, agent_manager: AgentManager, create_agent):
         pt = DiscretePoint(0, 0, 0)
-        for data_list in recv_data:
+        for sending_rank, data_list in enumerate(recv_data):
             for data in data_list:
                 agent_data = data[0]
                 pt_data = data[1]
-                agent = create_agent(agent_data)
+                agent = agent_manager.get_ghost(agent_data[0])
+                if agent is None:
+                    agent = create_agent(agent_data)
+                    agent_manager.add_ghost(sending_rank, agent)
                 self.buffered_agents.append(agent)
                 self.add(agent)
                 pt._reset(pt_data)
                 self.move(agent, pt)
 
-    def clear_ghosts(self):
+    def clear_ghosts(self, agent_manager: AgentManager):
         for agent in self.buffered_agents:
             self.remove(agent)
+            agent_manager.remove_ghost(agent)
         self.buffered_agents.clear()
 
-    def synchronize_ghosts(self, create_agent):
+    def synchronize_ghosts(self, agent_manager: AgentManager, create_agent):
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
-        self._process_recv_data(recv_data, create_agent)
+        self._process_recv_data(recv_data, agent_manager, create_agent)
 
     def _gather_1d(self, data_list, ranges):
         pt = DiscretePoint(0, 0, 0)
@@ -107,9 +112,10 @@ class SharedCSpace(_SharedContinuousSpace):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
         self.buffered_agents = []
 
-    def clear_ghosts(self):
+    def clear_ghosts(self, agent_manager):
         for agent in self.buffered_agents:
             self.remove(agent)
+            agent_manager.remove_ghost(agent)
         self.buffered_agents.clear()
 
     def _fill_send_data(self):
@@ -127,17 +133,20 @@ class SharedCSpace(_SharedContinuousSpace):
 
         return send_data
 
-    def _process_recv_data(self, recv_data, create_agent):
+    def _process_recv_data(self, recv_data, agent_manager: AgentManager, create_agent):
         pt = ContinuousPoint(0, 0, 0)
-        for data_list in recv_data:
+        for sending_rank, data_list in enumerate(recv_data):
             for agent_data, pt_data in data_list:
-                agent = create_agent(agent_data)
+                agent = agent_manager.get_ghost(agent_data[0])
+                if agent is None:
+                    agent = create_agent(agent_data)
+                    agent_manager.add_ghost(sending_rank, agent)
                 self.buffered_agents.append(agent)
                 self.add(agent)
                 pt._reset(pt_data)
                 self.move(agent, pt)
 
-    def synchronize_ghosts(self, create_agent):
+    def synchronize_ghosts(self, agent_manager: AgentManager, create_agent):
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
-        self._process_recv_data(recv_data, create_agent)
+        self._process_recv_data(recv_data, agent_manager, create_agent)

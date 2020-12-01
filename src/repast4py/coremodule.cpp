@@ -174,6 +174,7 @@ static PyObject* Agent_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
             self->aid->id = -1;
             self->aid->type = -1;
             self->aid->rank = 0;
+            self->local_rank = 0;
 
             // self->aid->as_tuple = PyTuple_New(3);
             // if (!self->aid->as_tuple) {
@@ -197,6 +198,7 @@ static int Agent_init(R4Py_Agent* self, PyObject* args, PyObject* kwds) {
         &self->aid->rank)) {
         return -1;
     }
+    self->local_rank = self->aid->rank;
     // TODO - maybe build this with PyTuple_New rather than parse the format string
     self->aid->as_tuple = Py_BuildValue("(liI)", self->aid->id, self->aid->type, self->aid->rank);
     return 0;
@@ -206,7 +208,7 @@ static PyObject* Agent_get_id(R4Py_Agent* self, void* closure) {
     return PyLong_FromLong(self->aid->id);
 }
 
-static PyObject* Agent_get_rank(R4Py_Agent* self, void* closure) {
+static PyObject* Agent_get_uid_rank(R4Py_Agent* self, void* closure) {
     return PyLong_FromLong(self->aid->rank);
 }
 
@@ -220,11 +222,31 @@ static PyObject* Agent_get_uid(R4Py_Agent* self, void* closure) {
     return uid;
 }
 
+static PyObject* Agent_get_local_rank(R4Py_Agent* self, void* closure) {
+    return PyLong_FromLong(self->local_rank);
+}
+
+static int Agent_set_local_rank(R4Py_Agent* self, PyObject* value, void* closure) {
+    if (value == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Cannot delete the local rank attribute");
+        return -1;
+    }
+    if (!PyLong_Check(value)) {
+        PyErr_SetString(PyExc_TypeError,
+                        "The local rank attribute value must be a integer value");
+        return -1;
+    }
+    self->local_rank = PyLong_AsLong(value);
+    return 0;
+}
+
 static PyGetSetDef Agent_get_setters[] = {
     {(char*)"id", (getter)Agent_get_id, NULL, (char*)"agent id", NULL},
     {(char*)"type", (getter)Agent_get_type, NULL, (char*)"agent type", NULL},
-    {(char*)"rank", (getter)Agent_get_rank, NULL, (char*)"agent rank", NULL},
+    {(char*)"uid_rank", (getter)Agent_get_uid_rank, NULL, (char*)"agent rank", NULL},
     {(char*)"uid", (getter)Agent_get_uid, NULL, (char*)"agent identifier", NULL},
+    {(char*)"local_rank", (getter)Agent_get_local_rank, (setter)Agent_set_local_rank, 
+        (char*)"the current local rank of the agent", NULL},
     {NULL}
 };
 

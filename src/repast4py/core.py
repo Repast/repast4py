@@ -2,7 +2,8 @@ import collections
 import numpy as np
 from ._core import Agent
 from .random import default_rng as rng
-from typing import Callable, List
+from typing import Callable, List, Tuple
+from dataclasses import dataclass
 
 try:
     from typing import Protocol, runtime_checkable
@@ -10,10 +11,126 @@ except ImportError:
     from typing_extensions import Protocol, runtime_checkable
 
 
+@dataclass
+class GhostAgent:
+    agent: Agent
+    ref_count: int
+
+
+class AgentManager:
+    """Manages local and non-local (ghost) agents as they move
+    between processes
+    """
+
+    def __init__(self, rank, world_size):
+        self._local_agents = collections.OrderedDict()
+        self._ghosted_agents = {}
+        for i in range(world_size):
+            self._ghosted_agents[i] = []
+        self._ghost_agents = {}
+        self.rank = rank
+
+    def remove_local(self, agent_id) -> Agent:
+        """Removes the specified agent from the collection of local agents.
+
+        Args:
+            agent_id (agent_id tuple): the id of the agent to remove
+
+        Returns:
+            The removed agent or None if the agent does not exist
+        """
+        # TODO check if agent is ghosted and update accordingly
+        return self._local_agents.pop(agent_id, None)
+
+    def add_local(self, agent: Agent):
+        """Adds the specified agent as a local agent
+
+        Args:
+            agent: the agent to add
+        """
+        agent.local_rank = self.rank
+        self._local_agents[agent.uid] = agent
+
+    def get_local(self, agent_id) -> Agent:
+        """Gets the specified agent from the local collection.
+
+        Args:
+            agent_id (agent_id tuple): the id of the agent to get.
+        Returns:
+            The agent with the specified id or None if no such agent is
+            in the local collection.
+        """
+        return self._local_agents.get(agent_id)
+
+    def tag_as_ghosted(self, ghost_rank: int, agent_id) -> Agent:
+        """Gets the specified agent from the local collection and marks it 
+        as ghosted on the specified rank.
+
+        Args:
+            ghost_rank: the rank the agent is being sent to as a ghost
+            agent_id: the id of the agent to get
+        Returns:
+            The specified agent.
+        """
+        agent = self._local_agents[agent_id]
+        self._ghosted_agents[ghost_rank].append(agent)
+        return agent
+
+    def remove_ghost(self, agent: Agent):
+        ghost_agent = self._ghost_agents[agent.uid]
+        ghost_agent.ref_count -= 1
+        if ghost_agent.ref_count == 0:
+            del self._ghost_agents[agent.uid]
+
+    def add_ghost(self, ghosted_rank: int, agent: Agent, incr: int=1):
+        """Adds the specified agent to the ghost collection from
+        the specified rank.
+
+        Args:
+            ghosted_rank: the rank the agent was received from
+            agent: the agent to add
+            incr: the amount to increment the reference count
+        """
+        uid = agent.uid
+        agent.local_rank = ghosted_rank
+        ghost_agent = GhostAgent(agent, incr)
+        self._ghost_agents[uid] = ghost_agent
+
+    def add_ghosts_to_projection(self, projection):
+        """Adds all the ghost agents to the specified projection.
+
+        Args:
+            projection: The projection to add the ghosts to
+        """
+        for gh in self._ghost_agents.values():
+            gh.ref_count += 1
+            projection.add(gh.agent)
+
+    def get_ghost(self, agent_uid: Tuple, incr: int=1) -> Agent:
+        """Gets the agent with the specified id from the collection
+        of ghost agents, or None if the agent does not exist in the
+        ghost agent collection. If the agent exists, its projection
+        reference count is incremented by the specified amount
+
+        Args:
+            agent_uid (agent uid tuple): the uid of the agent to get
+            incr: the amount to increment the reference count
+        Returns:
+            The specified agent or None if the agent is not in the ghost
+            agent collection. If the agent exists, its projection
+            reference count is incremented.
+        """
+        val = self._ghost_agents.get(agent_uid, None)
+        if val is not None:
+            val.ref_count += incr
+            return val.agent
+        return None
+
+
 @runtime_checkable
 class SharedProjection(Protocol):
 
-    def synchronize_ghosts(self, create_agent: Callable):
+    def synchronize_ghosts(self, agent_manager: AgentManager, create_agent: Callable):
         """Synchronizes the ghosted part of this projection
 
         Args:
@@ -22,7 +139,7 @@ class SharedProjection(Protocol):
         """
         pass
 
-    def clear_ghosts(self):
+    def clear_ghosts(self, agent_manager: AgentManager):
         """Clears the ghosted part of this projection"""
         pass
 
@@ -43,55 +160,13 @@ class BoundedProjection(Protocol):
 
     def _synch_move(self, agent, location: np.array):
         """Moves an agent to location in its new projection when
-        that agent moves out of bounds from a previous projection
-        
+        that agent moves out of bounds from a previous projection.
+
         Args:
             agent: the agent to move
             location: the location for the agent to move to
         """
         pass
-
-
-class AgentManager:
-    """Manages local and non-local (ghost) agents as they move
-    between processes
-    """
-
-    def __init__(self):
-        self._local_agents = collections.OrderedDict()
-        self._ghost_agents = {}
-        self._ghosted_agents = {}
-
-    def remove_local(self, agent_id) -> Agent:
-        """Removes the specified agent from the collection of local agents.
-
-        Args:
-            agent_id (agent_id tuple): the id of the agent to remove
-
-        Returns:
-            The removed agent or None if the agent does not exist
-        """
-        # TODO check if agent is ghosted and update accordingly
-        return self._local_agents.pop(agent_id, None)
-
-    def add_local(self, agent: Agent):
-        """Adds the specified agent as a local agent
-
-        Args:
-            agent: the agent to add
-        """
-        self._local_agents[agent.uid] = agent
-
-    def get_local(self, agent_id) -> Agent:
-        """Gets the specified agent from the local collection.
-
-        Args:
-            agent_id (agent_id tuple): the id of the agent to get.
-        Returns:
-            The agent with the specified id or None if no such agent is
-            in the local collection.
-        """
-        return self._local_agents.get(agent_id)
 
 
 class SharedContext:
@@ -106,10 +181,10 @@ class SharedContext:
         """Initializes this SharedContext with the specified communicator.
 
         Args:
-            comm (mpi4py communicator): the communicator uses to communicate 
+            comm (mpi4py communicator): the communicator uses to communicate
             among SharedContexts in the distributed model
         """
-        self._agent_manager = AgentManager()
+        self._agent_manager = AgentManager(comm.Get_rank(), comm.Get_size())
         self._agents_by_type = {}
         self.projections = {}
         self.projection_id = 0
@@ -128,6 +203,11 @@ class SharedContext:
         """
         self._agent_manager.add_local(agent)
         self._agents_by_type.setdefault(agent.uid[1], collections.OrderedDict())[agent.uid] = agent
+        for proj in self.projections.values():
+            proj.add(agent)
+
+    def _add_ghost(self, rank: int, agent: Agent):
+        self._agent_manager.add_ghost(rank, agent, len(self.projections))
         for proj in self.projections.values():
             proj.add(agent)
 
@@ -151,6 +231,8 @@ class SharedContext:
         
         for a in self._agent_manager._local_agents.values():
             projection.add(a)
+
+        self._agent_manager.add_ghosts_to_projection(projection)
 
         if isinstance(projection, SharedProjection):
             self.ghosted_projs.append(projection)
@@ -228,7 +310,7 @@ class SharedContext:
 
         if sync_buffer:
             for proj in self.ghosted_projs:
-                proj.clear_ghosts()
+                proj.clear_ghosts(self._agent_manager)
 
         send_data = self._fill_send_data()
         # print('{}: send data - {}'.format(self.rank, send_data))
@@ -238,7 +320,7 @@ class SharedContext:
 
         if sync_buffer:
             for proj in self.ghosted_projs:
-                proj.synchronize_ghosts(create_agent)
+                proj.synchronize_ghosts(self._agent_manager, create_agent)
 
     def agents(self, agent_type: int=None, shuffle: bool=False):
         """Gets the agents in SharedContext, optionally of the specified type or shuffled.
@@ -270,7 +352,7 @@ class SharedContext:
             else:
                 return self._agents_by_type[agent_type].values().__iter__()
 
-    def size(self, agent_type_ids:List[int]=None) -> dict:
+    def size(self, agent_type_ids: List[int]=None) -> dict:
         """Gets the number of agents in this SharedContext, optionally by type.
 
         Args:
@@ -288,3 +370,53 @@ class SharedContext:
             counts[0] = len(self._agent_manager._local_agents)
 
         return counts
+
+    def _send_requests(self, requested_agents: List):
+        requests = [None for i in range(self.comm.size)]
+        existing_ghosts = []
+        for request in requested_agents:
+            # 1 is the rank to request from
+            # 0 is the id of the agent we are requesting
+            agent = self._agent_manager.get_ghost(request[0], 0)
+            if agent is None:
+                lst = requests[request[1]]
+                if lst is None:
+                    requests[request[1]] = [request[0]]
+                else:
+                    requests[request[1]].append(request[0])
+            else:
+                existing_ghosts.append(agent)
+        recv = self.comm.alltoall(requests)
+        return (recv, existing_ghosts)
+
+    def request_agents(self, requested_agents: List, create_agent: Callable) -> List[Agent]:
+        """Requests agents from other ranks to be copied to this rank as ghosts.
+        This is a collective operation and all ranks must call it, regardless
+        of whether agents are being requested on that rank.
+
+        Args:
+            requested_agents: A list of tuples specifying requested agents and the rank
+            to request from. Each tuple must contain the agents id tuple and the rank, for
+            example ((id, type, rank), requested_rank).
+            create_agent: a Callable that can take the result of an agent save() and
+            return an agent.
+        Returns:
+            The list of requested agents.
+        """
+        sent_agents = [[] for i in range(self.comm.size)]
+        requested, ghosts = self._send_requests(requested_agents)
+        for rank, requests in enumerate(requested):
+            if requests:
+                for requested_id in requests:
+                    agent = self._agent_manager.tag_as_ghosted(rank, requested_id)
+                    sent_agents[rank].append(agent.save())
+
+        recv_agents = self.comm.alltoall(sent_agents)
+        # print(f'{self.comm.rank} {recv_agents}')
+        for rank, agents in enumerate(recv_agents):
+            for agent_data in agents:
+                agent = create_agent(agent_data)
+                ghosts.append(agent)
+                self._add_ghost(rank, agent)
+
+        return ghosts
