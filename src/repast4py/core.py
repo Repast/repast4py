@@ -17,6 +17,12 @@ class GhostAgent:
     ref_count: int
 
 
+@dataclass
+class GhostedAgent:
+    agent: Agent
+    ghost_rank: int
+
+
 class AgentManager:
     """Manages local and non-local (ghost) agents as they move
     between processes
@@ -25,8 +31,6 @@ class AgentManager:
     def __init__(self, rank, world_size):
         self._local_agents = collections.OrderedDict()
         self._ghosted_agents = {}
-        for i in range(world_size):
-            self._ghosted_agents[i] = []
         self._ghost_agents = {}
         self.rank = rank
 
@@ -73,7 +77,7 @@ class AgentManager:
             The specified agent.
         """
         agent = self._local_agents[agent_id]
-        self._ghosted_agents[ghost_rank].append(agent)
+        self._ghosted_agents[agent_id] = GhostedAgent(agent, ghost_rank)
         return agent
 
     def remove_ghost(self, agent: Agent):
@@ -297,18 +301,28 @@ class SharedContext:
                     # add to the projection
                 self.bounded_projs[proj_data[0]]._synch_move(agent, proj_data[1])
 
-    def synchronize(self, create_agent, sync_buffer: bool=True):
+    def _update_ghosts(self):
+        send_data = [[] for i in range(self.comm.size)]
+        for gh_agent in self._agent_manager._ghosted_agents:
+            send_data[gh_agent.ghost_rank] = gh_agent.agent.save()
+        recv_data = self.comm.alltoall(send_data)
+        for updates in recv_data:
+            for update in updates:
+                ghost = self._agent_manager._ghost_agents[update[0]]
+                ghost.update(update[1])
+
+    def synchronize(self, create_agent, sync_ghosts: bool=True):
         """Synchronizes the model state across processes by moving agents, filling 
         projection buffers and so forth.
 
         Args:
             create_agent: a callable that takes agent data and creates and returns an agent instance from
             data. The data is a tuple consisting of the agent id tuple, and the serialized agent state
-            synch_buffer: if True, the buffered areas in any buffered projections and value layers associated
+            sync_ghosts: if True, the ghosts in any SharedProjections and value layers associated
             with this SharedContext are also synchronized. Defaults to True.
         """
 
-        if sync_buffer:
+        if sync_ghosts:
             for proj in self.ghosted_projs:
                 proj.clear_ghosts(self._agent_manager)
 
@@ -318,7 +332,11 @@ class SharedContext:
         # print('{}: recv data - {}'.format(self.rank, recv_data))
         self._process_recv_data(recv_data, create_agent)
 
-        if sync_buffer:
+        if sync_ghosts:
+            # TODO if ghosted moved off rank, then send update ghosted
+            # rank
+            # Update the remaining ghosts -- send ghosted to ghost rank
+            self._update_ghosts()
             for proj in self.ghosted_projs:
                 proj.synchronize_ghosts(self._agent_manager, create_agent)
 

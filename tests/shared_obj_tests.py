@@ -861,6 +861,9 @@ class EAgent(core.Agent):
     def save(self):
         return (self.uid, self.energy)
 
+    def update(self, data):
+        self.energy = data[0]
+
     def restore(self, data):
         self.restored = True
         self.energy = data[1]
@@ -1833,19 +1836,25 @@ class SharedContextTests3(unittest.TestCase):
                 self.assertEqual(0, ga3.ref_count)
                 self.assertEqual(1, ga3.agent.local_rank)
 
-                self.assertEqual(1, len(manager._ghosted_agents[3]))
-                self.assertEqual(0, len(manager._ghosted_agents[0]))
-                self.assertEqual(0, len(manager._ghosted_agents[1]))
-                self.assertEqual(0, len(manager._ghosted_agents[2]))
-                self.assertEqual((1, 0, 0), manager._ghosted_agents[3][0].uid)
+                self.assertEqual(1, len(manager._ghosted_agents))
+                ghosted1 = manager._ghosted_agents.get((1, 0, 0))
+                self.assertIsNotNone(ghosted1)
+                self.assertEqual((1, 0, 0), ghosted1.agent.uid)
+                self.assertEqual(3, ghosted1.ghost_rank)
             
             elif rank == 2:
                 self.assertEqual(0, len(manager._ghost_agents))
-        
-                self.assertEqual(1, len(manager._ghosted_agents[3]))
-                self.assertEqual(1, len(manager._ghosted_agents[0]))
-                self.assertEqual(0, len(manager._ghosted_agents[1]))
-                self.assertEqual(0, len(manager._ghosted_agents[2]))
+
+                self.assertEqual(2, len(manager._ghosted_agents))
+                ghosted1 = manager._ghosted_agents.get((1, 0, 2))
+                self.assertIsNotNone(ghosted1)
+                self.assertEqual((1, 0, 2), ghosted1.agent.uid)
+                self.assertEqual(0, ghosted1.ghost_rank)
+
+                ghosted2 = manager._ghosted_agents.get((4, 0, 2))
+                self.assertIsNotNone(ghosted2)
+                self.assertEqual((4, 0, 2), ghosted2.agent.uid)
+                self.assertEqual(3, ghosted2.ghost_rank)
 
             elif rank == 3:
                 self.assertEqual(2, len(manager._ghost_agents))
@@ -1860,21 +1869,23 @@ class SharedContextTests3(unittest.TestCase):
                 self.assertEqual(0, ga2.ref_count)
                 self.assertEqual(2, ga2.agent.local_rank)
 
-                self.assertEqual(0, len(manager._ghosted_agents[3]))
-                self.assertEqual(0, len(manager._ghosted_agents[0]))
-                self.assertEqual(0, len(manager._ghosted_agents[1]))
-                self.assertEqual(0, len(manager._ghosted_agents[2]))
-
+                self.assertEqual(0, len(manager._ghosted_agents))
 
             elif rank == 1:
                 self.assertEqual(0, len(manager._ghost_agents))
 
-                self.assertEqual(0, len(manager._ghosted_agents[3]))
-                self.assertEqual(2, len(manager._ghosted_agents[0]))
-                self.assertEqual(0, len(manager._ghosted_agents[1]))
-                self.assertEqual(0, len(manager._ghosted_agents[2]))
-                self.assertEqual((1, 0, 1), manager._ghosted_agents[0][0].uid)
-                self.assertEqual((2, 0, 1), manager._ghosted_agents[0][1].uid)
+                self.assertEqual(2, len(manager._ghosted_agents))
+                ghosted1 = manager._ghosted_agents.get((1, 0, 1))
+                self.assertIsNotNone(ghosted1)
+                self.assertEqual((1, 0, 1), ghosted1.agent.uid)
+                self.assertEqual(0, ghosted1.ghost_rank)
+
+                ghosted2 = manager._ghosted_agents.get((2, 0, 1))
+                self.assertIsNotNone(ghosted2)
+                self.assertEqual((2, 0, 1), ghosted2.agent.uid)
+                self.assertEqual(0, ghosted2.ghost_rank)
+
+
 
     def test_requested_pre_proj(self):
 
