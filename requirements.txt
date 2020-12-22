@@ -1,0 +1,4 @@
+# Requirements for repast4py
+numpy
+numba
+mpi4py
