@@ -10,13 +10,13 @@ jobs:
           password: DH1mbm666  # context / project UI env-var reference
     steps:
       - checkout
-      - run: echo "this is the build job"
+      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
   test:
     docker:
       - image:  dsheeler/repast4py
         auth:
-          username: mydockerhub-user
-          password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
+          username: dsheeler
+          password: DH1mbm666  # context / project UI env-var reference
     steps:
       - checkout
       - run: echo "this is the test job"
