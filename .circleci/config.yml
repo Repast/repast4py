@@ -6,14 +6,14 @@ jobs:
     docker:
       - image: dsheeler/repast4py
         auth:
-          username: mydockerhub-user
-          password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
+          username: dsheeler
+          password: DH1mbm666  # context / project UI env-var reference
     steps:
       - checkout
       - run: echo "this is the build job"
   test:
     docker:
-      - image:  circleci/<language>:<version TAG>
+      - image:  dsheeler/repast4py
         auth:
           username: mydockerhub-user
           password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
