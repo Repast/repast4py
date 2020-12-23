@@ -2,7 +2,7 @@ version: 2.1
 
 # Define the jobs we want to run for this project
 jobs:
-  build:
+  build_and_test:
     docker:
       - image: dsheeler/repast4py
         auth:
@@ -11,19 +11,9 @@ jobs:
     steps:
       - checkout
       - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
-  test:
-    docker:
-      - image:  dsheeler/repast4py
-        auth:
-          username: dsheeler
-          password: DH1mbm666  # context / project UI env-var reference
-    steps:
-      - checkout
-      - run: echo "this is the test job"
-
+      - run: python -m unittest discover tests
 # Orchestrate our job run sequence
 workflows:
   build_and_test:
     jobs:
-      - build
-      - test
+      - build_and_test
