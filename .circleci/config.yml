@@ -12,6 +12,9 @@ jobs:
       - checkout
       - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
       - run: python -m unittest discover tests
+      - run: mpirun -n 9 python -m unittest tests.shared_obj_tests
+      - run: mpirun -n 9 python -m unittest tests.shared_vl_tests
+
 # Orchestrate our job run sequence
 workflows:
   build_and_test:
