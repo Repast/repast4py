@@ -24,6 +24,6 @@ jobs:
           #mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_sticky 
 # Orchestrate our job run sequence
 workflows:
-  build_and_test:
+  test:
     jobs:
-      - build_and_test
+      - test_single
