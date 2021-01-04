@@ -1,24 +1,27 @@
 version: 2.1
 
 # Define the jobs we want to run for this project
-jobs:
-  build_and_test:
+executors:
+  build:
     docker:
       - image: dsheeler/repast4py
         auth:
           username: dsheeler
           password: DH1mbm666  # context / project UI env-var reference
+jobs:
+  test_single:
+    executor: build
     steps:
       - checkout
       - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
       - run:
-          python -m unittest discover tests &&
-          mpirun -n 9 python -m unittest tests.shared_obj_tests &&
-          mpirun -n 9 python -m unittest tests.shared_vl_tests &&
-          mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d &&
-          mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic &&
-          mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_periodic &&
-          mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_sticky 
+          python -m unittest discover tests
+          #mpirun -n 9 python -m unittest tests.shared_obj_tests &&
+          #mpirun -n 9 python -m unittest tests.shared_vl_tests &&
+          #mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d &&
+          #mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic &&
+          #mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_periodic &&
+          #mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_sticky 
 # Orchestrate our job run sequence
 workflows:
   build_and_test:
