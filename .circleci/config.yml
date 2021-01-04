@@ -23,9 +23,22 @@ jobs:
       - checkout
       - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
       - run:
-          mpirun -n 9 python -m unittest tests.shared_obj_tests 
-          #mpirun -n 9 python -m unittest tests.shared_vl_tests &&
+          mpirun -n 9 python -m unittest tests.shared_obj_tests
           #mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d &&
+  test_2d_shared_vl:
+    executor: build
+    steps:
+      - checkout
+      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
+      - run:
+          mpirun -n 9 python -m unittest tests.shared_vl_tests
+   test_buffer_data_3d:
+    executor: build
+    steps:
+      - checkout
+      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
+      - run:
+          mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
           #mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic &&
           #mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_periodic &&
           #mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_sticky 
@@ -35,3 +48,5 @@ workflows:
     jobs:
       - test_single
       - test_2d_shared_obj
+      - test_2d_shared_vl
+      - test_buffer_data_3d
