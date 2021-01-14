@@ -6,66 +6,24 @@ executors:
     docker:
       - image: dsheeler/repast4py
         auth:
-          username: mydockerhub-user
+          username: $DOCKERHUB_USER
           password: $DOCKERHUB_PASSWORD
 jobs:
-  test_single:
+  test_all:
     executor: build
     steps:
       - checkout
       - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
       - run:
-          python -m unittest discover tests
-  test_2d_shared_obj:
-    executor: build
-    steps:
-      - checkout
-      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
-      - run:
-          mpirun -n 9 python -m unittest tests.shared_obj_tests
-  test_2d_shared_vl:
-    executor: build
-    steps:
-      - checkout
-      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
-      - run:
-          mpirun -n 9 python -m unittest tests.shared_vl_tests
-  test_buffer_data_3d:
-    executor: build
-    steps:
-      - checkout
-      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
-      - run:
-          mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
-  test_buffer_data_3d_periodic:
-    executor: build
-    steps:
-      - checkout
-      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
-      - run:
-          mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
-  test_buffers_3x3x3_periodic:
-    executor: build
-    steps:
-      - checkout
-      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
-      - run:
-          mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_periodic
-  test_buffers_3x3x3_sticky:
-    executor: build
-    steps:
-      - checkout
-      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
-      - run:
+          python -m unittest discover tests && \
+          mpirun -n 9 python -m unittest tests.shared_obj_tests && \
+          mpirun -n 9 python -m unittest tests.shared_vl_tests && \
+          mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d && \
+          mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic && \
+          mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_periodic && \
           mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_sticky
 # Orchestrate our job run sequence
 workflows:
   test:
     jobs:
-      - test_single
-      - test_2d_shared_obj
-      - test_2d_shared_vl
-      - test_buffer_data_3d
-      - test_buffer_data_3d_periodic
-      - test_buffers_3x3x3_periodic
-      - test_buffers_3x3x3_sticky
+      - test_all
