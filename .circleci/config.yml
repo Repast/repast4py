@@ -6,8 +6,8 @@ executors:
     docker:
       - image: dsheeler/repast4py
         auth:
-          username: dsheeler
-          password: DH1mbm666  # context / project UI env-var reference
+          username: mydockerhub-user
+          password: $DOCKERHUB_PASSWORD
 jobs:
   test_single:
     executor: build
