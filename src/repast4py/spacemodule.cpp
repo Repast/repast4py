@@ -1532,6 +1532,17 @@ static PyObject* SharedCSpace_remove(PyObject* self, PyObject* args) {
     if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
         return NULL;
     }
+
+    //  {
+    //      volatile int i = 0;
+    //      char hostname[256];
+    //      gethostname(hostname, sizeof(hostname));
+    //      printf("PID %d on %s ready for attach\n", getpid(), hostname);
+    //      fflush(stdout);
+    //      while (0 == i)
+    //          sleep(5);
+    // }
+
     bool ret_val = ((R4Py_SharedCSpace*)self)->space->remove((R4Py_Agent*)agent);
     return PyBool_FromLong(static_cast<long>(ret_val));
 }

@@ -64,7 +64,7 @@ bool BaseCSpace<AccessorType, BorderType>::remove(R4Py_Agent* agent) {
 template<typename AccessorType, typename BorderType>
 bool BaseCSpace<AccessorType, BorderType>::remove(R4Py_AgentID* aid) {
     auto iter = agent_map.find(aid);
-    if (iter != agent_map.end()) {
+    if (iter != agent_map.end() && iter->second->pt) {
         spatial_tree->removeItem(iter->second);
     }
     return BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::remove(aid);

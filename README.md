@@ -18,20 +18,26 @@ There are 3 types of python unit tests:
 
 2. Multiprocess (9 procs) mpi tests for 2D spaces. Run with:
 
-`mpirun -n 9 python -m unittest tests.shared_obj_tests`
-`mpirun -n 9 python -m unittest tests.shared_vl_tests`
+```
+mpirun -n 9 python -m unittest tests.shared_obj_tests
+mpirun -n 9 python -m unittest tests.shared_vl_tests
+```
 
 3. Multiprocess (18 procs) mpi tests for 3D spaces. Run with:
 
-`mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d`
-`mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic`
-`mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_periodic`
-`mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_sticky`
+```
+mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
+mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
+mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_periodic
+mpirun -n 18 python -m unittest tests.shared_vl_tests.SharedValueLayerTests.test_buffers_3x3x3_sticky
+```
 
 4. Multiprocess (4 procs) mpi tests for logging and network support. Run with:
 
-`mpirun -n 4 python -m unittest tests.logging_tests`
-`mpirun -n 4 python -m unittest tests.shared_network_tests`
+```
+mpirun -n 4 python -m unittest tests.logging_tests
+mpirun -n 4 python -m unittest tests.shared_network_tests
+```
 
 
 There are also some C++ unitests. C++ tests can be compiled with makefile target 'tests' and run with:
