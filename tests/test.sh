@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 commands=(
   "python -m unittest discover tests"
   "mpirun -n 9 python -m unittest tests.shared_obj_tests"
