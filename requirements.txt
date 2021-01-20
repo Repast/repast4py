@@ -2,3 +2,4 @@
 numpy
 numba
 mpi4py
+torch
