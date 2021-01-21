@@ -14,7 +14,7 @@ jobs:
     steps:
       - checkout
       - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
-      - run: ./tests/test.sh
+      - run: PYTHONPATH="src" ./tests/test.sh
 # Orchestrate our job run sequence
 workflows:
   test:
