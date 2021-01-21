@@ -1,0 +1,22 @@
+version: 2.1
+
+# Define the jobs we want to run for this project
+executors:
+  build:
+    docker:
+      - image: dsheeler/repast4py
+        auth:
+          username: $DOCKERHUB_USER
+          password: $DOCKERHUB_PASSWORD
+jobs:
+  test_all:
+    executor: build
+    steps:
+      - checkout
+      - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
+      - run: ./tests/test.sh
+# Orchestrate our job run sequence
+workflows:
+  test:
+    jobs:
+      - test_all
