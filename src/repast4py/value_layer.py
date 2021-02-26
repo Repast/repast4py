@@ -1,10 +1,15 @@
 import torch
 import numpy as np
 
+from typing import Callable
+
 from . import geometry
 
 from .space import BorderType, GridStickyBorders, GridPeriodicBorders, CartesianTopology, BoundingBox
 from .space import DiscretePoint as dpt
+
+from .core import AgentManager
+
 
 class Impl1D:
 
@@ -24,8 +29,7 @@ class Impl1D:
         self.ngh_finder = geometry.find_1d_nghs_sticky if borders == BorderType.Sticky else geometry.find_1d_nghs_periodic
         self.min_max = np.array(
             [bounds.xmin, bounds.xmin + bounds.xextent - 1])
-        
-    
+
     def get(self, pt):
         self.borders._transform(pt, self.tpt)
         # npt is a np array
@@ -609,13 +613,25 @@ class SharedValueLayer(ValueLayer):
         else:
             self._init_sync_data_3d(topo, buffer_size)
 
-            
-    # Required for the bounded space protocol
-    def clear_ghosts(self):
+    def _pre_synch_ghosts(self, agent_manager: AgentManager):
+        """Called prior to synchronizing ghosts and before any cross-rank movement
+        synchronization.
+
+        This is a null op on a value layer.
+
+        Args:
+            agent_manager: this rank's AgentManager
+        """
         pass
 
+    def _synch_ghosts(self, agent_manager: AgentManager, create_agent: Callable):
+        """Synchronizes the ghosted part of this projection
 
-    def synchronize_ghosts(self):
+        Args:
+            agent_manager: this rank's AgentManager
+            create_agent: a callable that can create an agent instance from
+            an agent id and data.
+        """
         # self.send_data = ((send_buf, (send_counts, send_displs)), ngh_buffers)
         # self.recv_data = ((recv_buf, (recv_counts, recv_displs)), recv_buf_data)
         # ngh_buffers: (ngh_rank, size, shape, bounds, slice_tuple)
@@ -627,7 +643,7 @@ class SharedValueLayer(ValueLayer):
         send_buf = send_msg[0]
         for ngh_rank, size, _, _, tslice in ngh_buffers:
             disp = send_displs[ngh_rank]
-            send_buf[disp : disp + size] = self.grid[tslice].numpy().reshape(size)
+            send_buf[disp: disp + size] = self.grid[tslice].numpy().reshape(size)
 
         self.cart_comm.Alltoallv(self.send_data[0], self.recv_data[0])
 
@@ -676,14 +692,25 @@ class ReadWriteValueLayer:
         """
         return self.read.get_nghs(pt, extent)
 
-    # Required for the buffer space interface
-    def clear_ghosts(self):
+    def _pre_synch_ghosts(self, agent_manager: AgentManager):
+        """Called prior to synchronizing ghosts and before any cross-rank movement
+        synchronization.
+
+        Args:
+            agent_manager: this rank's AgentManager
+        """
         pass
 
-    def synchronize_ghosts(self):
-        self.write_layer.synchronize_ghosts()
-        self.read_layer.synchronize_ghosts()
+    def _synch_ghosts(self, agent_manager: AgentManager, create_agent: Callable):
+        """Synchronizes the ghosted part of this projection
+
+        Args:
+            agent_manager: this rank's AgentManager
+            create_agent: a callable that can create an agent instance from
+            an agent id and data.
+        """
+        self.write_layer._synch_ghosts()
+        self.read_layer._synch_ghosts()
 
     def apply(self, func):
         func(self)
-

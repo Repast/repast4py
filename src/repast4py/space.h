@@ -60,6 +60,7 @@ public:
     virtual void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
     virtual PointType* move(R4Py_Agent* agent, PointType* to) = 0;
     const std::string name() const;
+    bool contains(R4Py_Agent* agent) const;
 };
 
 template<typename PointType, typename AccessorType, typename BorderType>
@@ -135,6 +136,11 @@ PointType* BaseSpace<PointType, AccessorType, BorderType>::getLocation(R4Py_Agen
         return iter->second->pt;
     }
     return nullptr;
+}
+
+template<typename PointType, typename AccessorType, typename BorderType>
+bool BaseSpace<PointType, AccessorType, BorderType>::contains(R4Py_Agent* agent) const {
+    return agent_map.find(agent->aid) != agent_map.end();
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>

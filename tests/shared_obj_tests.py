@@ -4,11 +4,13 @@ from mpi4py import MPI
 import numpy as np
 import random
 import math
+import traceback
+import unittest
 
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
-import unittest
 from repast4py import core, space
+from repast4py import context as ctx
 
 from repast4py.space import ContinuousPoint as CPt
 from repast4py.space import DiscretePoint as DPt
@@ -29,8 +31,10 @@ from repast4py.space import BorderType, OccupancyType
 def mp(x, y):
     return space.DiscretePoint(x, y)
 
+
 def cp(x, y):
     return space.ContinuousPoint(x, y)
+
 
 def make_move(grid, agent, x, y, target, expected):
     grid.move(agent, space.DiscretePoint(x, y))
@@ -76,7 +80,6 @@ class SharedCSTests(unittest.TestCase):
 
                 cspace.remove(a1)
                 self.assertIsNone(cspace.get_agent(pt))
-
 
             if (rank == 1):
                 pt = space.ContinuousPoint(12, 38.2)
@@ -346,7 +349,6 @@ class SharedGridTests(unittest.TestCase):
                     self.assertTrue(np.array_equal(exp[1], ob[2]))
                 self.assertEqual(0, len(expected))
 
-
             if (rank == 1):
                 a3 = core.Agent(1, 0, rank)
                 grid.add(a3)
@@ -438,7 +440,6 @@ class SharedGridTests(unittest.TestCase):
             make_move(grid, agents[0], 32, 20, 3, expected)
             make_move(grid, agents[1], 35, 45, 4, expected)
             make_move(grid, agents[2], 15, 45, 1, expected)
-            
 
         elif rank == 1:
             make_move(grid, agents[0], 15, 15, 0, expected)
@@ -500,7 +501,6 @@ class SharedGridTests(unittest.TestCase):
             self.assertEqual(exp[0], ob[1], rank)
             self.assertTrue(np.array_equal(exp[1], ob[2]), rank)
         self.assertEqual(0, len(expected), rank)
-
 
     def test_buffer_data(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
@@ -851,9 +851,6 @@ class SharedGridTests(unittest.TestCase):
             self.assertEqual(0, len(expected))
 
         
-
-                    
-
 class EAgent(core.Agent):
 
     def __init__(self, id, agent_type, rank, energy):
@@ -864,9 +861,9 @@ class EAgent(core.Agent):
     def save(self):
         return (self.uid, self.energy)
 
-    def restore(self, data):
-        self.restored = True
-        self.energy = data[1]
+    def load(self, data):
+        # update 
+        self.energy = data
 
 
 def create_agent(agent_data):
@@ -890,7 +887,7 @@ class SharedContextTests1(unittest.TestCase):
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
             with self.assertRaises(ValueError) as _:
                 context.add_projection(grid)
@@ -907,7 +904,7 @@ class SharedContextTests1(unittest.TestCase):
             a2 = core.Agent(2, 0, rank)
             agents = [a1, a2]
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add(a1)
             context.add(a2)
 
@@ -938,7 +935,7 @@ class SharedContextTests1(unittest.TestCase):
             a2 = core.Agent(2, 0, rank)
             a3 = core.Agent(2, 1, rank)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add(a1)
             context.add(a3)
             context.add(a2)
@@ -974,7 +971,7 @@ class SharedContextTests1(unittest.TestCase):
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             # test that adding to context 
@@ -1017,7 +1014,7 @@ class SharedContextTests1(unittest.TestCase):
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             # test that adding to context 
@@ -1043,9 +1040,9 @@ class SharedContextTests1(unittest.TestCase):
 
             if rank == 0:
                 # should now have a2 and a3
-                self.assertEqual(2, len(context._local_agents))
+                self.assertEqual(2, len(context._agent_manager._local_agents))
                 # a2
-                agent = context._local_agents[(2, 0, 1)]
+                agent = context._agent_manager._local_agents[(2, 0, 1)]
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(3, agent.energy)
                 pt = space.DiscretePoint(5, 30)
@@ -1053,7 +1050,7 @@ class SharedContextTests1(unittest.TestCase):
                 self.assertEqual(pt, grid.get_location(agent))
 
                 # a3
-                agent = context._local_agents[(3, 0, 1)]
+                agent = context._agent_manager._local_agents[(3, 0, 1)]
                 self.assertEqual((3, 0, 1), agent.uid)
                 self.assertEqual(2, agent.energy)
                 pt = space.DiscretePoint(3, 20)
@@ -1062,8 +1059,8 @@ class SharedContextTests1(unittest.TestCase):
 
             else:
                 # should now have a1
-                self.assertEqual(1, len(context._local_agents))
-                agent = context._local_agents[(1, 0, 0)]
+                self.assertEqual(1, len(context._agent_manager._local_agents))
+                agent = context._agent_manager._local_agents[(1, 0, 0)]
                 self.assertEqual((1, 0, 0), agent.uid)
                 self.assertEqual(12, agent.energy)
                 pt = space.DiscretePoint(12, 5)
@@ -1079,9 +1076,9 @@ class SharedContextTests1(unittest.TestCase):
             context.synchronize(create_agent)
 
             if rank == 0:
-                self.assertEqual(1, len(context._local_agents))
+                self.assertEqual(1, len(context._agent_manager._local_agents))
                 # a3
-                agent = context._local_agents[(3, 0, 1)]
+                agent = context._agent_manager._local_agents[(3, 0, 1)]
                 self.assertEqual((3, 0, 1), agent.uid)
                 self.assertEqual(2, agent.energy)
                 pt = space.DiscretePoint(3, 20)
@@ -1090,15 +1087,15 @@ class SharedContextTests1(unittest.TestCase):
 
             if rank == 1:
                 # a2 now back in 1
-                self.assertEqual(2, len(context._local_agents))
-                agent = context._local_agents[(2, 0, 1)]
+                self.assertEqual(2, len(context._agent_manager._local_agents))
+                agent = context._agent_manager._local_agents[(2, 0, 1)]
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(-10, agent.energy)
                 pt = space.DiscretePoint(12, 38)
                 self.assertEqual(agent, grid.get_agent(pt))
                 self.assertEqual(pt, grid.get_location(agent))
 
-                agent = context._local_agents[(1, 0, 0)]
+                agent = context._agent_manager._local_agents[(1, 0, 0)]
                 self.assertEqual((1, 0, 0), agent.uid)
                 self.assertEqual(12, agent.energy)
                 pt = space.DiscretePoint(12, 5)
@@ -1119,7 +1116,7 @@ class SharedContextTests1(unittest.TestCase):
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             if rank == 0:
@@ -1153,9 +1150,10 @@ class SharedContextTests1(unittest.TestCase):
                 pt = space.DiscretePoint(15, 15)
                 grid.move(a13, pt)
 
-            grid.clear_ghosts()
+            grid._pre_synch_ghosts(context._agent_manager)
+            self.assertEqual(0, len(context._agent_manager._ghost_agents))
             context.synchronize(create_agent, False)
-            grid.synchronize_ghosts(create_agent)
+            grid._synch_ghosts(context._agent_manager, create_agent)
 
             if rank == 0:
                 pt = space.DiscretePoint(10, 20)
@@ -1170,7 +1168,8 @@ class SharedContextTests1(unittest.TestCase):
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(12, agent.energy)
 
-                self.assertEqual(3, len(context._local_agents))
+                self.assertEqual(2, len(context._agent_manager._ghost_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
 
                 # moves these agents out of the buffer zone
                 pt = space.DiscretePoint(9, 15)
@@ -1192,10 +1191,11 @@ class SharedContextTests1(unittest.TestCase):
                     self.assertEqual(energy, a.energy)
                 self.assertEqual(0, len(expected))
 
-                self.assertEqual(3, len(context._local_agents))
+                self.assertEqual(3, len(context._agent_manager._ghost_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
 
-            grid.clear_ghosts()
-            grid.synchronize_ghosts(create_agent)
+            grid._pre_synch_ghosts(context._agent_manager)
+            grid._synch_ghosts(context._agent_manager, create_agent)
 
             if rank == 1:
                 pt = space.DiscretePoint(8, 20)
@@ -1213,7 +1213,7 @@ class SharedContextTests1(unittest.TestCase):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
-        context = core.SharedContext(comm)
+        context = ctx.SharedContext(comm)
 
         agents = {}
         for a in [EAgent(1, 0, rank, 1), EAgent(2, 0, rank, 2), EAgent(3, 0, rank, 3),
@@ -1282,8 +1282,8 @@ class SharedContextTests1(unittest.TestCase):
             if k.startswith(str(rank)):
                 grid.move(agents[v[0]], v[1])
 
-        grid.clear_ghosts()
-        grid.synchronize_ghosts(create_agent)
+        grid._pre_synch_ghosts(context._agent_manager)
+        grid._synch_ghosts(context._agent_manager, create_agent)
 
         exp = [
             ['1N', '3W', '4NW'],
@@ -1320,7 +1320,7 @@ class SharedContextTests2(unittest.TestCase):
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(cspace)
 
             # test that adding to context 
@@ -1361,7 +1361,7 @@ class SharedContextTests2(unittest.TestCase):
             grid = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             # test that adding to context 
@@ -1383,13 +1383,13 @@ class SharedContextTests2(unittest.TestCase):
                 grid.move(a2, pt)
                 grid.move(a3, space.ContinuousPoint(3, 20))
 
-            context.synchronize(create_agent, sync_buffer=False)
+            context.synchronize(create_agent, sync_ghosts=False)
 
             if rank == 0:
                 # should now have a2 and a3
-                self.assertEqual(2, len(context._local_agents))
+                self.assertEqual(2, len(context._agent_manager._local_agents))
                 # a2
-                agent = context._local_agents[(2, 0, 1)]
+                agent = context._agent_manager._local_agents[(2, 0, 1)]
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(3, agent.energy)
                 pt = space.ContinuousPoint(5, 30)
@@ -1397,7 +1397,7 @@ class SharedContextTests2(unittest.TestCase):
                 self.assertEqual(pt, grid.get_location(agent))
 
                 # a3
-                agent = context._local_agents[(3, 0, 1)]
+                agent = context._agent_manager._local_agents[(3, 0, 1)]
                 self.assertEqual((3, 0, 1), agent.uid)
                 self.assertEqual(2, agent.energy)
                 pt = space.ContinuousPoint(3, 20)
@@ -1406,8 +1406,8 @@ class SharedContextTests2(unittest.TestCase):
 
             else:
                 # should now have a1
-                self.assertEqual(1, len(context._local_agents))
-                agent = context._local_agents[(1, 0, 0)]
+                self.assertEqual(1, len(context._agent_manager._local_agents))
+                agent = context._agent_manager._local_agents[(1, 0, 0)]
                 self.assertEqual((1, 0, 0), agent.uid)
                 self.assertEqual(12, agent.energy)
                 pt = space.ContinuousPoint(12, 5)
@@ -1420,12 +1420,12 @@ class SharedContextTests2(unittest.TestCase):
                 grid.move(agent, space.ContinuousPoint(12, 38))
                 agent.energy = -10
             
-            context.synchronize(create_agent, sync_buffer=False)
+            context.synchronize(create_agent, sync_ghosts=False)
 
             if rank == 0:
-                self.assertEqual(1, len(context._local_agents))
+                self.assertEqual(1, len(context._agent_manager._local_agents))
                 # a3
-                agent = context._local_agents[(3, 0, 1)]
+                agent = context._agent_manager._local_agents[(3, 0, 1)]
                 self.assertEqual((3, 0, 1), agent.uid)
                 self.assertEqual(2, agent.energy)
                 pt = space.ContinuousPoint(3, 20)
@@ -1434,15 +1434,15 @@ class SharedContextTests2(unittest.TestCase):
 
             if rank == 1:
                 # a2 now back in 1
-                self.assertEqual(2, len(context._local_agents))
-                agent = context._local_agents[(2, 0, 1)]
+                self.assertEqual(2, len(context._agent_manager._local_agents))
+                agent = context._agent_manager._local_agents[(2, 0, 1)]
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(-10, agent.energy)
                 pt = space.ContinuousPoint(12, 38)
                 self.assertEqual(agent, grid.get_agent(pt))
                 self.assertEqual(pt, grid.get_location(agent))
 
-                agent = context._local_agents[(1, 0, 0)]
+                agent = context._agent_manager._local_agents[(1, 0, 0)]
                 self.assertEqual((1, 0, 0), agent.uid)
                 self.assertEqual(12, agent.energy)
                 pt = space.ContinuousPoint(12, 5)
@@ -1462,7 +1462,7 @@ class SharedContextTests2(unittest.TestCase):
             grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             if rank == 0:
@@ -1511,7 +1511,7 @@ class SharedContextTests2(unittest.TestCase):
                 self.assertEqual((2, 0, 1), agent.uid)
                 self.assertEqual(12, agent.energy)
 
-                self.assertEqual(3, len(context._local_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
 
                 # moves these agents out of the buffer zone
                 pt = space.ContinuousPoint(9, 15)
@@ -1533,10 +1533,10 @@ class SharedContextTests2(unittest.TestCase):
                     self.assertEqual(energy, a.energy)
                 self.assertEqual(0, len(expected))
 
-                self.assertEqual(3, len(context._local_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
 
-            grid.clear_ghosts()
-            grid.synchronize_ghosts(create_agent)
+            grid._pre_synch_ghosts(context._agent_manager)
+            grid._synch_ghosts(context._agent_manager, create_agent)
 
             if rank == 1:
                 pt = space.ContinuousPoint(8, 20)
@@ -1554,7 +1554,7 @@ class SharedContextTests2(unittest.TestCase):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
-        context = core.SharedContext(comm)
+        context = ctx.SharedContext(comm)
 
         agents = {}
         for a in [EAgent(1, 0, rank, 1), EAgent(2, 0, rank, 2), EAgent(3, 0, rank, 3),
@@ -1623,8 +1623,8 @@ class SharedContextTests2(unittest.TestCase):
             if k.startswith(str(rank)):
                 grid.move(agents[v[0]], v[1])
 
-        grid.clear_ghosts()
-        grid.synchronize_ghosts(create_agent)
+        grid._pre_synch_ghosts(context._agent_manager)
+        grid._synch_ghosts(context._agent_manager, create_agent)
 
         exp = [
             ['1N', '3W', '4NW'],
@@ -1668,7 +1668,7 @@ class SharedContextTests3(unittest.TestCase):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
-        context = core.SharedContext(comm)
+        context = ctx.SharedContext(comm)
 
         agents = []
         for i in range(100):
@@ -1683,8 +1683,6 @@ class SharedContextTests3(unittest.TestCase):
             occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
         context.add_projection(cspace)
         context.add_projection(grid)
-
-        
 
         g_moved = [[] for i in range(grid._cart_comm.size)]
         c_moved = [[] for i in range(grid._cart_comm.size)]
@@ -1722,6 +1720,7 @@ class SharedContextTests3(unittest.TestCase):
                 gp = grid.move(a, gp)
                 cp = cspace.move(a, cp)
                 gm.append(gp)
+                self.assertIsNotNone(grid.get_location(a))
                 cm.append(cp)
                 g_moved[5].append((gp.coordinates, a.uid))
                 c_moved[5].append((cp.coordinates, a.uid))
@@ -1746,7 +1745,7 @@ class SharedContextTests3(unittest.TestCase):
                 dp._reset_from_array(pt)
                 a = TempAgent(uid)
                 gp = grid.get_location(a)
-                self.assertEqual(dp, gp)
+                self.assertEqual(dp, gp, msg='rank: {}, agent: {}, pt: {}'.format(rank, a, pt))
 
         for l in recv_c_moved:
             dp = CPt(0, 0, 0)
@@ -1792,5 +1791,331 @@ class SharedContextTests3(unittest.TestCase):
                 self.assertIsNotNone(a)
                 self.assertEqual((3, 0, 7), a.uid)
 
+    def test_requested(self):
+        # 4 rank comm
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+    
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+            context = ctx.SharedContext(comm)
+            agents = [EAgent(x, 0, rank, x) for x in range(10)]
+            for a in agents:
+                context.add(a)
+                self.assertEqual(rank, a.local_rank)
 
+            requests = []
+            if rank == 0:
+                requests.append(((1, 0, 1),1))
+                requests.append(((1, 0, 2),2))
+                requests.append(((2, 0, 1),1))
+            elif rank == 3:
+                requests.append(((1, 0, 0), 0))
+                requests.append(((4, 0, 2), 2))
+                requests.append(((2, 0, 1),1))
+            
+            context.request_agents(requests, create_agent)
 
+            manager = context._agent_manager
+
+            if rank == 0:
+                ga1 = manager._ghost_agents[(1, 0, 1)]
+                self.assertEqual(3, len(manager._ghost_agents))
+                self.assertEqual((1, 0, 1), ga1.agent.uid)
+                self.assertEqual(0, ga1.ref_count)
+                self.assertEqual(1, ga1.agent.local_rank)
+
+                ga2 = manager._ghost_agents[(1, 0, 2)]
+                self.assertEqual((1, 0, 2), ga2.agent.uid)
+                self.assertEqual(0, ga2.ref_count)
+                self.assertEqual(2, ga2.agent.local_rank)
+
+                ga3 = manager._ghost_agents[(2, 0, 1)]
+                self.assertEqual((2, 0, 1), ga3.agent.uid)
+                self.assertEqual(0, ga3.ref_count)
+                self.assertEqual(1, ga3.agent.local_rank)
+
+                self.assertEqual(1, len(manager._ghosted_agents))
+                ghosted1 = manager._ghosted_agents.get((1, 0, 0))
+                self.assertIsNotNone(ghosted1)
+                self.assertEqual((1, 0, 0), ghosted1.agent.uid)
+                self.assertEqual(1, len(ghosted1.ghost_ranks))
+                self.assertTrue(3 in ghosted1.ghost_ranks)
+            
+            elif rank == 2:
+                self.assertEqual(0, len(manager._ghost_agents))
+
+                self.assertEqual(2, len(manager._ghosted_agents))
+                ghosted1 = manager._ghosted_agents.get((1, 0, 2))
+                self.assertIsNotNone(ghosted1)
+                self.assertEqual((1, 0, 2), ghosted1.agent.uid)
+                self.assertEqual(1, len(ghosted1.ghost_ranks))
+                self.assertTrue(0 in ghosted1.ghost_ranks)
+
+                ghosted2 = manager._ghosted_agents.get((4, 0, 2))
+                self.assertIsNotNone(ghosted2)
+                self.assertEqual((4, 0, 2), ghosted2.agent.uid)
+                self.assertEqual(1, len(ghosted2.ghost_ranks))
+                self.assertTrue(3 in ghosted2.ghost_ranks)
+            elif rank == 3:
+                self.assertEqual(3, len(manager._ghost_agents))
+
+                ga1 = manager._ghost_agents[(1, 0, 0)]
+                self.assertEqual((1, 0, 0), ga1.agent.uid)
+                self.assertEqual(0, ga1.ref_count)
+                self.assertEqual(0, ga1.agent.local_rank)
+
+                ga2 = manager._ghost_agents[(4, 0, 2)]
+                self.assertEqual((4, 0, 2), ga2.agent.uid)
+                self.assertEqual(0, ga2.ref_count)
+                self.assertEqual(2, ga2.agent.local_rank)
+
+                ga3 = manager._ghost_agents[(2, 0, 1)]
+                self.assertEqual((2, 0, 1), ga3.agent.uid)
+                self.assertEqual(0, ga3.ref_count)
+                self.assertEqual(1, ga3.agent.local_rank)
+
+                self.assertEqual(0, len(manager._ghosted_agents))
+
+            elif rank == 1:
+                self.assertEqual(0, len(manager._ghost_agents))
+
+                self.assertEqual(2, len(manager._ghosted_agents))
+                ghosted1 = manager._ghosted_agents.get((1, 0, 1))
+                self.assertIsNotNone(ghosted1)
+                self.assertEqual((1, 0, 1), ghosted1.agent.uid)
+                self.assertEqual(1, len(ghosted1.ghost_ranks))
+                self.assertTrue(0 in ghosted1.ghost_ranks)
+
+                ghosted2 = manager._ghosted_agents.get((2, 0, 1))
+                self.assertIsNotNone(ghosted2)
+                self.assertEqual((2, 0, 1), ghosted2.agent.uid)
+                self.assertEqual(2, len(ghosted2.ghost_ranks))
+                self.assertTrue(0 in ghosted2.ghost_ranks)
+                self.assertTrue(3 in ghosted2.ghost_ranks)
+
+    def test_requested_synch(self):
+        """ * Request Agents
+            * Update Agent state on local rank
+            * Synch
+            * Test that state update propogates to ghosts
+        """
+        # 4 rank comm
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+    
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+            context = ctx.SharedContext(comm)
+            manager = context._agent_manager
+            agents = [EAgent(x, 0, rank, x) for x in range(10)]
+            for a in agents:
+                context.add(a)
+                self.assertEqual(rank, a.local_rank)
+
+            expected = {(1, 0, 1) : 23, (1, 0, 2) : 12, (2, 0, 1) : 534,
+                        (1, 0, 0) : 143, (4, 0, 2) : 34}
+
+            requests = []
+            if rank == 0:
+                # requestion (1, 0, 1) from 1
+                requests.append(((1, 0, 1),1))
+                requests.append(((1, 0, 2),2))
+                requests.append(((2, 0, 1),1))
+            elif rank == 3:
+                requests.append(((1, 0, 0), 0))
+                requests.append(((4, 0, 2), 2))
+            
+            context.request_agents(requests, create_agent)
+
+            if rank == 0:
+                manager.get_local((1, 0, 0)).energy = expected[(1, 0, 0)]
+            elif rank == 1:
+                manager.get_local((1, 0, 1)).energy = expected[(1, 0, 1)]
+                manager.get_local((2, 0, 1)).energy = expected[(2, 0, 1)]
+            elif rank == 2:
+                manager.get_local((4, 0, 2)).energy = expected[(4, 0, 2)]
+                manager.get_local((1, 0, 2)).energy = expected[(1, 0, 2)]
+
+            context.synchronize(create_agent)
+
+            if rank == 0:
+                uids = [(1, 0, 1), (1, 0, 2), (2, 0, 1)]
+                for uid in uids:
+                    self.assertEqual(expected[uid], manager.get_ghost(uid, incr=0).energy)
+            elif rank == 3:
+                uids = [(1, 0, 0), (4, 0, 2)]
+                for uid in uids:
+                    self.assertEqual(expected[uid], manager.get_ghost(uid, incr=0).energy)
+
+    def test_requested_with_proj(self):
+
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+    
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+            context = ctx.SharedContext(comm)
+            agents = {}
+            for a in [EAgent(x, 0, rank, x) for x in range(10)]:
+                context.add(a)
+                self.assertEqual(rank, a.local_rank)
+                agents[a.uid] = a
+
+            requests = []
+            if rank == 0:
+                requests.append(((1, 0, 1),1))
+                requests.append(((1, 0, 2),2))
+                requests.append(((2, 0, 1),1))
+            elif rank == 3:
+                requests.append(((1, 0, 0), 0))
+                requests.append(((4, 0, 2), 2))
+            
+            context.request_agents(requests, create_agent)
+            
+            manager = context._agent_manager
+
+            box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+            cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+            grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+            context.add_projection(cspace)
+            context.add_projection(grid)
+
+            if rank == 0:
+                ga1 = manager._ghost_agents[(1, 0, 1)]
+                self.assertEqual(2, ga1.ref_count)
+
+                ga2 = manager._ghost_agents[(1, 0, 2)]
+                self.assertEqual(2, ga2.ref_count)
+
+                ga3 = manager._ghost_agents[(2, 0, 1)]
+                self.assertEqual(2, ga3.ref_count)
+
+            elif rank == 3:
+                self.assertEqual(2, len(manager._ghost_agents))
+
+                ga1 = manager._ghost_agents[(1, 0, 0)]
+                self.assertEqual(2, ga1.ref_count)
+
+                ga2 = manager._ghost_agents[(4, 0, 2)]
+                self.assertEqual(2, ga2.ref_count)
+
+            # move 
+            # ghosted on 0: (1, 0, 1), (1, 0, 2), (2, 0, 1), 
+            # ghosted on 3: (1, 0, 0),(4, 0, 2)
+            
+            # local bounds
+            # 0: BoundingBox(xmin=0, xextent=45, ymin=0, yextent=60, zmin=0, zextent=0)
+            # 1: BoundingBox(xmin=0, xextent=45, ymin=60, yextent=60, zmin=0, zextent=0)
+            # 2: BoundingBox(xmin=45, xextent=45, ymin=0, yextent=60, zmin=0, zextent=0)
+            # 3: BoundingBox(xmin=45, xextent=45, ymin=60, yextent=60, zmin=0, zextent=0)
+
+            if rank == 0:
+                # to 1
+                grid.move(agents[(1, 0, 0)], DPt(20, 65))
+           
+            elif rank == 1:
+                # to 0
+                grid.move(agents[(1, 0, 1)], DPt(20, 20))
+                # to 2
+                grid.move(agents[(2, 0, 1)], DPt(50, 20))
+            elif rank == 2:
+                # to 3
+                grid.move(agents[(1, 0, 2)], DPt(50, 65))
+                # to 0
+                grid.move(agents[(4, 0, 2)], DPt(20, 30))
+
+            try:
+                context.synchronize(create_agent)
+            except:
+                e = traceback.format_exc()
+                print(e, flush=True)
+
+            if rank == 0:
+                # (4, 0, 2) now on 0, and ghosted to 3
+                # (1, 0, 1) now on 0, and was ghosted to 0, now just local
+                self.assertIsNotNone(manager.get_local((4, 0, 2)))
+                self.assertIsNotNone(manager.get_local((1, 0, 1)))
+                self.assertIsNone(manager.get_ghost((1, 0, 1), incr=0))
+                self.assertEqual(0, manager.get_local((1, 0, 1)).local_rank)
+                self.assertEqual(1, len(manager._ghosted_agents))
+                self.assertTrue(3 in  manager._ghosted_agents[(4, 0, 2)].ghost_ranks)
+            elif rank == 1:
+                # (1, 0, 0) moved to 1, and ghosted to 3
+                self.assertEqual(1, len(manager._ghosted_agents))
+                self.assertTrue(3 in  manager._ghosted_agents[(1, 0, 0)].ghost_ranks)
+                self.assertIsNotNone(manager.get_local((1, 0, 0)))
+            elif rank == 2:
+                # 2, 0, 1 moved to 2 ghosted on 0
+                self.assertEqual(1, len(manager._ghosted_agents))
+                self.assertTrue(0 in  manager._ghosted_agents[(2, 0, 1)].ghost_ranks)
+                self.assertIsNotNone(manager.get_local((2, 0, 1)))
+            elif rank == 3:
+                self.assertEqual(1, len(manager._ghosted_agents))
+                self.assertTrue(0 in  manager._ghosted_agents[(1, 0, 2)].ghost_ranks)
+                self.assertIsNotNone(manager.get_local((1, 0, 2)))
+
+            if rank == 1:
+                context.agent((1, 0, 0)).energy = 1253
+            
+            try:
+                context.synchronize(create_agent)
+            except:
+                e = traceback.format_exc()
+                print(e, flush=True)
+            
+            if rank == 3:
+                # 1,0,0 was moved to 1 from 0, and ghosted on 3
+                # test that state update on 1 propogates to 3
+                self.assertEqual(1253, manager.get_ghost((1, 0, 0), incr=0).energy)
+    
+    def test_requested_with_removed(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+    
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+            context = ctx.SharedContext(comm)
+            agents = {}
+            for a in [EAgent(x, 0, rank, x) for x in range(10)]:
+                context.add(a)
+                self.assertEqual(rank, a.local_rank)
+                agents[a.uid] = a
+
+            requests = []
+            if rank == 0:
+                requests.append(((1, 0, 1),1))
+                requests.append(((1, 0, 2),2))
+                requests.append(((2, 0, 1),1))
+                requests.append(((4, 0, 2), 2))
+            elif rank == 3:
+                requests.append(((1, 0, 0), 0))
+                requests.append(((4, 0, 2), 2))
+            
+            context.request_agents(requests, create_agent)
+            
+            manager = context._agent_manager
+
+            box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+            cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+            grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
+                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+            context.add_projection(cspace)
+            context.add_projection(grid)
+
+            if rank == 2:
+                # remove (4,0,2) from two, and so as ghosts on 0 and 3
+                context.remove(agents[(4, 0, 2)])
+                self.assertIsNone(context.agent((4, 0, 2)))
+
+            try:
+                context.synchronize(create_agent)
+            except:
+                e = traceback.format_exc()
+                print(e, flush=True)
+
+            if rank == 0 or rank == 3:
+                self.assertIsNone(manager.get_ghost((4,0,2), incr=0))

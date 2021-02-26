@@ -64,7 +64,7 @@ bool BaseCSpace<AccessorType, BorderType>::remove(R4Py_Agent* agent) {
 template<typename AccessorType, typename BorderType>
 bool BaseCSpace<AccessorType, BorderType>::remove(R4Py_AgentID* aid) {
     auto iter = agent_map.find(aid);
-    if (iter != agent_map.end()) {
+    if (iter != agent_map.end() && iter->second->pt) {
         spatial_tree->removeItem(iter->second);
     }
     return BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::remove(aid);
@@ -119,6 +119,7 @@ public:
     virtual R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
     virtual void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
     virtual const std::string name() const = 0;
+    virtual bool contains(R4Py_Agent* agent) const = 0;
 };
 
 inline ICSpace::~ICSpace() {}
@@ -141,6 +142,7 @@ public:
     R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
     void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
     const std::string name() const override;
+    bool contains(R4Py_Agent* agent) const override;
 };
 
 template<typename DelegateType>
@@ -190,6 +192,11 @@ void CSpace<DelegateType>::getAgentsWithin(const BoundingBox& box, std::shared_p
 template<typename DelegateType>
 const std::string CSpace<DelegateType>::name() const {
     return delegate->name();
+}
+
+template<typename DelegateType>
+bool CSpace<DelegateType>::contains(R4Py_Agent* agent) const {
+    return delegate->contains(agent);
 }
 
 // aliases for  CSpace with multi occupancy and sticky borders

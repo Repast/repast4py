@@ -16,7 +16,7 @@ def run():
     print(vl.write_layer.impl.grid)
     for _ in range(1):
         vl.apply(diffuser)
-        # vl.synchronize_ghosts()
+        # vl._synch_ghosts()
         vl.swap_layers()
 
     print(vl.read_layer.impl.grid)

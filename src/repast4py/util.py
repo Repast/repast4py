@@ -2,6 +2,8 @@ import time
 from mpi4py import MPI
 import numpy as np
 
+from typing import List
+
 class Timer:
 
     def __init__(self):
@@ -37,3 +39,10 @@ class Timer:
                     print('{:<6d}{:<16s}{:>12.4f}{:>12.4f}{:>12.4f}{:>12.4f}{:>12.4f}'.
                         format(r, k,
                         sm, mn, mx, mean, std))
+
+
+def is_empty(lst: List) -> bool:
+    for nl in lst:
+        if len(nl) > 0:
+            return False
+    return True
