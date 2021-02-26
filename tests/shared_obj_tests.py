@@ -5,11 +5,12 @@ import numpy as np
 import random
 import math
 import traceback
+import unittest
 
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
-import unittest
 from repast4py import core, space
+from repast4py import context as ctx
 
 from repast4py.space import ContinuousPoint as CPt
 from repast4py.space import DiscretePoint as DPt
@@ -79,7 +80,6 @@ class SharedCSTests(unittest.TestCase):
 
                 cspace.remove(a1)
                 self.assertIsNone(cspace.get_agent(pt))
-
 
             if (rank == 1):
                 pt = space.ContinuousPoint(12, 38.2)
@@ -440,7 +440,6 @@ class SharedGridTests(unittest.TestCase):
             make_move(grid, agents[0], 32, 20, 3, expected)
             make_move(grid, agents[1], 35, 45, 4, expected)
             make_move(grid, agents[2], 15, 45, 1, expected)
-            
 
         elif rank == 1:
             make_move(grid, agents[0], 15, 15, 0, expected)
@@ -888,7 +887,7 @@ class SharedContextTests1(unittest.TestCase):
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
             with self.assertRaises(ValueError) as _:
                 context.add_projection(grid)
@@ -905,7 +904,7 @@ class SharedContextTests1(unittest.TestCase):
             a2 = core.Agent(2, 0, rank)
             agents = [a1, a2]
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add(a1)
             context.add(a2)
 
@@ -936,7 +935,7 @@ class SharedContextTests1(unittest.TestCase):
             a2 = core.Agent(2, 0, rank)
             a3 = core.Agent(2, 1, rank)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add(a1)
             context.add(a3)
             context.add(a2)
@@ -972,7 +971,7 @@ class SharedContextTests1(unittest.TestCase):
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             # test that adding to context 
@@ -1015,7 +1014,7 @@ class SharedContextTests1(unittest.TestCase):
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             # test that adding to context 
@@ -1117,7 +1116,7 @@ class SharedContextTests1(unittest.TestCase):
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             if rank == 0:
@@ -1151,10 +1150,10 @@ class SharedContextTests1(unittest.TestCase):
                 pt = space.DiscretePoint(15, 15)
                 grid.move(a13, pt)
 
-            grid.clear_ghosts(context._agent_manager)
+            grid._pre_synch_ghosts(context._agent_manager)
             self.assertEqual(0, len(context._agent_manager._ghost_agents))
             context.synchronize(create_agent, False)
-            grid.synchronize_ghosts(context._agent_manager, create_agent)
+            grid._synch_ghosts(context._agent_manager, create_agent)
 
             if rank == 0:
                 pt = space.DiscretePoint(10, 20)
@@ -1195,8 +1194,8 @@ class SharedContextTests1(unittest.TestCase):
                 self.assertEqual(3, len(context._agent_manager._ghost_agents))
                 self.assertEqual(3, len(context._agent_manager._local_agents))
 
-            grid.clear_ghosts(context._agent_manager)
-            grid.synchronize_ghosts(context._agent_manager, create_agent)
+            grid._pre_synch_ghosts(context._agent_manager)
+            grid._synch_ghosts(context._agent_manager, create_agent)
 
             if rank == 1:
                 pt = space.DiscretePoint(8, 20)
@@ -1214,7 +1213,7 @@ class SharedContextTests1(unittest.TestCase):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
-        context = core.SharedContext(comm)
+        context = ctx.SharedContext(comm)
 
         agents = {}
         for a in [EAgent(1, 0, rank, 1), EAgent(2, 0, rank, 2), EAgent(3, 0, rank, 3),
@@ -1283,8 +1282,8 @@ class SharedContextTests1(unittest.TestCase):
             if k.startswith(str(rank)):
                 grid.move(agents[v[0]], v[1])
 
-        grid.clear_ghosts(context._agent_manager)
-        grid.synchronize_ghosts(context._agent_manager, create_agent)
+        grid._pre_synch_ghosts(context._agent_manager)
+        grid._synch_ghosts(context._agent_manager, create_agent)
 
         exp = [
             ['1N', '3W', '4NW'],
@@ -1321,7 +1320,7 @@ class SharedContextTests2(unittest.TestCase):
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(cspace)
 
             # test that adding to context 
@@ -1362,7 +1361,7 @@ class SharedContextTests2(unittest.TestCase):
             grid = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             # test that adding to context 
@@ -1463,7 +1462,7 @@ class SharedContextTests2(unittest.TestCase):
             grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             context.add_projection(grid)
 
             if rank == 0:
@@ -1536,8 +1535,8 @@ class SharedContextTests2(unittest.TestCase):
 
                 self.assertEqual(3, len(context._agent_manager._local_agents))
 
-            grid.clear_ghosts(context._agent_manager)
-            grid.synchronize_ghosts(context._agent_manager, create_agent)
+            grid._pre_synch_ghosts(context._agent_manager)
+            grid._synch_ghosts(context._agent_manager, create_agent)
 
             if rank == 1:
                 pt = space.ContinuousPoint(8, 20)
@@ -1555,7 +1554,7 @@ class SharedContextTests2(unittest.TestCase):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
-        context = core.SharedContext(comm)
+        context = ctx.SharedContext(comm)
 
         agents = {}
         for a in [EAgent(1, 0, rank, 1), EAgent(2, 0, rank, 2), EAgent(3, 0, rank, 3),
@@ -1624,8 +1623,8 @@ class SharedContextTests2(unittest.TestCase):
             if k.startswith(str(rank)):
                 grid.move(agents[v[0]], v[1])
 
-        grid.clear_ghosts(context._agent_manager)
-        grid.synchronize_ghosts(context._agent_manager, create_agent)
+        grid._pre_synch_ghosts(context._agent_manager)
+        grid._synch_ghosts(context._agent_manager, create_agent)
 
         exp = [
             ['1N', '3W', '4NW'],
@@ -1669,7 +1668,7 @@ class SharedContextTests3(unittest.TestCase):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
-        context = core.SharedContext(comm)
+        context = ctx.SharedContext(comm)
 
         agents = []
         for i in range(100):
@@ -1721,6 +1720,7 @@ class SharedContextTests3(unittest.TestCase):
                 gp = grid.move(a, gp)
                 cp = cspace.move(a, cp)
                 gm.append(gp)
+                self.assertIsNotNone(grid.get_location(a))
                 cm.append(cp)
                 g_moved[5].append((gp.coordinates, a.uid))
                 c_moved[5].append((cp.coordinates, a.uid))
@@ -1745,7 +1745,7 @@ class SharedContextTests3(unittest.TestCase):
                 dp._reset_from_array(pt)
                 a = TempAgent(uid)
                 gp = grid.get_location(a)
-                self.assertEqual(dp, gp)
+                self.assertEqual(dp, gp, msg='rank: {}, agent: {}, pt: {}'.format(rank, a, pt))
 
         for l in recv_c_moved:
             dp = CPt(0, 0, 0)
@@ -1798,7 +1798,7 @@ class SharedContextTests3(unittest.TestCase):
     
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             agents = [EAgent(x, 0, rank, x) for x in range(10)]
             for a in agents:
                 context.add(a)
@@ -1906,7 +1906,7 @@ class SharedContextTests3(unittest.TestCase):
     
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             manager = context._agent_manager
             agents = [EAgent(x, 0, rank, x) for x in range(10)]
             for a in agents:
@@ -1955,7 +1955,7 @@ class SharedContextTests3(unittest.TestCase):
     
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             agents = {}
             for a in [EAgent(x, 0, rank, x) for x in range(10)]:
                 context.add(a)
@@ -2077,7 +2077,7 @@ class SharedContextTests3(unittest.TestCase):
     
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
-            context = core.SharedContext(comm)
+            context = ctx.SharedContext(comm)
             agents = {}
             for a in [EAgent(x, 0, rank, x) for x in range(10)]:
                 context.add(a)

@@ -1,13 +1,15 @@
-from mpi4py import MPI
+from typing import Callable, List
 
-from ._space import Grid, DiscretePoint, ContinuousPoint, ContinuousSpace
-from ._space import GridStickyBorders, GridPeriodicBorders
-from ._space import CartesianTopology
+from ._space import DiscretePoint, ContinuousPoint
 from ._space import SharedGrid as _SharedGrid
 from ._space import SharedContinuousSpace as _SharedContinuousSpace
-from .core import AgentManager
+# not used in this file but imported into space namespace from _.
+# for space API
+from ._space import GridStickyBorders, GridPeriodicBorders
+from ._space import CartesianTopology, Grid, ContinuousSpace
 
-from enum import Enum
+from .core import AgentManager, Agent
+
 from collections import namedtuple
 import sys
 
@@ -23,7 +25,7 @@ class OccupancyType:
 
 if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
     BoundingBox = namedtuple('BoundingBox', ['xmin', 'xextent', 'ymin', 'yextent', 'zmin', 'zextent'],
-        defaults=[0, 0])
+                             defaults=[0, 0])
 else:
     BoundingBox = namedtuple('BoundingBox', ['xmin', 'xextent', 'ymin', 'yextent', 'zmin', 'zextent'])
 
@@ -40,6 +42,9 @@ class SharedGrid(_SharedGrid):
             self.gather = self._gather_2d
         if bounds.zextent > 0:
             self.gather = self._gather_3d
+
+    def __contains__(self, agent):
+        return self.contains(agent)
 
     def _fill_send_data(self):
         send_data = [[] for i in range(self._cart_comm.size)]
@@ -58,6 +63,7 @@ class SharedGrid(_SharedGrid):
             for data in data_list:
                 agent_data = data[0]
                 pt_data = data[1]
+                # get will increment ref count if ghost exists
                 agent = agent_manager.get_ghost(agent_data[0])
                 if agent is None:
                     agent = create_agent(agent_data)
@@ -67,13 +73,28 @@ class SharedGrid(_SharedGrid):
                 pt._reset(pt_data)
                 self.move(agent, pt)
 
-    def clear_ghosts(self, agent_manager: AgentManager):
+    def _pre_synch_ghosts(self, agent_manager: AgentManager):
+        """Called prior to synchronizing ghosts and before any cross-rank movement
+        synchronization.
+
+        This removes the currently buffered agents.
+
+        Args:
+            agent_manager: this rank's AgentManager
+        """
         for agent in self.buffered_agents:
             self.remove(agent)
             agent_manager.remove_ghost(agent)
         self.buffered_agents.clear()
 
-    def synchronize_ghosts(self, agent_manager: AgentManager, create_agent):
+    def _synch_ghosts(self, agent_manager: AgentManager, create_agent):
+        """Synchronizes the ghosted part of this projection
+
+        Args:
+            agent_manager: this rank's AgentManager
+            create_agent: a callable that can create an agent instance from
+            an agent id and data.
+        """
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
         self._process_recv_data(recv_data, agent_manager, create_agent)
@@ -94,7 +115,7 @@ class SharedGrid(_SharedGrid):
                 agents = self.get_agents(pt)
                 for a in agents:
                     data_list.append((a.save(), (pt.x, pt.y, pt.z)))
-    
+
     def _gather_3d(self, data_list, ranges):
         pt = DiscretePoint(0, 0, 0)
         for x in range(ranges[0], ranges[1]):
@@ -103,7 +124,17 @@ class SharedGrid(_SharedGrid):
                     pt._reset3D(x, y, z)
                     agents = self.get_agents(pt)
                     for a in agents:
-                        data_list.append((o.save(), (pt.x, pt.y, pt.z)))
+                        data_list.append((a.save(), (pt.x, pt.y, pt.z)))
+
+    def _agent_moving_rank(self, moving_agent: Agent, dest_rank: int, moved_agent_data: List,
+                           agent_manager: AgentManager):
+        self.remove(moving_agent)
+
+    def _agents_moved_rank(self, moved_agents: List, agent_manager: AgentManager):
+        pass
+
+    def _post_agents_moved_rank(self, agent_manager: AgentManager, create_agent: Callable):
+        pass
 
 
 class SharedCSpace(_SharedContinuousSpace):
@@ -112,10 +143,22 @@ class SharedCSpace(_SharedContinuousSpace):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
         self.buffered_agents = []
 
-    def clear_ghosts(self, agent_manager):
+    def __contains__(self, agent):
+        return self.contains(agent)
+
+    def _pre_synch_ghosts(self, agent_manager):
+        """Called prior to synchronizing ghosts and before any cross-rank movement
+        synchronization.
+
+        This removes the currently buffered agents.
+
+        Args:
+            agent_manager: this rank's AgentManager
+        """
         for agent in self.buffered_agents:
             self.remove(agent)
             agent_manager.remove_ghost(agent)
+
         self.buffered_agents.clear()
 
     def _fill_send_data(self):
@@ -125,8 +168,8 @@ class SharedCSpace(_SharedContinuousSpace):
         for bd in self._get_buffer_data():
             data_list = send_data[bd[0]]
             box = bd[1]
-            bounds = BoundingBox(box[0], box[1] - box[0], box[2], box[3] - box[2], 
-                box[4], box[5] - box[4])
+            bounds = BoundingBox(box[0], box[1] - box[0], box[2], box[3] - box[2],
+                                 box[4], box[5] - box[4])
             for a in self.get_agents_within(bounds):
                 pt = self.get_location(a)
                 data_list.append((a.save(), (pt.x, pt.y, pt.z)))
@@ -146,7 +189,17 @@ class SharedCSpace(_SharedContinuousSpace):
                 pt._reset(pt_data)
                 self.move(agent, pt)
 
-    def synchronize_ghosts(self, agent_manager: AgentManager, create_agent):
+    def _synch_ghosts(self, agent_manager: AgentManager, create_agent):
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
         self._process_recv_data(recv_data, agent_manager, create_agent)
+
+    def _agent_moving_rank(self, moving_agent: Agent, dest_rank: int, moved_agent_data: List,
+                           agent_manager: AgentManager):
+        self.remove(moving_agent)
+
+    def _agents_moved_rank(self, moved_agents: List, agent_manager: AgentManager):
+        pass
+
+    def _post_agents_moved_rank(self, agent_manager: AgentManager, create_agent: Callable):
+        pass

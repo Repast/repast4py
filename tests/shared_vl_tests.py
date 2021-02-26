@@ -401,7 +401,7 @@ class SharedValueLayerTests(unittest.TestCase):
         self.assertEqual(grid.shape[1], vl.buffered_bounds.xextent)
         self.assertFalse(torch.any(torch.ne(grid, rank)))
 
-        vl.synchronize_ghosts()
+        vl._synch_ghosts(None, None)
 
         lb = vl.local_bounds
         grid = vl[lb.xmin: lb.xmin + lb.xextent, lb.ymin: lb.ymin + lb.yextent]
@@ -487,7 +487,7 @@ class SharedValueLayerTests(unittest.TestCase):
         grid = vl[lb.xmin: lb.xmin + lb.xextent, lb.ymin: lb.ymin + lb.yextent]
         self.assertFalse(torch.any(torch.ne(grid, rank + 101.1)))
     
-        vl.synchronize_ghosts()
+        vl._synch_ghosts(None, None)
         
         for exp_val, slices in exp[rank]:
             grid = vl[slices]

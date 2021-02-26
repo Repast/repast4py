@@ -11,14 +11,12 @@ class Agent:
     def __init__(self, schedule):
         self.sched = schedule
         self.at = 0
-    
+
     def run(self):
         self.at = self.sched.tick
-    
 
 
 # Run from parent dir: python -m unittest tests.schedule_tests
-
 class ScheduleTests(unittest.TestCase):
 
     def test_schedule_at(self):
@@ -76,6 +74,6 @@ class ScheduleTests(unittest.TestCase):
         self.assertEqual(2, a2.at)
         self.assertEqual(2, a3.at)
 
-        
+
 if __name__ == "__main__":
     unittest.main()

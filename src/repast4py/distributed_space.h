@@ -103,7 +103,7 @@ public:
     MPI_Comm getCartesianCommunicator();
     void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents);
     const std::string name() const;
-
+    bool contains(R4Py_Agent* agent) const;
 };
 
 template<typename BaseSpaceType, typename PointType>
@@ -157,6 +157,11 @@ bool DistributedCartesianSpace<BaseSpaceType, PointType>::add(R4Py_Agent* agent)
 template<typename BaseSpaceType, typename PointType>
 bool DistributedCartesianSpace<BaseSpaceType, PointType>::remove(R4Py_Agent* agent) {
     return this->remove(agent->aid);
+}
+
+template<typename BaseSpaceType, typename PointType>
+bool DistributedCartesianSpace<BaseSpaceType, PointType>::contains(R4Py_Agent* agent) const {
+    return base_space->contains(agent);
 }
 
 template<typename BaseSpaceType, typename PointType>
@@ -267,6 +272,7 @@ public:
     virtual BoundingBox getLocalBounds() const = 0;
     virtual MPI_Comm getCartesianCommunicator() = 0;
     virtual const std::string name() const = 0;
+    virtual bool contains(R4Py_Agent* agent) const = 0;
     
 };
 
@@ -296,6 +302,7 @@ public:
     BoundingBox getLocalBounds() const override;
     MPI_Comm getCartesianCommunicator() override;
     const std::string name() const override;
+    virtual bool contains(R4Py_Agent* agent) const override;
 };
 
 template<typename DelegateType>
@@ -313,6 +320,10 @@ bool SharedGrid<DelegateType>::remove(R4Py_Agent* agent) {
     return delegate->remove(agent);
 }
 
+template<typename DelegateType>
+bool SharedGrid<DelegateType>::contains(R4Py_Agent* agent) const {
+    return delegate->contains(agent);
+}
 template<typename DelegateType>
 bool SharedGrid<DelegateType>::remove(R4Py_AgentID* aid) {
     return delegate->remove(aid);
@@ -401,6 +412,7 @@ public:
     virtual MPI_Comm getCartesianCommunicator() = 0;
     virtual void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
     virtual const std::string name() const = 0;
+    virtual bool contains(R4Py_Agent* agent) const = 0;
 };
 
 inline ISharedContinuousSpace::~ISharedContinuousSpace() {}
@@ -430,6 +442,8 @@ public:
     MPI_Comm getCartesianCommunicator() override;
     void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
     const std::string name() const;
+    bool contains(R4Py_Agent* agent) const override;
+    
 };
 
 template<typename DelegateType>
@@ -446,6 +460,12 @@ template<typename DelegateType>
 bool SharedContinuousSpace<DelegateType>::remove(R4Py_Agent* agent) {
     return delegate->remove(agent);
 }
+
+template<typename DelegateType>
+bool SharedContinuousSpace<DelegateType>::contains(R4Py_Agent* agent) const {
+    return delegate->contains(agent);
+}
+
 
 template<typename DelegateType>
 bool SharedContinuousSpace<DelegateType>::remove(R4Py_AgentID* aid) {

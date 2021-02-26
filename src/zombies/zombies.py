@@ -225,7 +225,7 @@ class Model:
 
     def __init__(self, comm, props):
         self.comm = comm
-        self.context = core.SharedContext(comm)
+        self.context = ctx.SharedContext(comm)
         self.rank = self.comm.Get_rank()
 
         self.runner = schedule.SharedScheduleRunner(comm)
