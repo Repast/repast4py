@@ -1,33 +1,37 @@
 from mpi4py import MPI
 import sys
 import configparser
-import random, math
+import random
+import math
 import numpy as np
 import argparse
 import json
 import time
 
 import numba
-from numba import int32, int64
+from numba import int32
 from numba.experimental import jitclass
 
 from repast4py import core, space, util, schedule
+from repast4py import context as ctx
 
-from repast4py.space import ContinuousPoint as CPt
-from repast4py.space import DiscretePoint as DPt
+from repast4py.space import ContinuousPoint as cpt
+from repast4py.space import DiscretePoint as dpt
 from repast4py.space import BorderType, OccupancyType
 
 timer = util.Timer()
 model = None
 
+
 def printf(msg):
     print(msg)
     sys.stdout.flush()
 
+
 @numba.jit(nopython=True)
 def find_min_zombies(nghs, grid):
     minimum = [[], sys.maxsize]
-    at = Dpt(0, 0, 0)
+    at = dpt(0, 0, 0)
     for ngh in nghs:
         at._reset_from_array(ngh)
         count = 0
@@ -42,9 +46,11 @@ def find_min_zombies(nghs, grid):
 
     return minimum[0][random.randint(0, len(minimum[0]) - 1)]
 
+
 # @numba.jit((int64[:], int64[:]), nopython=True)
 def is_equal(a1, a2):
     return a1[0] == a2[0] and a1[1] == a2[1]
+
 
 spec = [
     ('m', int32[:]),
@@ -57,29 +63,28 @@ spec = [
     ('xmax', int32)
 ]
 
+
 @jitclass(spec)
 class GridNghFinder:
 
     def __init__(self, xmin, ymin, xmax, ymax):
         self.m = np.array([-1, 0, 1, -1, 1, -1, 0, 1], dtype=np.int32)
         self.n = np.array([1, 1, 1, 0, 0, -1, -1, -1], dtype=np.int32)
-        self.mo= np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.int32)
+        self.mo = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.int32)
         self.no = np.array([1, 1, 1, 0, 0, 0, -1, -1, -1], dtype=np.int32)
         self.xmin = xmin
         self.ymin = ymin
         self.xmax = xmax
         self.ymax = ymax
-        #self.zs = np.zeros(9, dtype=np.int32)
+        # self.zs = np.zeros(9, dtype=np.int32)
 
-    def find(self, x, y): # include_origin=False):
-        #if include_origin:
+    def find(self, x, y):  # include_origin=False):
+        # if include_origin:
         xs = self.mo + x
         ys = self.no + y
-        
-
         # else:
-        #     xs = self.m + x
-        #     ys = self.n + y
+        # xs = self.m + x
+        # ys = self.n + y
 
         xd = (xs >= self.xmin) & (xs < self.xmax)
         xs = xs[xd]
@@ -127,12 +132,12 @@ class Human(core.Agent):
             pt = grid.get_location(self)
             timer.stop_timer('g_get_location')
             timer.start_timer('ngh_finder')
-            nghs = model.ngh_finder.find(pt.x, pt.y) # include_origin=True)
-            #timer.stop_timer('ngh_finder')
+            nghs = model.ngh_finder.find(pt.x, pt.y)  # include_origin=True)
+            # timer.stop_timer('ngh_finder')
 
-            #timer.start_timer('zombie_finder')
+            # timer.start_timer('zombie_finder')
             minimum = [[], sys.maxsize]
-            at = DPt(0, 0, 0)
+            at = dpt(0, 0, 0)
             for ngh in nghs:
                 at._reset_from_array(ngh)
                 count = 0
@@ -146,19 +151,19 @@ class Human(core.Agent):
                     minimum[0].append(ngh)
 
             min_ngh = minimum[0][random.randint(0, len(minimum[0]) - 1)]
-            #timer.stop_timer('zombie_finder')
+            # timer.stop_timer('zombie_finder')
 
             timer.start_timer('do_move')
             # if not np.all(min_ngh == pt.coordinates):
             # if min_ngh[0] != pt.coordinates[0] or min_ngh[1] != pt.coordinates[1]:
-            #if not np.array_equal(min_ngh, pt.coordinates):
+            # if not np.array_equal(min_ngh, pt.coordinates):
             if not is_equal(min_ngh, pt.coordinates):
                 direction = (min_ngh - pt.coordinates) * 0.5
                 timer.start_timer('human_move')
                 model.move(self, space_pt.x + direction[0], space_pt.y + direction[1])
                 timer.stop_timer('human_move')
             timer.stop_timer('do_move')
-        
+
         return (not alive, space_pt)
 
 
@@ -178,9 +183,9 @@ class Zombie(core.Agent):
     def step(self):
         grid = model.grid
         pt = grid.get_location(self)
-        nghs = model.ngh_finder.find(pt.x, pt.y) # include_origin=True)
+        nghs = model.ngh_finder.find(pt.x, pt.y)  # include_origin=True)
 
-        at = DPt(0, 0)
+        at = dpt(0, 0)
         maximum = [[], -(sys.maxsize - 1)]
         for ngh in nghs:
             at._reset_from_array(ngh)
@@ -199,15 +204,16 @@ class Zombie(core.Agent):
         if not np.all(max_ngh == pt.coordinates):
             direction = (max_ngh - pt.coordinates[0:3]) * 0.25
             pt = model.space.get_location(self)
-            #timer.start_timer('zombie_move')
+            # timer.start_timer('zombie_move')
             model.move(self, pt.x + direction[0], pt.y + direction[1])
-            #timer.stop_timer('zombie_move')
+            # timer.stop_timer('zombie_move')
 
         pt = grid.get_location(self)
         for obj in grid.get_agents(pt):
             if obj.uid[1] == Human.ID:
                 obj.infect()
                 break
+
 
 def create_agent(agent_data):
     uid = agent_data[0]
@@ -235,11 +241,11 @@ class Model:
         box = space.BoundingBox(0, int(props['world.width']), 0, int(props['world.height']), 0, 0)
 
         self.grid = space.SharedGrid('grid', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
-            buffersize=2, comm=comm)
+                                     buffersize=2, comm=comm)
         self.context.add_projection(self.grid)
 
         self.space = space.SharedCSpace('space', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
-            buffersize=2, comm=comm, tree_threshold=100)
+                                        buffersize=2, comm=comm, tree_threshold=100)
         self.context.add_projection(self.space)
 
         self.ngh_finder = GridNghFinder(0, 0, box.xextent, box.yextent)
@@ -275,18 +281,17 @@ class Model:
 
         self.calc_counts()
 
-
     def move(self, agent, x, y):
-        #timer.start_timer('space_move')
-        self.space.move(agent, CPt(x, y))
-        #timer.stop_timer('space_move')
-        #timer.start_timer('grid_move')
-        self.grid.move(agent, DPt(int(math.floor(x)), int(math.floor(y))))
-        #timer.stop_timer('grid_move')
+        # timer.start_timer('space_move')
+        self.space.move(agent, cpt(x, y))
+        # timer.stop_timer('space_move')
+        # timer.start_timer('grid_move')
+        self.grid.move(agent, dpt(int(math.floor(x)), int(math.floor(y))))
+        # timer.stop_timer('grid_move')
 
     def step(self):
         # print("{}: {}".format(self.rank, len(self.context.local_agents)))
-        tick =  self.runner.schedule.tick
+        tick = self.runner.schedule.tick
         if tick % 10 == 0:
             hc, zc = self.calc_counts()
             if (self.rank == 0):
@@ -294,12 +299,12 @@ class Model:
 
         self.context.synchronize(create_agent)
 
-        #timer.start_timer('z_step')
+        # timer.start_timer('z_step')
         for z in self.context.agents(Zombie.ID):
             z.step()
-        #timer.stop_timer('z_step')
+        # timer.stop_timer('z_step')
 
-        #timer.start_timer('h_step')
+        # timer.start_timer('h_step')
         dead_humans = []
         for h in self.context.agents(Human.ID):
             dead, pt = h.step()
@@ -310,7 +315,7 @@ class Model:
             model.remove_agent(h)
             model.add_zombie(pt)
 
-        #timer.stop_timer('h_step')
+        # timer.stop_timer('h_step')
 
     def run(self):
         self.runner.execute()
@@ -323,7 +328,7 @@ class Model:
         self.zombie_id += 1
         self.context.add(z)
         self.move(z, pt.x, pt.y)
-        #print("Adding zombie at {}".format(pt))
+        # print("Adding zombie at {}".format(pt))
 
     def calc_counts(self):
         human_count = np.zeros(1, dtype='int64')
@@ -342,16 +347,18 @@ def run(props):
 
     global model
     model = Model(MPI.COMM_WORLD, props)
-    #timer.start_timer('all')
+    # timer.start_timer('all')
     model.run()
-    #timer.stop_timer('all')
-    #timer.print_times()
+    # timer.stop_timer('all')
+    # timer.print_times()
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("props_file", help="properties file")
     parser.add_argument("parameters", nargs="?", default="{}", help="json parameters string")
     return parser.parse_args()
+
 
 def parse_props(props_file, param_string):
     with open(props_file, 'r') as f_in:
@@ -365,8 +372,9 @@ def parse_props(props_file, param_string):
     params = json.loads(param_string)
     for p in params:
         props[p] = str(params[p])
-    
+
     return props
+
 
 if __name__ == "__main__":
     args = parse_args()
