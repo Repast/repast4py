@@ -730,6 +730,15 @@ static PyObject* Grid_remove(PyObject* self, PyObject* args) {
     return PyBool_FromLong(static_cast<long>(ret_val));
 }
 
+static PyObject* Grid_contains(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+    bool ret_val = ((R4Py_Grid*)self)->grid->contains((R4Py_Agent*)agent);
+    return PyBool_FromLong(static_cast<long>(ret_val));
+}
+
 static PyObject* Grid_getLocation(PyObject* self, PyObject* args) {
     PyObject* agent;
     if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
@@ -811,6 +820,7 @@ static PyGetSetDef Grid_get_setters[] = {
 static PyMethodDef Grid_methods[] = {
     {"add", Grid_add, METH_VARARGS, "Adds the specified agent to this grid projection"},
     {"remove", Grid_remove, METH_VARARGS, "Removes the specified agent from this grid projection"},
+    {"contains", Grid_contains, METH_VARARGS, "Gets whether or not this grid projection contains the specified agent"},
     {"move", Grid_move, METH_VARARGS, "Moves the specified agent to the specified location in this grid projection"},
     {"get_location", Grid_getLocation, METH_VARARGS, "Gets the location of the specified agent in this grid projection"},
     {"get_agent", Grid_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this grid projection"},
@@ -962,6 +972,15 @@ static PyObject* SharedGrid_remove(PyObject* self, PyObject* args) {
         return NULL;
     }
     bool ret_val = ((R4Py_SharedGrid*)self)->grid->remove((R4Py_Agent*)agent);
+    return PyBool_FromLong(static_cast<long>(ret_val));
+}
+
+static PyObject* SharedGrid_contains(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+    bool ret_val = ((R4Py_SharedGrid*)self)->grid->contains((R4Py_Agent*)agent);
     return PyBool_FromLong(static_cast<long>(ret_val));
 }
 
@@ -1124,6 +1143,7 @@ static PyMethodDef SharedGrid_methods[] = {
     {"add", SharedGrid_add, METH_VARARGS, "Adds the specified agent to this shared grid projection"},
     {"remove", SharedGrid_remove, METH_VARARGS, "Removes the specified agent from this shared grid projection"},
     {"move", SharedGrid_move, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection"},
+    {"contains", SharedGrid_contains, METH_VARARGS, "Gets whether or not this grid projection contains the specified agent"},
     {"_move_buffer_agent", SharedGrid_moveBufferAgent, METH_VARARGS, "Moves the specified agent to the specified buffer location in this shared grid projection"},
     {"get_location", SharedGrid_getLocation, METH_VARARGS, "Gets the location of the specified agent in this shared grid projection"},
     {"get_agent", SharedGrid_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this shared grid projection"},
@@ -1131,7 +1151,7 @@ static PyMethodDef SharedGrid_methods[] = {
     {"_get_oob", SharedGrid_getOOBData, METH_VARARGS, "Gets the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
     {"_clear_oob", SharedGrid_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
     {"get_local_bounds", SharedGrid_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared grid projection"},
-    {"_synch_move", SharedGrid_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection as part of a movement synchronization"},
+    {"_move_oob_agent", SharedGrid_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection as part of a movement synchronization"},
     {"_get_buffer_data", SharedGrid_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared grid projetion - a list of tuples of the form info for where and what range, tuple: (rank, (xmin, xmax, ymin, ymax, zmin, zmax))"},
     {NULL, NULL, 0, NULL}
 };
@@ -1273,6 +1293,15 @@ static PyObject* CSpace_remove(PyObject* self, PyObject* args) {
     return PyBool_FromLong(static_cast<long>(ret_val));
 }
 
+static PyObject* CSpace_contains(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+    bool ret_val = ((R4Py_CSpace*)self)->space->contains((R4Py_Agent*)agent);
+    return PyBool_FromLong(static_cast<long>(ret_val));
+}
+
 static PyObject* CSpace_getLocation(PyObject* self, PyObject* args) {
     PyObject* agent;
     if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
@@ -1380,6 +1409,7 @@ static PyMethodDef CSpace_methods[] = {
     {"add", CSpace_add, METH_VARARGS, "Adds the specified agent to this continuous space projection"},
     {"remove", CSpace_remove, METH_VARARGS, "Removes the specified agent from this continuous space projection"},
     {"move", CSpace_move, METH_VARARGS, "Moves the specified agent to the specified location in this continuous space projection"},
+    {"contains", CSpace_contains, METH_VARARGS, "Gets whether or not this grid projection contains the specified agent"},
     {"get_location", CSpace_getLocation, METH_VARARGS, "Gets the location of the specified agent in this continuous space projection"},
     {"get_agent", CSpace_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this continuous space projection"},
     {"get_agents", CSpace_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this continuous space projection"},
@@ -1532,7 +1562,28 @@ static PyObject* SharedCSpace_remove(PyObject* self, PyObject* args) {
     if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
         return NULL;
     }
+
+    //  {
+    //      volatile int i = 0;
+    //      char hostname[256];
+    //      gethostname(hostname, sizeof(hostname));
+    //      printf("PID %d on %s ready for attach\n", getpid(), hostname);
+    //      fflush(stdout);
+    //      while (0 == i)
+    //          sleep(5);
+    // }
+
     bool ret_val = ((R4Py_SharedCSpace*)self)->space->remove((R4Py_Agent*)agent);
+    return PyBool_FromLong(static_cast<long>(ret_val));
+}
+
+static PyObject* SharedCSpace_contains(PyObject* self, PyObject* args) {
+    PyObject* agent;
+    if (!PyArg_ParseTuple(args, "O!", &R4Py_AgentType, &agent)) {
+        return NULL;
+    }
+
+    bool ret_val = ((R4Py_SharedCSpace*)self)->space->contains((R4Py_Agent*)agent);
     return PyBool_FromLong(static_cast<long>(ret_val));
 }
 
@@ -1729,6 +1780,7 @@ static PyMethodDef SharedCSpace_methods[] = {
     {"add", SharedCSpace_add, METH_VARARGS, "Adds the specified agent to this shared continuous space projection"},
     {"remove", SharedCSpace_remove, METH_VARARGS, "Removes the specified agent from this shared continuous space projection"},
     {"move", SharedCSpace_move, METH_VARARGS, "Moves the specified agent to the specified location in this shared continuous space projection"},
+    {"contains", SharedCSpace_contains, METH_VARARGS, "Gets whether or not this grid projection contains the specified agent"},
     {"_move_buffer_agent", SharedCSpace_moveBufferAgent, METH_VARARGS, "Moves the specified agent to the specified buffer location in this shared continuous space projection"},
     {"get_location", SharedCSpace_getLocation, METH_VARARGS, "Gets the location of the specified agent in this shared continuous space projection"},
     {"get_agent", SharedCSpace_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this shared continuous space projection"},
@@ -1736,7 +1788,7 @@ static PyMethodDef SharedCSpace_methods[] = {
     {"_get_oob", SharedCSpace_getOOBData, METH_VARARGS, "Gets the out of bounds data for any agents that are out of the local bounds in this shared continuous space projection"},
     {"_clear_oob", SharedCSpace_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared continuous space projection"},
     {"get_local_bounds", SharedCSpace_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared continuous space projection"},
-    {"_synch_move", SharedCSpace_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared continuous space projection as part of a movement synchronization"},
+    {"_move_oob_agent", SharedCSpace_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared continuous space projection as part of a movement synchronization"},
     {"_get_buffer_data", SharedCSpace_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared continuous projection"},
     {"get_agents_within", SharedCSpace_getAgentsWithin, METH_VARARGS, "Gets all the agents within the specified bounding box in this shared continuous space projection"},
     {NULL, NULL, 0, NULL}

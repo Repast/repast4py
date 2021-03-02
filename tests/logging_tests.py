@@ -3,8 +3,7 @@ import unittest
 import os
 import csv
 
-import numpy as np
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from mpi4py import MPI
 
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))

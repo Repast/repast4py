@@ -27,6 +27,7 @@ struct agent_id_comp {
 struct R4Py_Agent {
     PyObject_HEAD
     R4Py_AgentID* aid;
+    unsigned int local_rank;
 };
 
 class AgentIter {

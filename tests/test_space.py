@@ -10,6 +10,7 @@ from repast4py import core, space
 from repast4py.space import BorderType, OccupancyType, GridStickyBorders, GridPeriodicBorders
 from repast4py.space import DiscretePoint as DPt
 
+
 class PointTests(unittest.TestCase):
 
     def test_cp_ops(self):
