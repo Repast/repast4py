@@ -15,8 +15,15 @@ jobs:
       - checkout
       - run: CC=mpicc CXX=mpicxx python setup.py build_ext --inplace
       - run: PYTHONPATH="src" ./tests/test.sh
+      - run: 
+          command: |
+            coverage combine
+            coverage report -m
+            bash <(curl -s https://codecov.io/bash) 
 # Orchestrate our job run sequence
 workflows:
   test:
     jobs:
-      - test_all
+      - test_all:
+          context:
+            - test-context
