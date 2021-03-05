@@ -8,8 +8,8 @@
     <td><b>Develop</b></td>
   </tr>
   <tr>
-    <td><a href="https://circleci.com/gh/jozik/repast4py/tree/master"><img src="https://circleci.com/gh/jozik/repast4py/tree/master.svg?style=shield&circle-token=7c12be81746f1285510fd8f96ce5700f6a44ae13" alt="Build Status" /></a></td>
-    <td><a href="https://circleci.com/gh/jozik/repast4py/tree/develop"><img src="https://circleci.com/gh/jozik/repast4py/tree/develop.svg?style=shield&circle-token=7c12be81746f1285510fd8f96ce5700f6a44ae13" alt="Build Status" /></a></td>
+    <td><a href="https://circleci.com/gh/Repast/repast4py/tree/master"><img src="https://circleci.com/gh/Repast/repast4py/tree/master.svg?style=shield&circle-token=7c12be81746f1285510fd8f96ce5700f6a44ae13" alt="Build Status" /></a></td>
+    <td><a href="https://circleci.com/gh/Repast/repast4py/tree/develop"><img src="https://circleci.com/gh/Repast/repast4py/tree/develop.svg?style=shield&circle-token=7c12be81746f1285510fd8f96ce5700f6a44ae13" alt="Build Status" /></a></td>
   </tr>
 </table>
 
