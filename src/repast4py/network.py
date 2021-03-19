@@ -1,6 +1,7 @@
 from mpi4py import MPI
 from networkx import OrderedGraph, OrderedDiGraph
 from dataclasses import dataclass
+from itertools import chain
 
 from typing import List, Iterable, Callable, Tuple, Dict
 
@@ -358,6 +359,130 @@ class SharedNetwork:
         self._agent_moved_edges.clear()
         self._synch_ghosts(agent_manager, create_agent)
 
+    def _agent_moving_rank(self, moving_agent: Agent, dest_rank: int, moving_agent_data: List,
+                           agent_manager: AgentManager):
+        """Notifies this projection that the specified agent is moving from the current rank
+        to the destination rank.
+
+        This is called whenever an agent is moving between ranks, but before the agent has been
+        received by the destination rank. This allows this projection to prepare the relevant
+        synchronization.
+
+        Args:
+            moving_agent: the agent that is moving.
+            dest_rank: the destination rank
+            moving_agent_data: A list where the first element is the serialized agent data. The
+            list may also contain a second element that is a dictionary where the keys are the
+            ranks the agent is currently ghosted to and the value is the number of projections
+            using that ghost. Projections can add to this dictionary if they ghost an agent
+            to another rank as part of their projection synchronization (e.g. ghosting edge).
+            agent_manager: the AgentManager
+
+        """
+        # 1. Check if moving agent is in edge with ghost, and ghost
+        # is not requested, meaning that the edge is an artifact of
+        # network sync and not explicitly created on this rank. In that
+        # case, remove the edge, and the node (if the node is not in any other
+        # edges)
+        #
+        # 2. Check if moving agent is in edge with local agent. This edge
+        # needs to be preserved. So, delete edge, and add this rank to the
+        # dictionary in the moved agent_data list (the data used by the dest rank
+        # to set up ghosting of the moved agent).
+        nodes_to_remove = []
+        edges_to_remove = []
+        for u, v, attr in self._edges(moving_agent, data=True):
+            other = v if u.uid == moving_agent.uid else u
+            if other.local_rank != self.rank and not agent_manager.is_requested(other.uid):
+                # other is ghosted and not requested so the edge is artifact of edge created
+                # on other node between u and v, so remove it.
+                edges_to_remove.append((u, v))
+                if self.num_edges(other) == 1:
+                    # other is only on this rank to to be part of the removed edge
+                    # and now the edge is gone so remove as node and ghost
+                    nodes_to_remove.append(other)
+                    agent_manager.remove_ghost(other)
+                    self._no_longer_ghosts[other.local_rank].append(other.uid)
+
+            else:
+                # moving agent participates in edges with local agents
+                # this should tell destination rank to ghost the moved
+                # agent back to this rank, so the edge remains live
+                if len(moving_agent_data) == 1:
+                    moving_agent_data.append({self.rank: 1})
+                else:
+                    if self.rank in moving_agent_data[1]:
+                        moving_agent_data[1][self.rank] += 1
+                    else:
+                        moving_agent_data[1][self.rank] = 1
+
+                # agent will be ghosted to this rank, so need to add it as a
+                # ghost
+                agent_manager.add_ghost(dest_rank, moving_agent, incr=0)
+                self._agent_moved_edges.append((u.uid, v.uid, attr))
+
+        for edge in edges_to_remove:
+            self.graph.remove_edge(*edge)
+            self._remove_edge_key(*edge)
+
+        for node in nodes_to_remove:
+            self.graph.remove_node(node)
+
+        self.graph.remove_node(moving_agent)
+
+    def _agents_moved_rank(self, moved_agents: List, agent_manager: AgentManager):
+        """Notifies this projection that the specified agents have moved rank.
+
+        This is called after the agents have moved ranks and includes all the agents
+        that have moved on all ranks EXCEPT for those moved off of the current rank.
+        All agents should have been moved and added to their destination ranks contexts
+        and AgentManagers when this is called.
+
+        Args:
+            moved_agents: a list of tuples (agent.uid, destination rank) where each tuple
+            is a moved agent. The list includes all the agents that have moved on all ranks
+            EXCEPT for those moved off of the current rank.
+            agent_manager: AgentManager
+        """
+        stop_ghosting_ids = self.comm.alltoall(self._no_longer_ghosts)
+        for ghost_rank, ids in enumerate(stop_ghosting_ids):
+            for id in ids:
+                agent_manager.untag_as_ghosted(ghost_rank, id)
+        self._no_longer_ghosts = [[] for _ in range(self.comm.size)]
+
+        for uid, dest in moved_agents:
+            if dest == self.rank:
+                # Check if moved agent was formerly a ghost on this rank
+                # and if so, then copy the edges the ghost participated in
+                # to new edges created with the now local agent, and remove
+                # the old ghost
+                ghost = agent_manager.get_ghost(uid)
+                if ghost is not None:
+                    agent = agent_manager.get_local(uid)
+                    for u, v, attr in self._edges(ghost, data=True):
+                        self.graph.remove_edge(u, v)
+                        if u.uid == agent.uid:
+                            self.graph.add_edge(agent, v, **attr)
+                        else:
+                            self.graph.add_edge(u, agent, **attr)
+                    self.graph.remove_node(ghost)
+            else:
+                # check if moved agent is a ghost on this rank,
+                # if so, then check if that agent participated in
+                # a ghosted edge. If so, then update the local rank
+                # of that ghost agent so that ghosted edge will be
+                # ghosted to new destination, and add that edge to
+                # the new edges, so it will be ghosted to new rank
+                # during next sync.
+                agent = agent_manager.get_ghost(uid, 0)
+                if agent is not None:
+                    for edge in self._edges(agent):
+                        edge_key = self._get_edge_key(edge)
+                        ge = self.ghosted_edges.get(edge_key, None)
+                        if ge is not None:
+                            ge.ghost_agent.local_rank = dest
+                            self.new_edges[edge_key] = ge
+
 
 class UndirectedSharedNetwork(SharedNetwork):
     """Encapsulates an undirected network shared over multiple processes.
@@ -483,129 +608,26 @@ class UndirectedSharedNetwork(SharedNetwork):
         else:
             self.graph.add_edge(u_agent, v_agent, **kwattr)
 
-    def _agent_moving_rank(self, moving_agent: Agent, dest_rank: int, moving_agent_data: List,
-                           agent_manager: AgentManager):
-        """Notifies this projection that the specified agent is moving from the current rank
-        to the destination rank.
-
-        This is called whenever an agent is moving between ranks, but before the agent has been
-        received by the destination rank. This allows this projection to prepare the relevant
-        synchronization.
+    def _edges(self, agent: Agent, data: bool=False):
+        """Gets an iterator over the incoming and outgoing edges for the specifed agent.
 
         Args:
-            moving_agent: the agent that is moving.
-            dest_rank: the destination rank
-            moving_agent_data: A list where the first element is the serialized agent data. The
-            list may also contain a second element that is a dictionary where the keys are the
-            ranks the agent is currently ghosted to and the value is the number of projections
-            using that ghost. Projections can add to this dictionary if they ghost an agent
-            to another rank as part of their projection synchronization (e.g. ghosting edge).
-            agent_manager: the AgentManager
+            agent: agent whose edges will be returned
+            data: if true, the edge data dictionary will be returned, otherwise
+            not
 
+        Returns:
+            An iterator over the incoming and outgoing edges for the specifed agent
         """
-        # 1. Check if moving agent is in edge with ghost, and ghost
-        # is not requested, meaning that the edge is an artifact of
-        # network sync and not explicitly created on this rank. In that
-        # case, remove the edge, and the node (if the node is not in any other
-        # edges)
-        #
-        # 2. Check if moving agent is in edge with local agent. This edge
-        # needs to be preserved. So, delete edge, and add this rank to the
-        # dictionary in the moved agent_data list (the data used by the dest rank
-        # to set up ghosting of the moved agent).
-        nodes_to_remove = []
-        edges_to_remove = []
-        for u, v, attr in self.graph.edges(moving_agent, data=True):
-            other = v if u.uid == moving_agent.uid else u
-            if other.local_rank != self.rank and not agent_manager.is_requested(other.uid):
-                # other is ghosted and not requested so the edge is artifact of edge created
-                # on other node between u and v, so remove it.
-                edges_to_remove.append((u, v))
-                if len(self.graph.edges(other)) == 1:
-                    # other is only on this rank to to be part of the removed edge
-                    # and now the edge is gone so remove as node and ghost
-                    nodes_to_remove.append(other)
-                    agent_manager.remove_ghost(other)
-                    self._no_longer_ghosts[other.local_rank].append(other.uid)
+        return self.graph.edges(agent, data=data)
 
-            else:
-                # moving agent participates in edges with local agents
-                # this should tell destination rank to ghost the moved
-                # agent back to this rank, so the edge remains live
-                if len(moving_agent_data) == 1:
-                    moving_agent_data.append({self.rank: 1})
-                else:
-                    if self.rank in moving_agent_data[1]:
-                        moving_agent_data[1][self.rank] += 1
-                    else:
-                        moving_agent_data[1][self.rank] = 1
+    def num_edges(self, agent: Agent) -> int:
+        """Gets the number of edges that contain the specified agent.
 
-                # agent will be ghosted to this rank, so need to add it as a
-                # ghost
-                agent_manager.add_ghost(dest_rank, moving_agent, incr=0)
-                self._agent_moved_edges.append((u.uid, v.uid, attr))
-
-        for edge in edges_to_remove:
-            self.graph.remove_edge(*edge)
-            self._remove_edge_key(*edge)
-
-        for node in nodes_to_remove:
-            self.graph.remove_node(node)
-
-        self.graph.remove_node(moving_agent)
-
-    def _agents_moved_rank(self, moved_agents: List, agent_manager: AgentManager):
-        """Notifies this projection that the specified agents have moved rank.
-
-        This is called after the agents have moved ranks and includes all the agents
-        that have moved on all ranks EXCEPT for those moved off of the current rank.
-        All agents should have been moved and added to their destination ranks contexts
-        and AgentManagers when this is called.
-
-        Args:
-            moved_agents: a list of tuples (agent.uid, destination rank) where each tuple
-            is a moved agent. The list includes all the agents that have moved on all ranks
-            EXCEPT for those moved off of the current rank.
-            agent_manager: AgentManager
+        Returns:
+            The number of edges that contain the specified agent
         """
-        stop_ghosting_ids = self.comm.alltoall(self._no_longer_ghosts)
-        for ghost_rank, ids in enumerate(stop_ghosting_ids):
-            for id in ids:
-                agent_manager.untag_as_ghosted(ghost_rank, id)
-        self._no_longer_ghosts = [[] for _ in range(self.comm.size)]
-
-        for uid, dest in moved_agents:
-            if dest == self.rank:
-                # Check if moved agent was formerly a ghost on this rank
-                # and if so then, the copy the edges the ghost participated in
-                # to new edges created with the now local agent, and remove
-                # the old ghost
-                ghost = agent_manager.get_ghost(uid)
-                if ghost is not None:
-                    agent = agent_manager.get_local(uid)
-                    for u, v, attr in self.graph.edges(ghost, data=True):
-                        self.graph.remove_edge(u, v)
-                        if u.uid == agent.uid:
-                            self.graph.add_edge(agent, v, **attr)
-                        else:
-                            self.graph.add_edge(u, agent, **attr)
-                    self.graph.remove_node(ghost)
-            else:
-                # check if moved agent is a ghost on this rank,
-                # if so, then check if that agent participated in
-                # a ghosted edge. If so, then update the local rank
-                # of that ghost agent so that ghosted edge will be
-                # ghosted to new destination, and add that edge to
-                # the new edges, so it will be ghosted to new rank
-                # during next sync.
-                agent = agent_manager.get_ghost(uid, 0)
-                if agent is not None:
-                    for edge in self.graph.edges(agent):
-                        edge_key = self._get_edge_key(edge)
-                        ge = self.ghosted_edges.get(edge_key, None)
-                        if ge is not None:
-                            ge.ghost_agent.local_rank = dest
-                            self.new_edges[edge_key] = ge
+        return len(self.graph.edges(agent))
 
 
 class DirectedSharedNetwork(SharedNetwork):
@@ -677,6 +699,17 @@ class DirectedSharedNetwork(SharedNetwork):
         """
         pass
 
+    def _add_edge_key(self, u_agent: Agent, v_agent: Agent):
+        """Creates a canonical edge key for the pair of nodes.
+
+        This is a NOOP on SharedDirectedNetwork
+
+        Args:
+            u_agent: the u node agent
+            v_agent: the v node agent
+        """
+        pass
+
     def add_edge(self, u_agent: Agent, v_agent: Agent, **kwattr):
         """Adds an edge betwwn u_agent and v_agent.
 
@@ -694,17 +727,43 @@ class DirectedSharedNetwork(SharedNetwork):
 
             >>> g.add_edge(agent1, agent2, weight=3.1)
         """
-        self.graph.add_edge(u_agent, v_agent, **kwattr)
         if u_agent.local_rank == self.rank and v_agent.local_rank != self.rank:
+            if not self.graph.has_node(v_agent):
+                self.ghosts_to_ref.append(v_agent)
+            self.graph.add_edge(u_agent, v_agent, **kwattr)
             edge_key = (u_agent, v_agent)
             ge = GhostedEdge(u_agent, v_agent, self.graph.edges[edge_key])
-            self.ghosted_edges[edge_key] = ge
             self.new_edges[edge_key] = ge
             self.edges_to_remove.pop(edge_key, None)
         elif u_agent.local_rank != self.rank and v_agent.local_rank == self.rank:
             # assume v_agent is local
+            if not self.graph.has_node(u_agent):
+                self.ghosts_to_ref.append(u_agent)
+            self.graph.add_edge(u_agent, v_agent, **kwattr)
             edge_key = (u_agent, v_agent)
             ge = GhostedEdge(v_agent, u_agent, self.graph.edges[edge_key])
-            self.ghosted_edges[edge_key] = ge
             self.new_edges[edge_key] = ge
             self.edges_to_remove.pop(edge_key, None)
+        else:
+            self.graph.add_edge(u_agent, v_agent, **kwattr)
+
+    def _edges(self, agent: Agent, data: bool=False):
+        """Gets an iterator over the incoming and outgoing edges for the specifed agent.
+
+        Args:
+            agent: agent whose edges will be returned
+            data: if true, the edge data dictionary will be returned, otherwise
+            not
+
+        Returns:
+            An iterator over the incoming and outgoing edges for the specifed agent
+        """
+        return chain(self.graph.out_edges(agent, data=data), self.graph.in_edges(agent, data=data))
+
+    def num_edges(self, agent: Agent) -> int:
+        """Gets the number of edges that contain the specified agent.
+
+        Returns:
+            The number of edges that contain the specified agent
+        """
+        return len(self.graph.out_edges(agent)) + len(self.graph.in_edges(agent))
