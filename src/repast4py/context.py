@@ -1,5 +1,7 @@
 import itertools
 import collections
+
+from repast4py.value_layer import SharedValueLayer
 from ._core import Agent
 from .random import default_rng as rng
 from typing import Callable, List, Dict, Set
@@ -32,6 +34,7 @@ class SharedContext:
         self.comm = comm
         self.bounded_projs = {}
         self.non_bounded_projs = []
+        self.value_layers = []
 
     def add(self, agent: Agent):
         """Adds the specified agent to this SharedContext.
@@ -51,12 +54,16 @@ class SharedContext:
         for proj in self.projections.values():
             proj.add(agent)
 
+    def add_value_alyer(self, value_layer: SharedValueLayer):
+        """Adds the specified value_layer to the this context.
+
+        Args:
+            value_layer: the value layer to add.
+        """
+        self.value_layers.append(value_layer)
+
     def add_projection(self, projection):
         """Adds the specified projection to this SharedContext.
-
-        If the projection has `clear_buffer` and `synchronize_buffer` attributes,
-        then clear_buffer will be called prior to synchornization, and synchronize buffer
-        during synchronization in the SharedProjection.synchronize method.
 
         Any agents currently in this context will be added to the projection.
 
@@ -219,6 +226,9 @@ class SharedContext:
         self._update_ghosts()
         for proj in self.projections.values():
             proj._synch_ghosts(self._agent_manager, create_agent)
+
+        for vl in self.value_layers:
+            vl._synch_ghosts()
 
     def synchronize(self, create_agent, sync_ghosts: bool=True):
         """Synchronizes the model state across processes by moving agents, filling

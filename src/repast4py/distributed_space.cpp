@@ -22,26 +22,30 @@ void compute_buffer_bounds(CTNeighbor& ngh, int offsets[], int num_dims, Boundin
         zmax = local_bounds.zmax_;
     }
 
-    if (offsets[0] == -1 || offsets[0] == 2) {
+    // 1: ngh to right of me.
+    // -1: ngh to left of me.
+    // > 1: ngh is wrapped to left
+    // < -1: ngh is wrapped to right
+    if (offsets[0] == -1 || offsets[0] > 1) {
         xmin = local_bounds.xmin_;
         xmax = xmin + buffer_size;
-    } else if (offsets[0] == 1 || offsets[0] == -2) {
+    } else if (offsets[0] == 1 || offsets[0] < -1) {
         xmin = local_bounds.xmax_ - buffer_size;
         xmax = xmin + buffer_size;
     }
 
-    if (offsets[1] == -1 || offsets[1] == 2) {
+    if (offsets[1] == -1 || offsets[1] > 1) {
         ymin = local_bounds.ymin_;
         ymax = ymin + buffer_size;
-    } else if (offsets[1] == 1 || offsets[1] == -2) {
+    } else if (offsets[1] == 1 || offsets[1] < -1) {
         ymin = local_bounds.ymax_ - buffer_size;
         ymax = ymin + buffer_size;
     }
 
-    if (offsets[2] == -1 || offsets[2] == 2) {
+    if (offsets[2] == -1 || offsets[2] > 1) {
         zmin = local_bounds.zmin_;
         zmax = zmin + buffer_size;
-    } else if (offsets[2] == 1 || offsets[2] == -2) {
+    } else if (offsets[2] == 1 || offsets[2] < -1) {
         zmin = local_bounds.zmax_ - buffer_size;
         zmax = zmin + buffer_size;
     }

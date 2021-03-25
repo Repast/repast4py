@@ -7,6 +7,7 @@ from . import geometry
 
 from .space import BorderType, GridStickyBorders, GridPeriodicBorders, CartesianTopology, BoundingBox
 from .space import DiscretePoint as dpt
+from .space import DiscretePoint
 
 from .core import AgentManager
 
@@ -24,28 +25,43 @@ class Impl1D:
             self.grid = torch.rand((bounds.xextent,), dtype=dtype)
         else:
             self.grid = torch.full((bounds.xextent,), init_value, dtype=dtype)
+        self.pt_translation = np.array([0 - bounds.xmin, 0, 0])
         self.ngh_translation = 0 - bounds.xmin
         self.translation = np.array([self.ngh_translation, 0, 0])
         self.ngh_finder = geometry.find_1d_nghs_sticky if borders == BorderType.Sticky else geometry.find_1d_nghs_periodic
         self.min_max = np.array(
             [bounds.xmin, bounds.xmin + bounds.xextent - 1])
 
-    def get(self, pt):
+    def get(self, pt: DiscretePoint):
+        """Gets the value at the specified point
+
+        Args:
+            pt: the location to get the value of
+        """
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.translation
         return self.grid[npt[0]]
 
-    def set(self, pt, val):
+    def set(self, pt: DiscretePoint, val):
+        """Sets the value at the specified location
+
+        Args:
+            pt: the location to set the value of
+            val: the value to set the location to
+        """
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.translation
         self.grid[npt[0]] = val
 
-    def get_nghs(self, pt, extent=1):
-        """ Gets the neighboring values and locations around the specified point.
-        :param pt: the point whose neighbors to get
-        :param extent: the extent of the neighborhood
+    def get_nghs(self, pt: DiscretePoint):
+        """Gets the neighboring values and locations around the specified point.
+
+        Args:
+            pt: the point whose neighbors to get
+        Returns:
+            The value at the specicifed location.
         """
         nghs = self.ngh_finder(pt.coordinates, self.min_max)
         grid_idxs = nghs + self.ngh_translation
@@ -54,19 +70,20 @@ class Impl1D:
     def _compute_slice(self, key):
         if isinstance(key, tuple):
             slc = key[0]
+            print(slc)
             step = 1 if slc.step is None else slc.step
             start = 0 if slc.start is None else (slc.start + self.translation[0])
-            stop = self.grid.shape[1] if slc.stop is None else (slc.stop + self.translation[0])
+            stop = self.grid.shape[0] if slc.stop is None else (slc.stop + self.translation[0])
             return (slice(start, stop, step),)
 
         elif isinstance(key, slice):
+            print(key)
             step = 1 if key.step is None else key.step
             start = 0 if key.start is None else (key.start + self.translation[0])
-            stop = self.grid.shape[1] if key.stop is None else (key.stop + self.translation[0])
+            stop = self.grid.shape[0] if key.stop is None else (key.stop + self.translation[0])
             return (slice(start, stop, step),)
 
         else:
-            #return self.grid[:, key + self.pt_translation[0]]
             return (slice(key + self.translation[0]),)
 
     def __getitem__(self, key):
@@ -99,30 +116,46 @@ class Impl2D:
             [bounds.xmin, bounds.xmin + bounds.xextent - 1, bounds.ymin, bounds.ymin + bounds.yextent - 1])
 
     def _update_idx(self, pt):
+        """Updates in the internal indexing array from the specified point,
+        converting from x,y,z order to pytorch order (z,y,x)
+        """
         self.idx[0, 0] = pt[1]
         self.idx[1, 0] = pt[0]
 
         return self.idx
 
+    def get(self, pt: DiscretePoint):
+        """Gets the value at the specified point
 
-    def get(self, pt):
+        Args:
+            pt: the location to get the value of
+        """
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.pt_translation
         return self.grid[self._update_idx(npt)]
 
-    def set(self, pt, val):
+    def set(self, pt: DiscretePoint, val):
+        """Sets the value at the specified location
+
+        Args:
+            pt: the location to set the value of
+            val: the value to set the location to
+        Returns:
+            The value at the specicifed location.
+        """
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.pt_translation
         self.grid[self._update_idx(npt)] = val
 
-    def get_nghs(self, pt, extent=1):
+    def get_nghs(self, pt: DiscretePoint):
         """ Gets the neighboring values and locations around the specified point.
-        :param pt: the point whose neighbors to get
-        :param extent: the extent of the neighborhood
+
+        Args:
+            pt: the point whose neighbors to get
         """
-        nghs = self.ngh_finder(pt.coordinates, self.min_max, row_major=True)
+        nghs = self.ngh_finder(pt.coordinates, self.min_max, pytorch_order=True)
         grid_idxs = nghs + self.ngh_translation
         # swap to remove the row major
         nghs[[0, 1]] = nghs[[1, 0]]
@@ -136,7 +169,7 @@ class Impl2D:
                 start = 0 if slc.start is None else (slc.start + self.pt_translation[0])
                 stop = self.grid.shape[1] if slc.stop is None else (slc.stop + self.pt_translation[0])
                 return (slice(None, None), slice(start, stop, step))
-                
+
             else:
                 cslice = key[0]
                 cstep = 1 if cslice.step is None else cslice.step
@@ -148,29 +181,28 @@ class Impl2D:
                 rstart = 0 if rslice.start is None else (rslice.start + self.pt_translation[1])
                 rstop = self.grid.shape[0] if rslice.stop is None else (rslice.stop + self.pt_translation[1])
 
-                #return self.grid[rstart : rstop : rstep, cstart : cstop : cstep]
                 return (slice(rstart, rstop, rstep), slice(cstart, cstop, cstep))
-
 
         elif isinstance(key, slice):
             step = 1 if key.step is None else key.step
             start = 0 if key.start is None else (key.start + self.pt_translation[0])
             stop = self.grid.shape[1] if key.stop is None else (key.stop + self.pt_translation[0])
-            #return self.grid[:, start : stop : step]
             return (slice(None, None), slice(start, stop, step))
 
         else:
-            #return self.grid[:, key + self.pt_translation[0]]
             return (slice(None, None), slice(key + self.pt_translation[0], None))
 
     def __getitem__(self, key):
         return self.grid[self._compute_slice(key)]
-        
+
     def __setitem__(self, key, val):
         self.grid[self._compute_slice(key)] = val
 
 
 class Impl3D:
+    # Torch 3D tensor of shape (3, 4, 2)
+    # is 3 arrays of 4 rows and 2 columns:
+    # thus (z, y, x)
 
     def __init__(self, bounds, borders, init_value, dtype):
         self.tpt = dpt(0, 0, 0)
@@ -182,48 +214,68 @@ class Impl3D:
 
         if init_value == 'random':
             self.grid = torch.rand(
-                (bounds.yextent, bounds.xextent, bounds.zextent), dtype=dtype)
+                (bounds.zextent, bounds.yextent, bounds.xextent), dtype=dtype)
         else:
             self.grid = torch.full(
-                (bounds.yextent, bounds.xextent, bounds.zextent), init_value, dtype=dtype)
+                (bounds.zextent, bounds.yextent, bounds.xextent), init_value, dtype=dtype)
 
-        # row major
         self.pt_translation = np.array([0 - bounds.xmin, 0 - bounds.ymin, 0 - bounds.zmin])
-        self.ngh_translation = np.array([[self.pt_translation[1]], [self.pt_translation[0]], [self.pt_translation[2]]])
-        self.ngh_finder = None #geometry.find_3d_nghs_sticky if borders == BorderType.Sticky else geometry.find_3d_nghs_periodic,
+        # pytorch z,y,z order
+        self.ngh_translation = np.array([[self.pt_translation[2]], [self.pt_translation[1]], [self.pt_translation[0]]])
+        self.ngh_finder = geometry.find_3d_nghs_sticky if borders == BorderType.Sticky else geometry.find_3d_nghs_periodic
         self.min_max = np.array(
             [bounds.xmin, bounds.xmin + bounds.xextent - 1,
-             bounds.ymin, bounds.ymin + bounds.xextent - 1,
+             bounds.ymin, bounds.ymin + bounds.yextent - 1,
              bounds.zmin, bounds.zmin + bounds.zextent - 1])
 
     def _update_idx(self, pt):
-        self.idx[0, 0] = pt[1]
-        self.idx[1, 0] = pt[0]
-        self.idx[2, 0] = pt[2]
-        
+        """Updates in the internal indexing array from the specified point,
+        converting from x,y,z order to pytorch order (z,y,x)
+        """
+        # Torch 3D tensor of shape (3, 4, 2)
+        # is 3 arrays of 4 rows and 2 columns:
+        # thus (z, y, x)
+        self.idx[0, 0] = pt[2]
+        self.idx[1, 0] = pt[1]
+        self.idx[2, 0] = pt[0]
+
         return self.idx
 
-    def get(self, pt):
+    def get(self, pt: DiscretePoint):
+        """Gets the value at the specified point
+
+        Args:
+            pt: the location to get the value of
+        """
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.pt_translation
         return self.grid[self._update_idx(npt)]
 
-    def set(self, pt, val):
+    def set(self, pt: DiscretePoint, val):
+        """Sets the value at the specified location
+
+        Args:
+            pt: the location to set the value of
+            val: the value to set the location to
+        """
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.pt_translation
         self.grid[self._update_idx(npt)] = val
 
-    def get_nghs(self, pt, extent=1):
-        """ Gets the neighboring values and locations around the specified point.
-        :param pt: the point whose neighbors to get
-        :param extent: the extent of the neighborhood
+    def get_nghs(self, pt: DiscretePoint):
+        """Gets the neighboring values and locations around the specified point.
+
+        Args:
+            pt: the point whose neighbors to get
+        Returns:
+            The value at the specicifed location.
         """
-        nghs = self.ngh_finder(pt.coordinates, self.min_max, row_major=True) 
+        nghs = self.ngh_finder(pt.coordinates, self.min_max, pytorch_order=True)
         grid_idxs = nghs + self.ngh_translation
-        # swap to remove the row major
-        nghs[[0, 1, 2]] = nghs[[1, 0, 2]]
+        # swap to reverse tensor (z,y,x) order
+        nghs[[0, 1, 2]] = nghs[[2, 1, 0]]
         return (self.grid[grid_idxs], nghs)
 
     def _compute_slice(self, key):
@@ -233,8 +285,8 @@ class Impl3D:
                 step = 1 if slc.step is None else slc.step
                 start = 0 if slc.start is None else (slc.start + self.pt_translation[0])
                 stop = self.grid.shape[1] if slc.stop is None else (slc.stop + self.pt_translation[0])
-                return (slice(None, None), slice(start, stop, step), slice(None, None))
-                
+                return (slice(None, None), slice(None, None), slice(start, stop, step))
+
             elif (len(key) == 2):
                 cslice = key[0]
                 cstep = 1 if cslice.step is None else cslice.step
@@ -246,8 +298,7 @@ class Impl3D:
                 rstart = 0 if rslice.start is None else (rslice.start + self.pt_translation[1])
                 rstop = self.grid.shape[0] if rslice.stop is None else (rslice.stop + self.pt_translation[1])
 
-                #return self.grid[rstart : rstop : rstep, cstart : cstop : cstep]
-                return (slice(rstart, rstop, rstep), slice(cstart, cstop, cstep), slice(None, None))
+                return (slice(None, None), slice(rstart, rstop, rstep), slice(cstart, cstop, cstep))
 
             else:
                 cslice = key[0]
@@ -265,27 +316,23 @@ class Impl3D:
                 zstart = 0 if zslice.start is None else (zslice.start + self.pt_translation[2])
                 zstop = self.grid.shape[2] if zslice.stop is None else (zslice.stop + self.pt_translation[2])
 
-                #return self.grid[rstart : rstop : rstep, cstart : cstop : cstep]
-                return (slice(rstart, rstop, rstep), slice(cstart, cstop, cstep), slice(zstart, zstop, zstep))
-
+                return (slice(zstart, zstop, zstep), slice(rstart, rstop, rstep), slice(cstart, cstop, cstep))
 
         elif isinstance(key, slice):
             step = 1 if key.step is None else key.step
             start = 0 if key.start is None else (key.start + self.pt_translation[0])
             stop = self.grid.shape[1] if key.stop is None else (key.stop + self.pt_translation[0])
-            #return self.grid[:, start : stop : step]
-            return (slice(None, None), slice(start, stop, step), slice(None, None))
+            return (slice(None, None), slice(None, None), slice(start, stop, step))
 
         else:
-            #return self.grid[:, key + self.pt_translation[0]]
-            return (slice(None, None), slice(key + self.pt_translation[0], None), slice(None, None))
+            return (slice(None, None), slice(None, None), slice(key + self.pt_translation[0], None))
 
     def __getitem__(self, key):
         return self.grid[self._compute_slice(key)]
 
     def __setitem__(self, key, val):
         self.grid[self._compute_slice(key)] = val
-    
+
 
 class ValueLayer:
 
@@ -306,26 +353,47 @@ class ValueLayer:
     @property
     def bounds(self):
         return self.bbounds
-            
-    def get(self, pt):
+
+    def get(self, pt: DiscretePoint):
+        """Gets the value at the specified point
+
+        Args:
+            pt: the location to get the value of
+        """
         return self.impl.get(pt)
-        
-    def set(self, pt, val):
+
+    def set(self, pt: DiscretePoint, val):
+        """Sets the value at the specified location
+
+        Args:
+            pt: the location to set the value of
+            val: the value to set the location to
+        """
         self.impl.set(pt, val)
 
-    def __getitem__(self, key):
-        return self.impl.__getitem__(key)
-    
-    def __setitem__(self, key, val):
-        self.impl.__setitem__(key, val)
+    # def __getitem__(self, key):
+    #     return self.impl.__getitem__(key)
 
-    def get_nghs(self, pt, extent=1):
-        """ Gets the neighboring values and locations around the specified point.
-        :param pt: the point whose neighbors to get
-        :param extent: the extent of the neighborhood
+    # def __setitem__(self, key, val):
+    #     self.impl.__setitem__(key, val)
+
+    def get_nghs(self, pt: DiscretePoint):
+        """Gets the neighboring values and locations around the specified point.
+
+        Args:
+            pt: the point whose neighbors to get
         """
-        return self.impl.get_nghs(pt, extent)
-        
+        return self.impl.get_nghs(pt)
+
+
+def num_dims(bounds: BoundingBox) -> int:
+    num_dims = 1
+    if (bounds.yextent > 0):
+        num_dims += 1
+        if (bounds.zextent > 0):
+            num_dims += 1
+    return num_dims
+
 
 class SharedValueLayer(ValueLayer):
 
@@ -336,6 +404,7 @@ class SharedValueLayer(ValueLayer):
         self.rank = self.cart_comm.Get_rank()
         self.coords = topo.coordinates
         self.buffer_size = buffer_size
+        self.full_bounds = bounds
 
         # add buffer to local bounds
         self.local_bounds = topo.local_bounds
@@ -345,10 +414,36 @@ class SharedValueLayer(ValueLayer):
             self.buffered_bounds = self.local_bounds
             self.non_buff_grid_offsets = np.zeros(6, dtype=np.int32)
 
-        super().__init__(self.buffered_bounds, borders, init_value, dtype)
+        super().__init__(self.buffered_bounds, borders, 'random', dtype)
+
+        nd = num_dims(bounds)
+        mins = [bounds.xmin, bounds.ymin, bounds.zmin]
+        if periodic:
+            for i in range(0, nd):
+                if self.impl.pt_translation[i] == 0:
+                    self.impl.pt_translation[i] = buffer_size - mins[i]
+        self._init_value(init_value, nd)
 
         if comm.Get_size() > 1:
             self._init_sync_data(topo, buffer_size)
+
+    def _init_value(self, init_value, nd: int):
+        if init_value != 'random':
+            lb = self.local_bounds
+            x1 = lb.xmin + self.impl.pt_translation[0]
+            x2 = lb.xmin + lb.xextent + self.impl.pt_translation[0]
+
+            if nd == 1:
+                self.grid[x1: x2] = init_value
+            else:
+                y1 = lb.ymin + self.impl.pt_translation[1]
+                y2 = lb.ymin + lb.yextent + self.impl.pt_translation[1]
+                if nd == 2:
+                    self.grid[y1: y2, x1: x2] = init_value
+                else:
+                    z1 = lb.zmin + self.impl.pt_translation[2]
+                    z2 = lb.zmin + lb.zextent + self.impl.pt_translation[2]
+                    self.grid[z1: z2, y1: y2, x1: x2] = init_value
 
     def _init_buffered_bounds(self, bounds, buffer_size, periodic):
         xmin, xextent = 0, 0
@@ -405,8 +500,8 @@ class SharedValueLayer(ValueLayer):
                     else:
                         yextent = self.local_bounds.yextent + buffer_size
                 elif self.local_bounds.ymin + self.local_bounds.yextent < ymax:
-                        yextent = self.local_bounds.yextent + buffer_size
-                        self.non_buff_grid_offsets[3] = buffer_size
+                    yextent = self.local_bounds.yextent + buffer_size
+                    self.non_buff_grid_offsets[3] = buffer_size
                 else:
                     # topology is 1D
                     ymin = self.local_bounds.ymin
@@ -428,12 +523,12 @@ class SharedValueLayer(ValueLayer):
                         zextent = self.local_bounds.zextent + buffer_size
                         self.non_buff_grid_offsets[5] = buffer_size
 
+        # bounds including the buffer if necessary
         self.buffered_bounds = BoundingBox(xmin, xextent, ymin, yextent, zmin, zextent)
 
     def _init_sync_data_1d(self, topo, buffer_size):
         ngh_buffers = []
         # create send_counts, send_displs, and send_buf
-        # buf_ngh: (rank, (ranges)) e.g., (1, (8, 10, 40, 42, 0, 0))
         r_trans = self.impl.pt_translation[0]
         for ngh_rank, bounds in topo.compute_buffer_nghs(buffer_size):
             # convert bounds into grid slices, row major'ing and
@@ -449,13 +544,14 @@ class SharedValueLayer(ValueLayer):
         buf_dtype = self.grid[ngh_buffers[0][4]].numpy().dtype
 
         num_procs = self.cart_comm.Get_size()
-        meta_data_send = np.zeros((num_procs, 7), dtype=np.int32)
-        self.ngh_meta_data_recv = np.zeros((num_procs, 7), dtype=np.int32)
+        meta_data_send = np.zeros((num_procs, 3), dtype=np.int32)
+        self.ngh_meta_data_recv = np.zeros((num_procs, 3), dtype=np.int32)
 
         for ngh_rank, _, buf_shape, bounds, _ in ngh_buffers:
+            meta_data_send[ngh_rank, :] = [buf_shape[0]] + [bounds[0], bounds[1]]
             # send bounds in row major
-            meta_data_send[ngh_rank, :] = [buf_shape[0]] + \
-                [bounds[2], bounds[3], bounds[0], bounds[1], bounds[4], bounds[5]]
+            # meta_data_send[ngh_rank, :] = [buf_shape[0]] + \
+            #    [bounds[2], bounds[3], bounds[0], bounds[1], bounds[4], bounds[5]]
 
         self.cart_comm.Alltoall(meta_data_send, self.ngh_meta_data_recv)
 
@@ -474,11 +570,20 @@ class SharedValueLayer(ValueLayer):
         recv_buf_data = []
 
         for ngh_rank, data in enumerate(self.ngh_meta_data_recv):
-            # data: shape, bounds [ 2   0 30 0  0  0  0]
             if data[0] != 0:
                 row = data[1] + r_trans
                 # origin + extent
                 stop_row = row + (data[2] - data[1])
+
+                if row < 0:
+                    # wrapping left edge to right edge
+                    row += self.full_bounds.xextent
+                    stop_row += self.full_bounds.xextent
+                elif row >= self.full_bounds.xextent:
+                    # wrapping right edge to left edge
+                    row -= self.full_bounds.xextent
+                    stop_row -= self.full_bounds.xextent
+
                 recv_buf_data.append((ngh_rank, data[0], data[0], (slice(row, stop_row),)))
 
         self.recv_data = (
@@ -486,10 +591,9 @@ class SharedValueLayer(ValueLayer):
 
     def _init_sync_data_2d(self, topo, buffer_size):
         ngh_buffers = []
-        # create send_counts, send_displs, and send_buf
-        # buf_ngh: (rank, (ranges)) e.g., (1, (8, 10, 40, 42, 0, 0))
         c_trans = self.impl.pt_translation[0]
         r_trans = self.impl.pt_translation[1]
+        # Compute what to send to which neighbor
         for ngh_rank, bounds in topo.compute_buffer_nghs(buffer_size):
             # convert bounds into grid slices, row major'ing and
             # applying the pt translations.
@@ -502,20 +606,23 @@ class SharedValueLayer(ValueLayer):
             ngh_buffers.append(
                 (ngh_rank, np.prod(shape), shape, bounds, (slice(row, stop_row), slice(col, stop_col))))
 
+        # sort by rank of receiving neighbor
         ngh_buffers.sort(key=lambda data: data[0])
         buf_dtype = self.grid[ngh_buffers[0][4]].numpy().dtype
 
         num_procs = self.cart_comm.Get_size()
-        meta_data_send = np.zeros((num_procs, 8), dtype=np.int32)
-        self.ngh_meta_data_recv = np.zeros((num_procs, 8), dtype=np.int32)
+        # send buffer for meta data (bounds etc.)
+        meta_data_send = np.zeros((num_procs, 6), dtype=np.int32)
+        # recv buffer for meta
+        self.ngh_meta_data_recv = np.zeros((num_procs, 6), dtype=np.int32)
 
         for ngh_rank, _, buf_shape, bounds, _ in ngh_buffers:
             # send bounds in row major
-            meta_data_send[ngh_rank, : ] = [buf_shape[0], buf_shape[1]] + [bounds[2], bounds[3], bounds[0], bounds[1], bounds[4], bounds[5]]
+            meta_data_send[ngh_rank, :] = [buf_shape[0], buf_shape[1]] + [bounds[2], bounds[3], bounds[0], bounds[1]]
 
         self.cart_comm.Alltoall(meta_data_send, self.ngh_meta_data_recv)
-        
-        # x the shapes to get count for each rank
+
+        # * the shapes to get count for each rank
         send_counts = np.apply_along_axis(lambda row: np.prod(row[:2]), 1, meta_data_send)
         send_displs = np.concatenate((np.zeros(1, dtype=np.int32), np.cumsum(send_counts, dtype=np.int32)[:-1]))
         send_buf = np.empty(np.sum(send_counts), dtype=buf_dtype)
@@ -527,7 +634,7 @@ class SharedValueLayer(ValueLayer):
         recv_buf_data = []
 
         for ngh_rank, data in enumerate(self.ngh_meta_data_recv):
-            # data: shape, row_major bounds [ 2 30  0 30 80 82  0  0]
+            # data: shape, pytorch_order bounds [ 2 30  0 30 80 82  0  0]
             if data[0] != 0:
                 row = data[2] + r_trans
                 col = data[4] + c_trans
@@ -535,7 +642,7 @@ class SharedValueLayer(ValueLayer):
                 stop_row = row + (data[3] - data[2])
                 stop_col = col + (data[5] - data[4])
                 recv_buf_data.append((ngh_rank, np.prod(data[:2]), data[:2], (slice(row, stop_row), slice(col, stop_col)))) #buf))
-            
+
         self.recv_data = ((recv_buf, (recv_counts, recv_displs)), recv_buf_data)
 
     def _init_sync_data_3d(self, topo, buffer_size):
@@ -589,7 +696,7 @@ class SharedValueLayer(ValueLayer):
         recv_buf_data = []
 
         for ngh_rank, data in enumerate(self.ngh_meta_data_recv):
-            # data: shape, row_major bounds [ 2 30  0 30 80 82  0  0]
+            # data: shape, pytorch_order bounds [ 2 30  0 30 80 82  0  0]
             if data[0] != 0:
                 row = data[2] + r_trans
                 col = data[4] + c_trans
@@ -613,24 +720,8 @@ class SharedValueLayer(ValueLayer):
         else:
             self._init_sync_data_3d(topo, buffer_size)
 
-    def _pre_synch_ghosts(self, agent_manager: AgentManager):
-        """Called prior to synchronizing ghosts and before any cross-rank movement
-        synchronization.
-
-        This is a null op on a value layer.
-
-        Args:
-            agent_manager: this rank's AgentManager
-        """
-        pass
-
-    def _synch_ghosts(self, agent_manager: AgentManager, create_agent: Callable):
-        """Synchronizes the ghosted part of this projection
-
-        Args:
-            agent_manager: this rank's AgentManager
-            create_agent: a callable that can create an agent instance from
-            an agent id and data.
+    def _synch_ghosts(self):
+        """Synchronizes the ghosted buffer part of this value layer.
         """
         # self.send_data = ((send_buf, (send_counts, send_displs)), ngh_buffers)
         # self.recv_data = ((recv_buf, (recv_counts, recv_displs)), recv_buf_data)
@@ -652,9 +743,13 @@ class SharedValueLayer(ValueLayer):
         recv_displs = recv_msg[1][1]
         recv_buf = recv_msg[0]
         for ngh_rank, size, shape, tslice in recv_buf_data:
-            disp = recv_displs[ngh_rank]
-            self.grid[tslice] = torch.as_tensor(
-                recv_buf[disp: disp + size].reshape(shape))
+            try:
+                disp = recv_displs[ngh_rank]
+                self.grid[tslice] = torch.as_tensor(
+                    recv_buf[disp: disp + size].reshape(shape))
+            except Exception:
+                print(self.rank, ngh_rank, size, shape, tslice)
+                raise
 
 
 class ReadWriteValueLayer:

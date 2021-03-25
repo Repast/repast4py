@@ -9,7 +9,7 @@ import unittest
 
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
-from repast4py import core, space
+from repast4py import core, space, geometry
 from repast4py import context as ctx
 
 from repast4py.space import ContinuousPoint as CPt
@@ -56,7 +56,7 @@ class SharedCSTests(unittest.TestCase):
             a1 = core.Agent(1, 0, rank)
             a2 = core.Agent(2, 0, rank)
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
             self.assertEqual('shared_space', cspace.name)
@@ -109,7 +109,7 @@ class SharedCSTests(unittest.TestCase):
             a1 = core.Agent(1, 0, rank)
             a2 = core.Agent(2, 0, rank)
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
@@ -160,7 +160,7 @@ class SharedCSTests(unittest.TestCase):
             a1 = core.Agent(1, 0, rank)
             a2 = core.Agent(2, 0, rank)
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Periodic, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
@@ -208,7 +208,7 @@ class SharedCSTests(unittest.TestCase):
             if comm != MPI.COMM_NULL:
                 rank = comm.Get_rank()
 
-                box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+                box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
                 cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Periodic, 
                     occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
@@ -273,7 +273,7 @@ class SharedGridTests(unittest.TestCase):
             a1 = core.Agent(1, 0, rank)
             a2 = core.Agent(2, 0, rank)
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
             self.assertEqual('shared_grid', grid.name)
@@ -311,7 +311,7 @@ class SharedGridTests(unittest.TestCase):
 
                 agents = grid.get_agents(pt)
                 expected = [a2, a3]
-                count  = 0
+                count = 0
                 for i, agent in enumerate(agents):
                     self.assertEqual(expected[i], agent)
                     count += 1
@@ -328,7 +328,7 @@ class SharedGridTests(unittest.TestCase):
             a1 = core.Agent(1, 0, rank)
             a2 = core.Agent(2, 0, rank)
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -378,7 +378,7 @@ class SharedGridTests(unittest.TestCase):
             a1 = core.Agent(1, 0, rank)
             a2 = core.Agent(2, 0, rank)
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -427,7 +427,7 @@ class SharedGridTests(unittest.TestCase):
             core.Agent(4, 0, rank), core.Agent(5, 0, rank), core.Agent(6, 0, rank),
             core.Agent(7, 0, rank), core.Agent(8, 0, rank)]
 
-        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+        box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
             occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -509,7 +509,7 @@ class SharedGridTests(unittest.TestCase):
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -563,7 +563,7 @@ class SharedGridTests(unittest.TestCase):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
-        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+        box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic, 
             occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -722,7 +722,7 @@ class SharedGridTests(unittest.TestCase):
                 print("3D buffer tests not run -- run with -n 18")
             return
         
-        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=60)
+        box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=60)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
             occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -796,7 +796,7 @@ class SharedGridTests(unittest.TestCase):
                 print("3D buffer tests not run -- run with -n 18")
             return
 
-        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=60)
+        box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=60)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic, 
             occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -883,7 +883,7 @@ class SharedContextTests1(unittest.TestCase):
         
 
         if comm != MPI.COMM_NULL:
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -967,7 +967,7 @@ class SharedContextTests1(unittest.TestCase):
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -1010,7 +1010,7 @@ class SharedContextTests1(unittest.TestCase):
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -1112,7 +1112,7 @@ class SharedContextTests1(unittest.TestCase):
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
 
@@ -1223,7 +1223,7 @@ class SharedContextTests1(unittest.TestCase):
             agents[a.uid] = a
             context.add(a)
 
-        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+        box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
             occupancy=OccupancyType.Multiple, buffersize=1, comm=comm)
         context.add_projection(grid)
@@ -1316,7 +1316,7 @@ class SharedContextTests2(unittest.TestCase):
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
@@ -1357,7 +1357,7 @@ class SharedContextTests2(unittest.TestCase):
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
@@ -1458,7 +1458,7 @@ class SharedContextTests2(unittest.TestCase):
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
 
-            box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
 
@@ -1564,7 +1564,7 @@ class SharedContextTests2(unittest.TestCase):
             agents[a.uid] = a
             context.add(a)
 
-        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+        box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky, 
             occupancy=OccupancyType.Multiple, buffersize=1, comm=comm, tree_threshold=100)
         context.add_projection(grid)
@@ -1676,7 +1676,7 @@ class SharedContextTests3(unittest.TestCase):
             agents.append(a)
             context.add(a)
 
-        box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+        box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
             occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
@@ -1692,7 +1692,7 @@ class SharedContextTests3(unittest.TestCase):
 
         if rank == 0:
             b = grid.get_local_bounds()
-            box = space.BoundingBox(b.xmin + b.xextent, 2, b.ymin, b.yextent, 0, 0)
+            box = geometry.BoundingBox(b.xmin + b.xextent, 2, b.ymin, b.yextent, 0, 0)
             for i, a in enumerate(agents[0:30]):
                 cp, gp = get_random_pts(box)
                 gp = grid.move(a, gp)
@@ -1704,7 +1704,7 @@ class SharedContextTests3(unittest.TestCase):
 
         if rank == 4:
             b = grid.get_local_bounds()
-            box = space.BoundingBox(b.xmin - 4, 2, b.ymin, b.yextent, 0, 0)
+            box = geometry.BoundingBox(b.xmin - 4, 2, b.ymin, b.yextent, 0, 0)
             for i, a in enumerate(agents[0:4]):
                 cp, gp = get_random_pts(box)
                 gp = grid.move(a, gp)
@@ -1714,7 +1714,7 @@ class SharedContextTests3(unittest.TestCase):
                 g_moved[1].append((gp.coordinates, a.uid))
                 c_moved[1].append((cp.coordinates, a.uid))
 
-            box = space.BoundingBox(b.xmin, b.xextent, b.ymin + b.yextent, 2, 0, 0)
+            box = geometry.BoundingBox(b.xmin, b.xextent, b.ymin + b.yextent, 2, 0, 0)
             for i, a in enumerate(agents[4:15]):
                 cp, gp = get_random_pts(box)
                 gp = grid.move(a, gp)
@@ -1975,7 +1975,7 @@ class SharedContextTests3(unittest.TestCase):
             
             manager = context._agent_manager
 
-            box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
@@ -2098,7 +2098,7 @@ class SharedContextTests3(unittest.TestCase):
             
             manager = context._agent_manager
 
-            box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+            box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky, 
                 occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky, 
