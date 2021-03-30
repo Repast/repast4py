@@ -1956,7 +1956,8 @@ static PyObject* CartesianTopology_computeBufferData(PyObject* self, PyObject* a
     BoundingBox bounds(0, 0, 0, 0, 0, 0);
     ((R4Py_CartesianTopology*)self)->topo->getBounds(bounds);
     int num_dims = ((R4Py_CartesianTopology*)self)->topo->numDims();
-    compute_neighbor_buffers(*nghs, coords, bounds, num_dims, buffer_size);
+    const int* procs_per_dim = ((R4Py_CartesianTopology*)self)->topo->procsPerDim();
+    compute_neighbor_buffers(*nghs, coords, bounds, num_dims, procs_per_dim, buffer_size);
 
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
     obj_iter->iter = new SequenceIter<std::vector<CTNeighbor>, GetBufferInfo>(nghs);
@@ -1964,10 +1965,24 @@ static PyObject* CartesianTopology_computeBufferData(PyObject* self, PyObject* a
     return (PyObject*)obj_iter; 
 }
 
+static PyObject* CartesianTopology_procsPerDim(PyObject* self, void* args) {
+    int num_dims = ((R4Py_CartesianTopology*)self)->topo->numDims();
+    const int* procs_per_dim = ((R4Py_CartesianTopology*)self)->topo->procsPerDim();
+
+    if (num_dims == 1) {
+        return Py_BuildValue("(i)", procs_per_dim[0]);
+    } else if (num_dims == 2) {
+        return Py_BuildValue("(ii)", procs_per_dim[0], procs_per_dim[1]);
+    } else {
+        return  Py_BuildValue("(iii)", procs_per_dim[0], procs_per_dim[1], procs_per_dim[2]);
+    }
+}
+
 static PyGetSetDef CartesianTopology_get_setters[] = {
     {(char*)"comm", (getter)CartesianTopology_getCartComm, NULL, (char*)"The communicator over the Carteisan topology", NULL},
     {(char*)"coordinates", (getter)CartesianTopology_getCartCoords, NULL, (char*)"The coordinates of the current rank within this topology", NULL},
     {(char*)"local_bounds", (getter)CartesianTopology_getLocalBounds, NULL, (char*)"The local bounds of the current rank within this topology", NULL},
+    {(char*)"procs_per_dim", (getter)CartesianTopology_procsPerDim, NULL, (char*)"The number of processes per dimension in x,y,z order."},
     {NULL}
 };
 

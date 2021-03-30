@@ -30,7 +30,7 @@ struct GetBufferInfo {
 };
 
 void compute_neighbor_buffers(std::vector<CTNeighbor>& nghs, std::vector<int>& cart_coords, 
-    BoundingBox& local_bounds, int num_dims, unsigned int buffer_size);
+    BoundingBox& local_bounds, int num_dims, const int* procs_per_dim, unsigned int buffer_size);
 
 
 class CartesianTopology {
@@ -56,6 +56,10 @@ public:
     void getNeighbors(std::vector<CTNeighbor>& neighbors);
     int numDims() const {
         return num_dims_;
+    }
+    
+    const int* procsPerDim() const {
+        return procs_per_dim;
     }
 };
 
@@ -122,7 +126,7 @@ DistributedCartesianSpace<BaseSpaceType, PointType>::DistributedCartesianSpace(c
     std::vector<int> coords;
     ct.getCoords(coords);
 
-    compute_neighbor_buffers(*nghs, coords, local_bounds, dims, buffer_size_);
+    compute_neighbor_buffers(*nghs, coords, local_bounds, dims, ct.procsPerDim(), buffer_size_);
 }
 
 template<typename BaseSpaceType, typename PointType>
@@ -141,7 +145,7 @@ DistributedCartesianSpace<BaseSpaceType, PointType>::DistributedCartesianSpace(c
     std::vector<int> coords;
     ct.getCoords(coords);
 
-    compute_neighbor_buffers(*nghs, coords, local_bounds, dims, buffer_size_);
+    compute_neighbor_buffers(*nghs, coords, local_bounds, dims, ct.procsPerDim(), buffer_size_);
 }
 
 template<typename BaseSpaceType, typename PointType>

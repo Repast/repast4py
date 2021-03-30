@@ -386,20 +386,34 @@ class ValueLayer:
         return self.impl.get_nghs(pt)
 
 
-def num_dims(bounds: BoundingBox) -> int:
-    num_dims = 1
-    if (bounds.yextent > 0):
-        num_dims += 1
-        if (bounds.zextent > 0):
-            num_dims += 1
-    return num_dims
+def _compute_meta_data_counts(meta_data, num_dims, offset, num_slices):
+    # np.apply_along_axis(lambda row: np.prod(row[:2]) + np.prod(row[6:8]), 1, meta_data_send)
+    if num_slices == 1:
+        return np.apply_along_axis(lambda row: np.prod(row[:num_dims]), 1, meta_data)
+    elif num_slices == 2:
+        # return meta_data[:, 0] + meta_data[:, offset]
+        return np.apply_along_axis(
+            lambda row: np.prod(row[:num_dims]) + np.prod(row[offset: offset + num_dims]), 1, meta_data)
+    elif num_slices == 3:
+        return np.apply_along_axis(
+            lambda row: np.prod(row[:num_dims]) +
+            np.prod(row[offset: offset + num_dims]) +
+            np.prod(row[offset * 2: offset * 2 + num_dims]),
+            1, meta_data)
+    elif num_slices == 4:
+        return np.apply_along_axis(
+            lambda row: np.prod(row[:num_dims]) +
+            np.prod(row[offset: offset + num_dims]) +
+            np.prod(row[offset * 2: offset * 2 + num_dims]) +
+            np.prod(row[offset * 3: offset * 3 + num_dims]),
+            1, meta_data)
 
 
 class SharedValueLayer(ValueLayer):
 
     def __init__(self, comm, bounds, borders, buffer_size, init_value, dtype=torch.float64):
-        periodic = borders == BorderType.Periodic
-        topo = CartesianTopology(comm, bounds, periodic)
+        self.periodic = borders == BorderType.Periodic
+        topo = CartesianTopology(comm, bounds, self.periodic)
         self.cart_comm = topo.comm
         self.rank = self.cart_comm.Get_rank()
         self.coords = topo.coordinates
@@ -409,23 +423,23 @@ class SharedValueLayer(ValueLayer):
         # add buffer to local bounds
         self.local_bounds = topo.local_bounds
         if comm.Get_size() > 1:
-            self._init_buffered_bounds(bounds, buffer_size, periodic)
+            self._init_buffered_bounds(bounds, buffer_size, self.periodic)
         else:
             self.buffered_bounds = self.local_bounds
             self.non_buff_grid_offsets = np.zeros(6, dtype=np.int32)
 
         super().__init__(self.buffered_bounds, borders, 'random', dtype)
 
-        nd = num_dims(bounds)
+        nd = 1 if bounds.yextent == 0 else (3 if bounds.zextent > 0 else 2)
         mins = [bounds.xmin, bounds.ymin, bounds.zmin]
-        if periodic:
+        if self.periodic:
             for i in range(0, nd):
                 if self.impl.pt_translation[i] == 0:
                     self.impl.pt_translation[i] = buffer_size - mins[i]
         self._init_value(init_value, nd)
 
         if comm.Get_size() > 1:
-            self._init_sync_data(topo, buffer_size)
+            self._init_sync_data(nd, topo, buffer_size)
 
     def _init_value(self, init_value, nd: int):
         if init_value != 'random':
@@ -444,6 +458,16 @@ class SharedValueLayer(ValueLayer):
                     z1 = lb.zmin + self.impl.pt_translation[2]
                     z2 = lb.zmin + lb.zextent + self.impl.pt_translation[2]
                     self.grid[z1: z2, y1: y2, x1: x2] = init_value
+
+    def _wrap_slice_vals(self, start_val, end_val, extent):
+        if start_val < 0:
+            start_val += extent
+            end_val += extent
+        elif start_val >= extent:
+            start_val -= extent
+            end_val -= extent
+
+        return (start_val, end_val)
 
     def _init_buffered_bounds(self, bounds, buffer_size, periodic):
         xmin, xextent = 0, 0
@@ -543,48 +567,59 @@ class SharedValueLayer(ValueLayer):
         ngh_buffers.sort(key=lambda data: data[0])
         buf_dtype = self.grid[ngh_buffers[0][4]].numpy().dtype
 
-        num_procs = self.cart_comm.Get_size()
-        meta_data_send = np.zeros((num_procs, 3), dtype=np.int32)
-        self.ngh_meta_data_recv = np.zeros((num_procs, 3), dtype=np.int32)
+        data_size = 3 if topo.procs_per_dim[0] != 2 and self.periodic else 6
 
+        num_procs = self.cart_comm.Get_size()
+        meta_data_send = np.zeros((num_procs, data_size), dtype=np.int32)
+        self.ngh_meta_data_recv = np.zeros((num_procs, data_size), dtype=np.int32)
+
+        offset = 3
+        num_sent_slices = int(data_size / offset)
+        offsets = [0] * num_procs
         for ngh_rank, _, buf_shape, bounds, _ in ngh_buffers:
-            meta_data_send[ngh_rank, :] = [buf_shape[0]] + [bounds[0], bounds[1]]
-            # send bounds in row major
-            # meta_data_send[ngh_rank, :] = [buf_shape[0]] + \
-            #    [bounds[2], bounds[3], bounds[0], bounds[1], bounds[4], bounds[5]]
+            s_idx = offsets[ngh_rank]
+            meta_data_send[ngh_rank, s_idx: s_idx + offset] = [buf_shape[0]] + [bounds[0], bounds[1]]
+            offsets[ngh_rank] += offset
 
         self.cart_comm.Alltoall(meta_data_send, self.ngh_meta_data_recv)
 
-        # shape element in first colum is the size
-        send_counts = meta_data_send[:, 0]
+        # shape element in first and 3rd column is the size
+        # send_counts = meta_data_send[:, 0] + meta_data_send[:, 3]
+        send_counts = _compute_meta_data_counts(meta_data_send, 1, 3, num_sent_slices)
         send_displs = np.concatenate(
             (np.zeros(1, dtype=np.int32), np.cumsum(send_counts, dtype=np.int32)[:-1]))
         send_buf = np.empty(np.sum(send_counts), dtype=buf_dtype)
         self.send_data = ((send_buf, (send_counts, send_displs)), ngh_buffers)
 
         # shape element in first col
-        recv_counts = self.ngh_meta_data_recv[:, 0]
+        # recv_counts = self.ngh_meta_data_recv[:, 0] + self.ngh_meta_data_recv[:, 3]
+        recv_counts = _compute_meta_data_counts(self.ngh_meta_data_recv, 1, 3, num_sent_slices)
         recv_displs = np.concatenate(
             (np.zeros(1, dtype=np.int32), np.cumsum(recv_counts, dtype=np.int32)[:-1]))
         recv_buf = np.empty(np.sum(recv_counts), dtype=buf_dtype)
         recv_buf_data = []
 
         for ngh_rank, data in enumerate(self.ngh_meta_data_recv):
+            slice_data = []
             if data[0] != 0:
                 row = data[1] + r_trans
                 # origin + extent
                 stop_row = row + (data[2] - data[1])
+                row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.xextent)
+                slice_data.append((ngh_rank, data[0], data[0], (slice(row, stop_row),)))
 
-                if row < 0:
-                    # wrapping left edge to right edge
-                    row += self.full_bounds.xextent
-                    stop_row += self.full_bounds.xextent
-                elif row >= self.full_bounds.xextent:
-                    # wrapping right edge to left edge
-                    row -= self.full_bounds.xextent
-                    stop_row -= self.full_bounds.xextent
-
-                recv_buf_data.append((ngh_rank, data[0], data[0], (slice(row, stop_row),)))
+                for i in range(1, num_sent_slices):
+                    idx = offset * i
+                    if data[idx] != 0:
+                        row = data[idx + 1] + r_trans
+                        # origin + extent
+                        stop_row = row + (data[idx + 2] - data[idx + 1])
+                        row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.xextent)
+                        slice_data.append((ngh_rank, data[idx], data[idx], (slice(row, stop_row),)))
+                    else:
+                        break
+            if len(slice_data) > 0:
+                recv_buf_data.append(slice_data)
 
         self.recv_data = (
             (recv_buf, (recv_counts, recv_displs)), recv_buf_data)
@@ -609,39 +644,76 @@ class SharedValueLayer(ValueLayer):
         # sort by rank of receiving neighbor
         ngh_buffers.sort(key=lambda data: data[0])
         buf_dtype = self.grid[ngh_buffers[0][4]].numpy().dtype
-
         num_procs = self.cart_comm.Get_size()
-        # send buffer for meta data (bounds etc.)
-        meta_data_send = np.zeros((num_procs, 6), dtype=np.int32)
-        # recv buffer for meta
-        self.ngh_meta_data_recv = np.zeros((num_procs, 6), dtype=np.int32)
 
+        offset = 6
+        data_size = offset
+        if self.periodic:
+            if topo.procs_per_dim[0] == 2 and topo.procs_per_dim[1] == 2:
+                data_size = 24
+            elif topo.procs_per_dim[0] == 2 or topo.procs_per_dim[1] == 2:
+                data_size = 12
+
+        # send buffer for meta data (bounds etc.)
+        meta_data_send = np.zeros((num_procs, data_size), dtype=np.int32)
+        # recv buffer for meta
+        self.ngh_meta_data_recv = np.zeros((num_procs, data_size), dtype=np.int32)
+
+        offsets = [0] * num_procs
         for ngh_rank, _, buf_shape, bounds, _ in ngh_buffers:
+            s_idx = offsets[ngh_rank]
             # send bounds in row major
-            meta_data_send[ngh_rank, :] = [buf_shape[0], buf_shape[1]] + [bounds[2], bounds[3], bounds[0], bounds[1]]
+            meta_data_send[ngh_rank, s_idx: s_idx + offset] = [buf_shape[0], buf_shape[1]] + [bounds[2], bounds[3], bounds[0], bounds[1]]
+            offsets[ngh_rank] += offset
 
         self.cart_comm.Alltoall(meta_data_send, self.ngh_meta_data_recv)
 
         # * the shapes to get count for each rank
-        send_counts = np.apply_along_axis(lambda row: np.prod(row[:2]), 1, meta_data_send)
+        num_sent_slices = int(data_size / offset)
+        send_counts = _compute_meta_data_counts(meta_data_send, 2, offset, num_sent_slices)
+        # send_counts = np.apply_along_axis(lambda row: np.prod(row[:2]) + np.prod(row[6:8]), 1, meta_data_send)
         send_displs = np.concatenate((np.zeros(1, dtype=np.int32), np.cumsum(send_counts, dtype=np.int32)[:-1]))
         send_buf = np.empty(np.sum(send_counts), dtype=buf_dtype)
         self.send_data = ((send_buf, (send_counts, send_displs)), ngh_buffers)
 
-        recv_counts = np.apply_along_axis(lambda row: row[0] * row[1], 1, self.ngh_meta_data_recv)
+        recv_counts = _compute_meta_data_counts(self.ngh_meta_data_recv, 2, offset, num_sent_slices)
+        # np.apply_along_axis(lambda row: row[0] * row[1] + row[6] * row[7], 1, self.ngh_meta_data_recv)
         recv_displs = np.concatenate((np.zeros(1, dtype=np.int32), np.cumsum(recv_counts, dtype=np.int32)[:-1]))
         recv_buf = np.empty(np.sum(recv_counts), dtype=buf_dtype)
         recv_buf_data = []
 
         for ngh_rank, data in enumerate(self.ngh_meta_data_recv):
-            # data: shape, pytorch_order bounds [ 2 30  0 30 80 82  0  0]
+            # data: shape, pytorch_ordered bounds [ 2 30  0 30 80 82  0  0]
+            slice_data = []
             if data[0] != 0:
                 row = data[2] + r_trans
                 col = data[4] + c_trans
                 # origin + extent
                 stop_row = row + (data[3] - data[2])
                 stop_col = col + (data[5] - data[4])
-                recv_buf_data.append((ngh_rank, np.prod(data[:2]), data[:2], (slice(row, stop_row), slice(col, stop_col)))) #buf))
+
+                row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.yextent)
+                col, stop_col = self._wrap_slice_vals(col, stop_col, self.full_bounds.xextent)
+                slice_data.append((ngh_rank, np.prod(data[:2]), data[:2], (slice(row, stop_row), slice(col, stop_col))))
+
+                for i in range(1, num_sent_slices):
+                    idx = offset * i
+                    if data[idx] != 0:
+                        row = data[idx + 2] + r_trans
+                        col = data[idx + 4] + c_trans
+                        # origin + extent
+                        stop_row = row + (data[idx + 3] - data[idx + 2])
+                        stop_col = col + (data[idx + 5] - data[idx + 4])
+
+                        row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.yextent)
+                        col, stop_col = self._wrap_slice_vals(col, stop_col, self.full_bounds.xextent)
+                        slice_data.append((ngh_rank, np.prod(data[idx: idx + 2]), data[idx: idx + 2],
+                                          (slice(row, stop_row), slice(col, stop_col))))
+                    else:
+                        break
+
+            if len(slice_data) > 0:
+                recv_buf_data.append(slice_data)
 
         self.recv_data = ((recv_buf, (recv_counts, recv_displs)), recv_buf_data)
 
@@ -670,26 +742,27 @@ class SharedValueLayer(ValueLayer):
         buf_dtype = self.grid[ngh_buffers[0][4]].numpy().dtype
 
         num_procs = self.cart_comm.Get_size()
-        meta_data_send = np.zeros((num_procs, 9), dtype=np.int32)
-        self.ngh_meta_data_recv = np.zeros((num_procs, 9), dtype=np.int32)
+        meta_data_send = np.zeros((num_procs, 18), dtype=np.int32)
+        self.ngh_meta_data_recv = np.zeros((num_procs, 18), dtype=np.int32)
 
         for ngh_rank, _, buf_shape, bounds, _ in ngh_buffers:
+            s_idx = 0 if meta_data_send[ngh_rank, 0] == 0 else 9
             # send bounds in row major
-            meta_data_send[ngh_rank, :] = [buf_shape[0], buf_shape[1], buf_shape[2]] + \
-                [bounds[2], bounds[3], bounds[0], bounds[1], bounds[4], bounds[5]]
+            meta_data_send[ngh_rank, s_idx: s_idx + 9] = [buf_shape[0], buf_shape[1], buf_shape[2]] + \
+                bounds[4], bounds[5], [bounds[2], bounds[3], bounds[0], bounds[1]]
 
         self.cart_comm.Alltoall(meta_data_send, self.ngh_meta_data_recv)
 
         # x the shapes to get count for each rank
         send_counts = np.apply_along_axis(
-            lambda row: np.prod(row[0:3]), 1, meta_data_send)
+            lambda row: np.prod(row[0:3] + np.prod(row[9:12])), 1, meta_data_send)
         send_displs = np.concatenate(
             (np.zeros(1, dtype=np.int32), np.cumsum(send_counts, dtype=np.int32)[:-1]))
         send_buf = np.empty(np.sum(send_counts), dtype=buf_dtype)
         self.send_data = ((send_buf, (send_counts, send_displs)), ngh_buffers)
 
         recv_counts = np.apply_along_axis(
-            lambda row: np.prod(row[0:3]), 1, self.ngh_meta_data_recv)
+            lambda row: np.prod(row[0:3] + np.prod(row[9:12])), 1, self.ngh_meta_data_recv)
         recv_displs = np.concatenate(
             (np.zeros(1, dtype=np.int32), np.cumsum(recv_counts, dtype=np.int32)[:-1]))
         recv_buf = np.empty(np.sum(recv_counts), dtype=buf_dtype)
@@ -697,25 +770,50 @@ class SharedValueLayer(ValueLayer):
 
         for ngh_rank, data in enumerate(self.ngh_meta_data_recv):
             # data: shape, pytorch_order bounds [ 2 30  0 30 80 82  0  0]
+            # TODO check order -- is this z,y,x?
+            slice_data = []
             if data[0] != 0:
-                row = data[2] + r_trans
-                col = data[4] + c_trans
-                z = data[6] + z_trans
+                z = data[2] + z_trans
+                row = data[4] + r_trans
+                col = data[6] + c_trans
+
                 # origin + extent
-                stop_row = row + (data[3] - data[2])
-                stop_col = col + (data[5] - data[4])
-                stop_z = z + (data[7] - data[6])
-                recv_buf_data.append((ngh_rank, np.prod(data[:3]), data[:3], (slice(
+                stop_z = z + (data[3] - data[2])
+                stop_row = row + (data[5] - data[4])
+                stop_col = col + (data[7] - data[6])
+
+                row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.yextent)
+                col, stop_col = self._wrap_slice_vals(col, stop_col, self.full_bounds.xextent)
+                z, stop_z = self._wrap_slice_vals(z, stop_z, self.full_bounds.zextent)
+                slice_data.append((ngh_rank, np.prod(data[:3]), data[:3], (slice(
                     row, stop_row), slice(col, stop_col), slice(z, stop_z))))
+
+                if data[9] != 0:
+                    z = data[11] + z_trans
+                    row = data[13] + r_trans
+                    col = data[15] + c_trans
+
+                    # origin + extent
+                    stop_z = z + (data[12] - data[11])
+                    stop_row = row + (data[14] - data[13])
+                    stop_col = col + (data[16] - data[15])
+
+                    row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.yextent)
+                    col, stop_col = self._wrap_slice_vals(col, stop_col, self.full_bounds.xextent)
+                    z, stop_z = self._wrap_slice_vals(z, stop_z, self.full_bounds.zextent)
+                    slice_data.append((ngh_rank, np.prod(data[9:12]), data[9:12], (slice(
+                        row, stop_row), slice(col, stop_col), slice(z, stop_z))))
+
+            if len(slice_data) > 0:
+                recv_buf_data.append(slice_data)
 
         self.recv_data = (
             (recv_buf, (recv_counts, recv_displs)), recv_buf_data)
 
-    def _init_sync_data(self, topo, buffer_size):
-        dims = 1 if self.local_bounds.yextent == 0 else (3 if self.local_bounds.zextent > 0 else 2)
-        if dims == 1:
+    def _init_sync_data(self, num_dims, topo, buffer_size):
+        if num_dims == 1:
             self._init_sync_data_1d(topo, buffer_size)
-        elif dims == 2:
+        elif num_dims == 2:
             self._init_sync_data_2d(topo, buffer_size)
         else:
             self._init_sync_data_3d(topo, buffer_size)
@@ -742,14 +840,16 @@ class SharedValueLayer(ValueLayer):
         recv_msg, recv_buf_data = self.recv_data
         recv_displs = recv_msg[1][1]
         recv_buf = recv_msg[0]
-        for ngh_rank, size, shape, tslice in recv_buf_data:
-            try:
-                disp = recv_displs[ngh_rank]
-                self.grid[tslice] = torch.as_tensor(
-                    recv_buf[disp: disp + size].reshape(shape))
-            except Exception:
-                print(self.rank, ngh_rank, size, shape, tslice)
-                raise
+        for items in recv_buf_data:
+            for ngh_rank, size, shape, tslice in items:
+                try:
+                    disp = recv_displs[ngh_rank]
+                    self.grid[tslice] = torch.as_tensor(
+                        recv_buf[disp: disp + size].reshape(shape))
+
+                except Exception:
+                    print(self.rank, ngh_rank, size, shape, tslice)
+                    raise
 
 
 class ReadWriteValueLayer:
