@@ -17,7 +17,6 @@ jobs:
       - run: PYTHONPATH="src" ./tests/test.sh
       - run: 
           command: |
-            env
             coverage combine
             coverage report -m
             bash <(curl -s https://codecov.io/bash) 
