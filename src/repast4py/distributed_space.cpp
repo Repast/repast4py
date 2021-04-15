@@ -75,9 +75,12 @@ void compute_neighbor_buffers(std::vector<CTNeighbor>& nghs, std::vector<int>& c
             p_ranks.emplace(ngh.rank);
         }
     } else if (num_dims == 2) {
-        // bool is_0 = cart_coords[0] == 3 && cart_coords[1] == 1;
+        // bool is_0 = cart_coords[0] == 0 && cart_coords[1] == 0;
         
+        // first element is number of times ngh appears, 2 and 3 and cart coord
+        // differences
         std::map<int, std::vector<int>> coord_offset_counts;
+        // if (is_0) std::cout << "num nghs: " << nghs.size() << std::endl;
         for (auto& ngh : nghs) {
             if (coord_offset_counts.find(ngh.rank) == coord_offset_counts.end()) {
                 int ox = ngh.cart_coord_x - cart_coords[0];
@@ -86,8 +89,8 @@ void compute_neighbor_buffers(std::vector<CTNeighbor>& nghs, std::vector<int>& c
                 coord_offset_counts.emplace(ngh.rank, std::vector<int>{1, ox, oy});
             } else {
                 coord_offset_counts[ngh.rank][0] += 1;
-                int ox = ngh.cart_coord_x - cart_coords[0];
-                int oy = ngh.cart_coord_y - cart_coords[1];
+                // int ox = ngh.cart_coord_x - cart_coords[0];
+                // int oy = ngh.cart_coord_y - cart_coords[1];
                 // if (is_0) std::cout << "ngh offsets for " << ngh.rank << ": " << ox << ", " << oy << std::endl;
             }
         }
@@ -112,6 +115,14 @@ void compute_neighbor_buffers(std::vector<CTNeighbor>& nghs, std::vector<int>& c
             } else if (val[0] == 4) {
                 // both dimensions duplicated
                 fixed_offsets.emplace(kv.first, std::vector<int>{1, 1, 1, -1, -1, 1, -1, -1});
+            } else if (val[0] == 6) {
+                // this will occur with 2 procs and periodic -- meet at left / right or top / bottom
+                // and 4 corners
+                if (x2) {
+                    fixed_offsets.emplace(kv.first, std::vector<int>{-1, -1, -1, 1, 1, -1, 1, 1, -1, 0, 1, 0});
+                } else if (y2) {
+                    fixed_offsets.emplace(kv.first, std::vector<int>{-1, -1, -1, 1, 1, -1, 1, 1, 0, -1, 0, 1});
+                }
             }
         }
 
@@ -304,6 +315,8 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
     // point to the same neighbor rank
     // std::map<int, CTNeighbor> ngh_map;
 
+    int rank = getRank();
+
     if (num_dims_ == 1) {
         std::list<int> offsets{-1, 1};
         if (!periodic_) {
@@ -324,35 +337,59 @@ void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
     } else if (num_dims_ == 2) {
         std::list<int> xoffsets{-1, 0, 1};
         std::list<int> yoffsets{-1, 0, 1};
-        if (!periodic_) {
+        if (periodic_) {
+            // avoid making self a neighbor
+            // if (procs_per_dim[0] == 1) {
+            //     xoffsets.pop_front();
+            //     xoffsets.pop_back();
+            // }
+            // if (procs_per_dim[1] == 1) {
+            //     yoffsets.pop_front();
+            //     yoffsets.pop_back();
+            // }
+        } else {
             if (coords[0] + xoffsets.front() < 0) xoffsets.pop_front();
             if (coords[0] + xoffsets.back() >= procs_per_dim[0]) xoffsets.pop_back();
 
             if (coords[1] + yoffsets.front() < 0) yoffsets.pop_front();
             if (coords[1] + yoffsets.back() >= procs_per_dim[1]) yoffsets.pop_back();
         }
-
         for (int xd : xoffsets) {
             for (int yd : yoffsets) {
                 if (!(xd == 0 && yd == 0)) {
                     int working[] = {coords[0] + xd, coords[1] + yd};
-                    //printf("%d: (%d, %d)\n", getRank(), working[0], working[1]);
+                    // printf("%d: (%d, %d)\n", getRank(), working[0], working[1]);
                     int n_rank;
                     MPI_Cart_rank(comm_, working, &n_rank);
                     MPI_Cart_coords(comm_, n_rank, num_dims_, working);
-                    //ngh_map.emplace(n_rank, CTNeighbor{n_rank, working[0], working[1], -1, nullptr,
-                    //{0, 0, 0, 0}});
-                    neighbors.push_back(CTNeighbor{n_rank, working[0], working[1], -1, nullptr,
-                        {0, 0, 0, 0}});
+                    if (n_rank != rank) {
+                        //ngh_map.emplace(n_rank, CTNeighbor{n_rank, working[0], working[1], -1, nullptr,
+                        //{0, 0, 0, 0}});
+                        neighbors.push_back(CTNeighbor{n_rank, working[0], working[1], -1, nullptr,
+                            {0, 0, 0, 0}});
+                    }
                 }
             }
         }
-
     } else if (num_dims_ == 3) {
         std::list<int> xoffsets{-1, 0, 1};
         std::list<int> yoffsets{-1, 0, 1};
         std::list<int> zoffsets{-1, 0, 1};
-        if (!periodic_) {
+        if (periodic_) {
+            // avoid making self a neighbor
+            if (procs_per_dim[0] == 1) {
+                xoffsets.pop_front();
+                xoffsets.pop_back();
+            }
+            if (procs_per_dim[1] == 1) {
+                yoffsets.pop_front();
+                yoffsets.pop_back();
+            }
+            if (procs_per_dim[2] == 1) {
+                zoffsets.pop_front();
+                zoffsets.pop_back();
+            }
+        } else {
             if (coords[0] + xoffsets.front() < 0) xoffsets.pop_front();
             if (coords[0] + xoffsets.back() >= procs_per_dim[0]) xoffsets.pop_back();
 

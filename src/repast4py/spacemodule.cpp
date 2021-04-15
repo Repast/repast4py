@@ -1481,6 +1481,16 @@ static PyObject* SharedCSpace_new(PyTypeObject* type, PyObject* args, PyObject* 
 
 static int SharedCSpace_init(R4Py_SharedCSpace* self, PyObject* args, PyObject* kwds) {
     // bounds=box, border=BorderType.Sticky, occupancy=OccupancyType.Multiple
+    // {
+    //      volatile int i = 0;
+    //      char hostname[256];
+    //      gethostname(hostname, sizeof(hostname));
+    //      printf("PID %d on %s ready for attach\n", getpid(), hostname);
+    //      fflush(stdout);
+    //      while (0 == i)
+    //          sleep(5);
+    // }
+
     static char* kwlist[] = {(char*)"name",(char*)"bounds", (char*)"borders",
         (char*)"occupancy", (char*)"buffersize", (char*)"comm", (char*)"tree_threshold", NULL};
 

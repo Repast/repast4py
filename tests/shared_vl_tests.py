@@ -97,7 +97,75 @@ class SharedValueLayerTests(unittest.TestCase):
         vl = SharedValueLayer(comm, bounds, BorderType.Periodic, 2, rank)
         self.assertEqual(exp[rank], vl.buffered_bounds, msg=f'r: {rank}')
 
-    def test_synch_1x2_periodic(self):
+    def test_synch_2x1_periodic(self):
+        torch.set_printoptions(linewidth=140)
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+            bounds = BoundingBox(
+                xmin=0, xextent=40, ymin=0, yextent=60, zmin=0, zextent=0)
+            vl = SharedValueLayer(comm, bounds, BorderType.Periodic, 2, rank)
+            self.assertEqual(2, vl.buffer_size)
+
+            grid = vl.grid[:]
+            self.assertEqual(grid.shape[0], vl.buffered_bounds.yextent)
+            self.assertEqual(grid.shape[1], vl.buffered_bounds.xextent)
+
+            # offsets for slice
+            lb = vl.local_bounds
+            y1 = lb.ymin + vl.impl.pt_translation[1]
+            y2 = lb.ymin + lb.yextent + vl.impl.pt_translation[1]
+            x1 = lb.xmin + vl.impl.pt_translation[0]
+            x2 = lb.xmin + lb.xextent + vl.impl.pt_translation[0]
+            grid = vl.grid[y1: y2, x1: x2]
+            # get local part of grid
+            self.assertFalse(torch.any(torch.ne(grid, rank)))
+
+            vl._synch_ghosts()
+
+            grid = vl.grid[y1: y2, x1: x2]
+            # if rank == 0:
+            #     print(vl.grid, flush=True)
+            # Test: values = rank within local bounds
+            self.assertFalse(torch.any(torch.ne(grid, rank)))
+
+            # TEST: buffer border areas == neighboring rank
+            exp = {
+                0: [(1, (0, 2), (0, 2)),
+                    (1, (22, 24), (0, 2)),
+                    (1, (0, 2), (2, 62)),
+                    (1, (0, 2), (62, 64)),
+                    (1, (22, 24), (2, 62)),
+                    (1, (22, 24), (62, 64)),
+                    # self buffered area
+                    (0, (2, 22), (0, 2)),
+                    (0, (2, 22), (62, 64))],
+
+                1: [(0, (0, 2), (0, 2)),
+                    (0, (22, 24), (0, 2)),
+                    (0, (0, 2), (2, 62)),
+                    (0, (0, 2), (62, 64)),
+                    (0, (22, 24), (2, 62)),
+                    (0, (22, 24), (62, 64)),
+                    (1, (2, 22), (0, 2)),
+                    (1, (2, 22), (62, 64))]
+
+            }
+
+            for exp_val, xs, ys in exp[rank]:
+                grid = vl.grid[ys[0]: ys[1], xs[0]: xs[1]]
+                self.assertFalse(torch.any(torch.ne(grid, exp_val)), msg=f'{rank}: {exp_val} {xs} {ys} {grid}')
+
+            # TEST: Update local area, synch, borders should have changed
+            vl.grid[y1: y2, x1: x2] = rank + 101.1
+            vl._synch_ghosts()
+
+            for exp_val, xs, ys in exp[rank]:
+                grid = vl.grid[ys[0]: ys[1], xs[0]: xs[1]]
+                self.assertFalse(torch.any(torch.ne(grid, exp_val + 101.1)), msg=f'{rank}: {exp_val} {xs} {ys} {grid}')
+
+    def test_synch_2x0_periodic(self):
         torch.set_printoptions(linewidth=140)
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
         comm = MPI.COMM_WORLD.Create_group(new_group)
@@ -582,7 +650,7 @@ class SharedValueLayerTests(unittest.TestCase):
             self.assertFalse(torch.any(torch.ne(grid, rank)))
 
             # TEST: buffer border areas == neighboring rank
-            # order: n,s,e,w,ne,se,sw,se
+            # order: n,s,e,w,ne,se,nw,sw
             slices = [((2, 12), (0, 2)),
                       ((2, 12), (62, 64)),
                       ((12, 14), (2, 62)),

@@ -878,8 +878,8 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             other = context.ghost_agent((2, 0, 1))
             g.add_edge(other, agents[0], rate=2)
             self.assertEqual(2, g.edge_count)
-            edges = [x for x in g.graph.in_edges(agents[0], data=True)]
-            self.assertEqual(edges[0], (other, agents[0], {'rate': 2}))
+            edges = [x for x in g.graph.edges(agents[0], data=True)]
+            self.assertEqual(edges[1], (agents[0], other, {'rate': 2}))
         elif rank == 1:
             g.add_edge(agents[0], agents[1], weight=3)
             self.assertEqual(1, g.edge_count)

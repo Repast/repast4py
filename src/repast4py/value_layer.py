@@ -1,3 +1,4 @@
+from numpy.testing._private.utils import clear_and_catch_warnings
 import torch
 import numpy as np
 
@@ -407,6 +408,15 @@ def _compute_meta_data_counts(meta_data, num_dims, offset, num_slices):
             np.prod(row[offset * 2: offset * 2 + num_dims]) +
             np.prod(row[offset * 3: offset * 3 + num_dims]),
             1, meta_data)
+    elif num_slices == 6:
+        return np.apply_along_axis(
+            lambda row: np.prod(row[:num_dims]) +
+            np.prod(row[offset: offset + num_dims]) +
+            np.prod(row[offset * 2: offset * 2 + num_dims]) +
+            np.prod(row[offset * 3: offset * 3 + num_dims]) +
+            np.prod(row[offset * 4: offset * 4 + num_dims]) +
+            np.prod(row[offset * 5: offset * 5 + num_dims]),
+            1, meta_data)
 
 
 class SharedValueLayer(ValueLayer):
@@ -416,6 +426,7 @@ class SharedValueLayer(ValueLayer):
         topo = CartesianTopology(comm, bounds, self.periodic)
         self.cart_comm = topo.comm
         self.rank = self.cart_comm.Get_rank()
+        self.procs_per_dim = topo.procs_per_dim
         self.coords = topo.coordinates
         self.buffer_size = buffer_size
         self.full_bounds = bounds
@@ -432,11 +443,22 @@ class SharedValueLayer(ValueLayer):
 
         nd = 1 if bounds.yextent == 0 else (3 if bounds.zextent > 0 else 2)
         mins = [bounds.xmin, bounds.ymin, bounds.zmin]
+        self.buffer_self = []
         if self.periodic:
             for i in range(0, nd):
                 if self.impl.pt_translation[i] == 0:
                     self.impl.pt_translation[i] = buffer_size - mins[i]
+
+            if len(self.procs_per_dim) == 1 and self.procs_per_dim[0] == 1:
+                self.buffer_self.append(self._buffer_self_X)
+
+            if len(self.procs_per_dim) == 2:
+                if self.procs_per_dim[0] == 1:
+                    self.buffer_self.append(self._buffer_self_X)
+                if self.procs_per_dim[1] == 1:
+                    self.buffer_self.append(self._buffer_self_Y)
         self._init_value(init_value, nd)
+        self._buffer_self()
 
         if comm.Get_size() > 1:
             self._init_sync_data(nd, topo, buffer_size)
@@ -459,13 +481,39 @@ class SharedValueLayer(ValueLayer):
                     z2 = lb.zmin + lb.zextent + self.impl.pt_translation[2]
                     self.grid[z1: z2, y1: y2, x1: x2] = init_value
 
-    def _wrap_slice_vals(self, start_val, end_val, extent):
-        if start_val < 0:
-            start_val += extent
-            end_val += extent
-        elif start_val >= extent:
-            start_val -= extent
-            end_val -= extent
+    def _buffer_self_X(self):
+        # left
+        left = self.grid[self.buffer_size: self.buffer_size + self.local_bounds.yextent, self.buffer_size: self.buffer_size * 2]
+        # set right buffer to left unbuffered
+        self.grid[self.buffer_size: self.buffer_size + self.local_bounds.yextent, -self.buffer_size:] = left
+        right = self.grid[self.buffer_size: self.buffer_size + self.local_bounds.yextent, -self.buffer_size * 2: -self.buffer_size]
+        # set left buffer to right unbuffered
+        self.grid[self.buffer_size: self.buffer_size + self.local_bounds.yextent, 0: self.buffer_size] = right
+
+    def _buffer_self_Y(self):
+        # unbuffered top area
+        top = self.grid[self.buffer_size: self.buffer_size * 2, self.buffer_size: self.buffer_size + self.local_bounds.xextent]
+        # set bottom buffer to top unbuffered
+        self.grid[-self.buffer_size:, self.buffer_size: self.buffer_size + self.local_bounds.xextent] = top
+        bottom = self.grid[-self.buffer_size * 2: -self.buffer_size, self.buffer_size: self.buffer_size + self.local_bounds.xextent]
+        self.grid[0: self.buffer_size, self.buffer_size: self.buffer_size + self.local_bounds.xextent] = bottom
+
+    def _buffer_self(self):
+        for func in self.buffer_self:
+            func()
+
+    def _wrap_slice_vals(self, start_val, end_val, full_extent, local_extent, procs_per_dim):
+        if procs_per_dim > 1:
+            if start_val < 0:
+                start_val += full_extent
+                end_val += full_extent
+            elif start_val >= full_extent:
+                start_val -= full_extent
+                end_val -= full_extent
+
+        elif start_val == local_extent and self.periodic:
+            start_val = start_val + self.buffer_size
+            end_val = end_val + self.buffer_size
 
         return (start_val, end_val)
 
@@ -605,7 +653,8 @@ class SharedValueLayer(ValueLayer):
                 row = data[1] + r_trans
                 # origin + extent
                 stop_row = row + (data[2] - data[1])
-                row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.xextent)
+                row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.xextent, self.local_bounds.xextent,
+                                                      self.procs_per_dim[0])
                 slice_data.append((ngh_rank, data[0], data[0], (slice(row, stop_row),)))
 
                 for i in range(1, num_sent_slices):
@@ -614,7 +663,8 @@ class SharedValueLayer(ValueLayer):
                         row = data[idx + 1] + r_trans
                         # origin + extent
                         stop_row = row + (data[idx + 2] - data[idx + 1])
-                        row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.xextent)
+                        row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.xextent, self.local_bounds.xextent,
+                                                              self.procs_per_dim[0])
                         slice_data.append((ngh_rank, data[idx], data[idx], (slice(row, stop_row),)))
                     else:
                         break
@@ -638,6 +688,8 @@ class SharedValueLayer(ValueLayer):
             shape = (bounds[3] - bounds[2], bounds[1] - bounds[0])
             stop_row = row + shape[0]
             stop_col = col + shape[1]
+            # if self.rank == 1:
+            #    print('Sending:', ngh_rank, np.prod(shape), shape, bounds, (slice(row, stop_row), slice(col, stop_col)), flush=True)
             ngh_buffers.append(
                 (ngh_rank, np.prod(shape), shape, bounds, (slice(row, stop_row), slice(col, stop_col))))
 
@@ -652,7 +704,10 @@ class SharedValueLayer(ValueLayer):
             if topo.procs_per_dim[0] == 2 and topo.procs_per_dim[1] == 2:
                 data_size = 24
             elif topo.procs_per_dim[0] == 2 or topo.procs_per_dim[1] == 2:
-                data_size = 12
+                if num_procs == 2:
+                    data_size = 36
+                else:
+                    data_size = 12
 
         # send buffer for meta data (bounds etc.)
         meta_data_send = np.zeros((num_procs, data_size), dtype=np.int32)
@@ -682,31 +737,42 @@ class SharedValueLayer(ValueLayer):
         recv_buf = np.empty(np.sum(recv_counts), dtype=buf_dtype)
         recv_buf_data = []
 
+        rts = [r_trans for _ in range(num_sent_slices)]
+        cts = [c_trans for _ in range(num_sent_slices)]
+        if topo.procs_per_dim[0] == 1:
+            cts = [0, 0, 0, 0, c_trans, c_trans]
+        elif topo.procs_per_dim[1] == 1:
+            rts = [0, r_trans, 0, r_trans, r_trans, r_trans]
+
         for ngh_rank, data in enumerate(self.ngh_meta_data_recv):
             # data: shape, pytorch_ordered bounds [ 2 30  0 30 80 82  0  0]
             slice_data = []
             if data[0] != 0:
-                row = data[2] + r_trans
-                col = data[4] + c_trans
+                row = data[2] + rts[0]
+                col = data[4] + cts[0]
                 # origin + extent
                 stop_row = row + (data[3] - data[2])
                 stop_col = col + (data[5] - data[4])
 
-                row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.yextent)
-                col, stop_col = self._wrap_slice_vals(col, stop_col, self.full_bounds.xextent)
+                row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.yextent, self.local_bounds.yextent,
+                                                      self.procs_per_dim[1])
+                col, stop_col = self._wrap_slice_vals(col, stop_col, self.full_bounds.xextent, self.local_bounds.xextent,
+                                                      self.procs_per_dim[0])
                 slice_data.append((ngh_rank, np.prod(data[:2]), data[:2], (slice(row, stop_row), slice(col, stop_col))))
 
                 for i in range(1, num_sent_slices):
                     idx = offset * i
                     if data[idx] != 0:
-                        row = data[idx + 2] + r_trans
-                        col = data[idx + 4] + c_trans
+                        row = data[idx + 2] + rts[i]
+                        col = data[idx + 4] + cts[i]
                         # origin + extent
                         stop_row = row + (data[idx + 3] - data[idx + 2])
                         stop_col = col + (data[idx + 5] - data[idx + 4])
 
-                        row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.yextent)
-                        col, stop_col = self._wrap_slice_vals(col, stop_col, self.full_bounds.xextent)
+                        row, stop_row = self._wrap_slice_vals(row, stop_row, self.full_bounds.yextent,
+                                                              self.local_bounds.yextent, self.procs_per_dim[1])
+                        col, stop_col = self._wrap_slice_vals(col, stop_col, self.full_bounds.xextent,
+                                                              self.local_bounds.xextent, self.procs_per_dim[0])
                         slice_data.append((ngh_rank, np.prod(data[idx: idx + 2]), data[idx: idx + 2],
                                           (slice(row, stop_row), slice(col, stop_col))))
                     else:
@@ -850,6 +916,7 @@ class SharedValueLayer(ValueLayer):
                 except Exception:
                     print(self.rank, ngh_rank, size, shape, tslice)
                     raise
+        self._buffer_self()
 
 
 class ReadWriteValueLayer:
