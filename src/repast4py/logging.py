@@ -11,6 +11,8 @@ except ImportError:
 
 from dataclasses import dataclass, fields
 
+from .util import find_free_filename
+
 
 class DataSource(Protocol):
 
@@ -247,7 +249,7 @@ class ReducingDataSet:
         self._rank = comm.Get_rank()
         self._buf = None
         self._buffer_size = buffer_size
-        self.fpath = fpath
+        self.fpath = find_free_filename(fpath)
 
         if self._rank == 0:
             parent = os.path.dirname(fpath)

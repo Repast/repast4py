@@ -3,6 +3,7 @@ from mpi4py import MPI
 import numpy as np
 
 from typing import List
+from pathlib import Path
 
 class Timer:
 
@@ -46,3 +47,28 @@ def is_empty(lst: List) -> bool:
         if len(nl) > 0:
             return False
     return True
+
+
+def find_free_filename(file_path: str) -> Path:
+    """Given a file path, check if that file exists,
+    and if so, repeatedly add a numeric infix to that
+    file path until, the file does not exist.
+
+    For example, if output/counts.csv, exists check
+    if counts_1.csv, counts_2.csv, and so exists until
+    finding one that doesn't exist.
+
+    Args:
+        file_path: the path to the file to check
+    Return:
+        the path to the unused file
+    """
+    op = Path(file_path)
+    p = Path(file_path)
+    suffix = p.suffix
+    infix = 1
+    while (p.exists()):
+        p = op.with_name(f'{op.stem}_{infix}{suffix}')
+        infix += 1
+
+    return p
