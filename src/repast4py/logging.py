@@ -191,7 +191,7 @@ class DCDataSource:
 
 def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str]=None) -> List[ReducingDataLogger]:
     """Creates ReducingDataLogger-s from a dataclasses.dataclass, optionally
-    constrainingthe loggers to log only from specified fields. By default the
+    constraining the loggers to log only from specified fields. By default the
     names argument is None and all the dataclass fields will be logged.
 
     Args:

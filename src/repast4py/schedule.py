@@ -2,6 +2,7 @@ import heapq
 import itertools
 from mpi4py import MPI
 
+
 class ScheduledEvent:
 
     def __init__(self, at, evt):
@@ -10,6 +11,7 @@ class ScheduledEvent:
 
     def __call__(self):
         self.evt()
+
 
 class RepeatingEvent(ScheduledEvent):
 
@@ -21,6 +23,7 @@ class RepeatingEvent(ScheduledEvent):
         self.at += self.interval
         heapq.heappush(queue, (self.at, sequence_count, self))
 
+
 class OneTimeEvent(ScheduledEvent):
 
     def __init__(self, at, evt):
@@ -28,7 +31,7 @@ class OneTimeEvent(ScheduledEvent):
 
     def reschedule(self, queue, sequence_count):
         pass
-    
+
 
 class Schedule:
 
@@ -40,7 +43,7 @@ class Schedule:
     def push_event(self, at, evt):
         count = next(self.counter)
         heapq.heappush(self.queue, (at, count, evt))
-    
+
     def schedule_event(self, at, evt):
         scheduled_evt = OneTimeEvent(at, evt)
         self.push_event(at, scheduled_evt)
@@ -48,13 +51,13 @@ class Schedule:
     def schedule_repeating_event(self, at, interval, evt):
         scheduled_evt = RepeatingEvent(at, interval, evt)
         self.push_event(at, scheduled_evt)
-    
+
     def next_tick(self):
         if len(self.queue) == 0:
             return -1
 
         return self.queue[0][0]
-        
+
     def execute(self):
         if len(self.queue) > 0:
             self.tick, sequence_count, evt = self.queue[0]
@@ -68,6 +71,7 @@ class Schedule:
                 else:
                     next_tick, sequence_count, evt = self.queue[0]
                     go = next_tick == self.tick
+
 
 class SharedScheduleRunner:
 
@@ -86,26 +90,24 @@ class SharedScheduleRunner:
         self.schedule.schedule_repeating_event(at, interval, evt)
         self.next_tick = self.schedule.next_tick()
 
-    def schedule_end_evt(self, evt):
+    def schedule_end_event(self, evt):
         self.end_evts.append(evt)
 
     def schedule_stop(self, at):
         self.schedule.schedule_event(at, self.stop)
-    
+
     def stop(self):
         self.go = False
 
     def tick(self):
         return self.schedule.tick
-    
+
     def execute(self):
         while self.go:
             global_next_tick = self.comm.allreduce(self.next_tick, op=MPI.MIN)
             if self.next_tick == global_next_tick:
                 self.schedule.execute()
             self.next_tick = self.schedule.next_tick()
-        
+
         for evt in self.end_evts:
             evt()
-
-    
