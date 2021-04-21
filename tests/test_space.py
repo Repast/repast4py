@@ -85,6 +85,7 @@ class PointTests(unittest.TestCase):
         self.assertEqual(43, pt.y)
         self.assertEqual(423, pt.z)
 
+
 class BorderTests(unittest.TestCase):
 
     def test_gsb_transform(self):
@@ -209,7 +210,6 @@ class GridTests(unittest.TestCase):
         self.assertEqual(10, pt.y)
         self.assertEqual(3, pt.z)
 
-    
     def test_periodic_move(self):
         a1 = core.Agent(1, 0)
 

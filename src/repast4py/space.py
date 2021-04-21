@@ -8,6 +8,8 @@ from ._space import SharedContinuousSpace as _SharedContinuousSpace
 from ._space import GridStickyBorders, GridPeriodicBorders
 from ._space import CartesianTopology, Grid, ContinuousSpace
 
+from .geometry import BoundingBox
+
 from .core import AgentManager, Agent
 
 from collections import namedtuple
@@ -21,13 +23,6 @@ class BorderType:
 
 class OccupancyType:
     Multiple = 0
-
-
-if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
-    BoundingBox = namedtuple('BoundingBox', ['xmin', 'xextent', 'ymin', 'yextent', 'zmin', 'zextent'],
-                             defaults=[0, 0])
-else:
-    BoundingBox = namedtuple('BoundingBox', ['xmin', 'xextent', 'ymin', 'yextent', 'zmin', 'zextent'])
 
 
 class SharedGrid(_SharedGrid):
