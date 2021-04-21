@@ -603,23 +603,20 @@ class SharedValueLayerTests(unittest.TestCase):
                 3: [2, 2, 1, 1, 0, 0, 0, 0]
             }
 
-            if rank == 0:
-                print(vl.grid[:], flush=True)
-
             if rank in exp:
                 for i, exp_val in enumerate(exp[rank]):
                     xs, ys = slices[i]
                     grid = vl.grid[ys[0]: ys[1], xs[0]: xs[1]]
                     self.assertFalse(torch.any(torch.ne(grid, exp_val)), msg=f'{rank}: {exp_val} {xs} {grid}')
 
-            # # update unbuffered section
-            # vl.grid[y1: y2, x1: x2] = rank + 101.1
-            # vl._synch_ghosts()
+            # update unbuffered section
+            vl.grid[y1: y2, x1: x2] = rank + 101.1
+            vl._synch_ghosts()
 
-            # for i, exp_val in enumerate(exp[rank]):
-            #     xs, ys = slices[i]
-            #     grid = vl.grid[ys[0]: ys[1], xs[0]: xs[1]]
-            #     self.assertFalse(torch.any(torch.ne(grid, exp_val + 101.1)), msg=f'{rank}: {exp_val} {xs} {grid}')
+            for i, exp_val in enumerate(exp[rank]):
+                xs, ys = slices[i]
+                grid = vl.grid[ys[0]: ys[1], xs[0]: xs[1]]
+                self.assertFalse(torch.any(torch.ne(grid, exp_val + 101.1)), msg=f'{rank}: {exp_val} {xs} {grid}')
 
     def test_synch_2x4_periodic(self):
         torch.set_printoptions(linewidth=140)
@@ -683,3 +680,86 @@ class SharedValueLayerTests(unittest.TestCase):
                 xs, ys = slices[i]
                 grid = vl.grid[ys[0]: ys[1], xs[0]: xs[1]]
                 self.assertFalse(torch.any(torch.ne(grid, exp_val + 101.1)), msg=f'{rank}: {exp_val} {xs} {grid}')
+
+    def test_accessors_2x1_periodic(self):
+        torch.set_printoptions(linewidth=140)
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+            bounds = BoundingBox(
+                xmin=0, xextent=40, ymin=0, yextent=60, zmin=0, zextent=0)
+            vl = SharedValueLayer(comm, bounds, BorderType.Periodic, 2, rank)
+            self.assertEqual(2, vl.buffer_size)
+
+            grid = vl.grid[:]
+            self.assertEqual(grid.shape[0], vl.buffered_bounds.yextent)
+            self.assertEqual(grid.shape[1], vl.buffered_bounds.xextent)
+
+            # offsets for slice
+            lb = vl.local_bounds
+            y1 = lb.ymin + vl.impl.pt_translation[1]
+            y2 = lb.ymin + lb.yextent + vl.impl.pt_translation[1]
+            x1 = lb.xmin + vl.impl.pt_translation[0]
+            x2 = lb.xmin + lb.xextent + vl.impl.pt_translation[0]
+            grid = vl.grid[y1: y2, x1: x2]
+            # get local part of grid
+            self.assertFalse(torch.any(torch.ne(grid, rank)))
+
+            vl._synch_ghosts()
+
+            if rank == 0:
+                self.assertEqual(0, vl.get(dpt(0, 0)))
+                self.assertEqual(0, vl.get(dpt(0, 59)))
+            elif rank == 1:
+                self.assertEqual(1, vl.get(dpt(20, 0)))
+                self.assertEqual(1, vl.get(dpt(20, 59)))
+
+    def test_accessors_2x2_periodic(self):
+        torch.set_printoptions(linewidth=140)
+        new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+            bounds = BoundingBox(xmin=0, xextent=40, ymin=0, yextent=120, zmin=0, zextent=0)
+            vl = SharedValueLayer(comm, bounds, BorderType.Periodic, 2, rank)
+            self.assertEqual(2, vl.buffer_size)
+            grid = vl.grid[:, :]
+            self.assertEqual(grid.shape[0], vl.buffered_bounds.yextent)
+            self.assertEqual(grid.shape[1], vl.buffered_bounds.xextent)
+
+            # offsets for slice
+            lb = vl.local_bounds
+            y1 = lb.ymin + vl.impl.pt_translation[1]
+            y2 = lb.ymin + lb.yextent + vl.impl.pt_translation[1]
+            x1 = lb.xmin + vl.impl.pt_translation[0]
+            x2 = lb.xmin + lb.xextent + vl.impl.pt_translation[0]
+            grid = vl.grid[y1: y2, x1: x2]
+
+            self.assertFalse(torch.any(torch.ne(grid, rank)))
+            vl._synch_ghosts()
+
+            if rank == 0:
+                self.assertEqual(0, vl.get(dpt(0, 0)))
+                self.assertEqual(0, vl.get(dpt(0, 59)))
+                self.assertEqual(0, vl.get(dpt(19, 0)))
+                self.assertEqual(0, vl.get(dpt(19, 59)))
+                self.assertEqual(3, vl.get(dpt(21, 61)))
+            elif rank == 1:
+                self.assertEqual(1, vl.get(dpt(0, 60)))
+                self.assertEqual(1, vl.get(dpt(0, 119)))
+                self.assertEqual(1, vl.get(dpt(19, 60)))
+                self.assertEqual(1, vl.get(dpt(19, 119)))
+            elif rank == 2:
+                self.assertEqual(2, vl.get(dpt(20, 0)))
+                self.assertEqual(2, vl.get(dpt(20, 59)))
+                self.assertEqual(2, vl.get(dpt(39, 0)))
+                self.assertEqual(2, vl.get(dpt(39, 59)))
+                self.assertEqual(0, vl.get(dpt(41, 59)))
+            elif rank == 3:
+                self.assertEqual(3, vl.get(dpt(20, 60)))
+                self.assertEqual(3, vl.get(dpt(20, 119)))
+                self.assertEqual(3, vl.get(dpt(39, 60)))
+                self.assertEqual(3, vl.get(dpt(39, 119)))
+                self.assertEqual(1, vl.get(dpt(41, 119)))

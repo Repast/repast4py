@@ -163,4 +163,3 @@ class LoggingTests(unittest.TestCase):
                     self.assertEqual(exp, row)
             self.assertEqual(11, row_count)
 
-    
