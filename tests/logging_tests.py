@@ -33,6 +33,9 @@ class LoggingTests(unittest.TestCase):
         rank = MPI.COMM_WORLD.Get_rank()
 
         fpath = './test_out/test_log.csv'
+        if rank == 0 and os.path.exists(fpath):
+            os.remove(fpath)
+
         loggers = logging.create_loggers(c, names={'a': 'A', 'b': 'BValue', 'c': None}, op=MPI.SUM, rank=rank)
         data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, fpath=fpath)
 
@@ -67,6 +70,8 @@ class LoggingTests(unittest.TestCase):
         rank = MPI.COMM_WORLD.Get_rank()
 
         fpath = './test_out/test_log.csv'
+        if rank == 0 and os.path.exists(fpath):
+            os.remove(fpath)
         # names is none so all field names, with ds name as field name
         loggers = logging.create_loggers(c, MPI.SUM, rank)
         data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, fpath=fpath)
@@ -102,6 +107,8 @@ class LoggingTests(unittest.TestCase):
         rank = MPI.COMM_WORLD.Get_rank()
 
         fpath = './test_out/test_log.csv'
+        if rank == 0 and os.path.exists(fpath):
+            os.remove(fpath)
         # only log a
         loggers = logging.create_loggers(c, MPI.SUM, rank, names={'a': 'A'})
         data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, fpath=fpath)
@@ -135,6 +142,8 @@ class LoggingTests(unittest.TestCase):
         rank = MPI.COMM_WORLD.Get_rank()
 
         fpath = './test_out/test_log.csv'
+        if rank == 0 and os.path.exists(fpath):
+            os.remove(fpath)
         loggers = logging.create_loggers(c, names={'a': 'A', 'b': 'BValue', 'c': None}, op=MPI.SUM, rank=rank)
         data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, fpath=fpath, buffer_size=1)
 
