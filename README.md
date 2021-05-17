@@ -1,5 +1,7 @@
 # repast4py
 
+[![codecov](https://codecov.io/gh/Repast/repast4py/branch/develop/graph/badge.svg?token=JCDU2LT8G2)](https://codecov.io/gh/Repast/repast4py/branch/develop)
+
 ## Build Status
 
 <table>
