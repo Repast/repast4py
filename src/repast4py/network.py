@@ -554,6 +554,7 @@ class UndirectedSharedNetwork(SharedNetwork):
         edge_key = (u_agent, v_agent)
         self.canonical_edge_keys[edge_key] = edge_key
         self.canonical_edge_keys[(v_agent, u_agent)] = edge_key
+        return edge_key
 
     def _remove_edge_key(self, u_agent: Agent, v_agent: Agent):
         """Removes the canonical edge key for the specified edge.
@@ -588,9 +589,7 @@ class UndirectedSharedNetwork(SharedNetwork):
             if not self.graph.has_node(v_agent):
                 self.ghosts_to_ref.append(v_agent)
             self.graph.add_edge(u_agent, v_agent, **kwattr)
-            edge_key = (u_agent, v_agent)
-            self.canonical_edge_keys[edge_key] = edge_key
-            self.canonical_edge_keys[(v_agent, u_agent)] = edge_key
+            edge_key = self._add_edge_key(u_agent, v_agent)
             ge = GhostedEdge(u_agent, v_agent, self.graph.edges[edge_key])
             self.new_edges[edge_key] = ge
             self.edges_to_remove.pop(edge_key, None)
@@ -599,13 +598,12 @@ class UndirectedSharedNetwork(SharedNetwork):
             if not self.graph.has_node(u_agent):
                 self.ghosts_to_ref.append(u_agent)
             self.graph.add_edge(u_agent, v_agent, **kwattr)
-            edge_key = (u_agent, v_agent)
-            self.canonical_edge_keys[edge_key] = edge_key
-            self.canonical_edge_keys[(v_agent, u_agent)] = edge_key
+            edge_key = self._add_edge_key(u_agent, v_agent)
             ge = GhostedEdge(v_agent, u_agent, self.graph.edges[edge_key])
             self.new_edges[edge_key] = ge
             self.edges_to_remove.pop(edge_key, None)
         else:
+            self._add_edge_key(u_agent, v_agent)
             self.graph.add_edge(u_agent, v_agent, **kwattr)
 
     def _edges(self, agent: Agent, data: bool=False):
