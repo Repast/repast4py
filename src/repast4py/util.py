@@ -42,7 +42,15 @@ class Timer:
                         sm, mn, mx, mean, std))
 
 
-def is_empty(lst: List) -> bool:
+def is_empty(lst: List[List]) -> bool:
+    """Returns whether or not the specified list of lists
+    is empty.
+
+    Args:
+        lst: the list of lists
+    Returns:
+        True if the list is empty or all of its nested lists are empty, otherwise False.
+    """
     for nl in lst:
         if len(nl) > 0:
             return False

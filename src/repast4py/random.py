@@ -2,6 +2,7 @@
 """
 
 import numpy as np
+import time
 import torch
 
 default_rng = None
@@ -22,3 +23,6 @@ def init(rng_seed: int=None):
     seed = rng_seed
     torch.manual_seed(rng_seed)
     default_rng = np.random.default_rng(rng_seed)
+
+
+init(int(time.time()))

@@ -4,7 +4,7 @@ import collections
 from repast4py.value_layer import SharedValueLayer
 from ._core import Agent
 from .random import default_rng as rng
-from typing import Callable, List, Dict, Set
+from typing import Callable, List
 
 from .core import AgentManager, SharedProjection, BoundedProjection
 from .util import is_empty
@@ -15,15 +15,15 @@ class SharedContext:
 
     A SharedContext may have one or more projections associated with it to
     impose a relational structure on the agents in the context. It also
-    provides functionality for synchroizes agents across processes, moving
+    provides functionality for synchronizing agents across processes, moving
     agents from one processe to another and managing any ghosting strategy.
     """
     def __init__(self, comm):
         """Initializes this SharedContext with the specified communicator.
 
         Args:
-            comm (mpi4py communicator): the communicator uses to communicate
-            among SharedContexts in the distributed model
+            comm (mpi4py communicator): the communicator used to communicate
+                among SharedContexts in the distributed model
         """
         self._agent_manager = AgentManager(comm.Get_rank(), comm.Get_size())
         self._agents_by_type = {}
@@ -54,7 +54,7 @@ class SharedContext:
         for proj in self.projections.values():
             proj.add(agent)
 
-    def add_value_alyer(self, value_layer: SharedValueLayer):
+    def add_value_layer(self, value_layer: SharedValueLayer):
         """Adds the specified value_layer to the this context.
 
         Args:
@@ -62,7 +62,7 @@ class SharedContext:
         """
         self.value_layers.append(value_layer)
 
-    def add_projection(self, projection):
+    def add_projection(self, projection: SharedProjection):
         """Adds the specified projection to this SharedContext.
 
         Any agents currently in this context will be added to the projection.
@@ -94,6 +94,9 @@ class SharedContext:
         This agent is also removed from any projections associated with this SharedContext.
         If the agent is shared as a ghost on any other ranks it will be removed from those
         ranks during the next synchronization.
+
+        Args:
+            agent: the agent to remove.
         """
         self._agent_manager.delete_local(agent.uid, self.removed_ghosteds)
         del self._agents_by_type[agent.uid[1]][agent.uid]
@@ -101,32 +104,15 @@ class SharedContext:
             proj.remove(agent)
 
     def _gather_oob_data(self, oob_agents: List):
-        """Gathers the agent data from any agents that have moved out-of-bounds
-        (oob).
-
-        In addition to gathering the agent data of the oob agents, if any of the
-        oob agents are ghosted from this rank, then the ghosted details for that agent
-        is added to ghosted_moved. The ghosted details are a tuple of:
-
-        1. the new rank of the agent
-        2. the agent id
-        3. a dictionary where the keys are the ranks the agents are ghosted to and
-           the values are the projection reference count on that rank.
-
-        In addition, for each non bounded projection, projection._agents_moved_rank is called,
-        passing the oob agents as arguments.
+        """Gets the agent data from any agents that have moved out-of-bounds
+        (oob), and adds to the specified list the agent data and the rank where the agent 
+        will move.
 
         Args:
-            ghosted_moved: a list that is filled with the ghosted data for any
-            oob agent this is ghosted from this rank. See pydoc above for the
-            details.
-            oob_agents: dictionary of agents that is filled by this methoed with
-            out of bounds agents. Key is agent id, value is tuple (agent, destination rank)
-            projs_to_notify: a set filled by this method with projection ids
-            that need to be notified that an agent has moved due to oob.
-
+            oob_agents: an empty list into which a tuple (agent_data, ngh_rank) for
+                each oob agent will be added.
         Return:
-            A list of lists where the position of the first list is the rank
+            A list of lists where the position in the first list is the rank
             to send the data in the second list to.
         """
         send_data = [[] for i in range(self.comm.size)]
@@ -201,11 +187,6 @@ class SharedContext:
         self.removed_ghosteds.clear()
 
     def _update_ghosts(self):
-        """
-        Args:
-            ghosted_moved: list of tuples describing agents that were ghosted from this rank
-            but have moved off of it. Format is (destination_rank, agent_id, [ghost ranks])
-        """
         self._update_removed_ghosts()
         # send agent state updates to ghosts
         send_data = [[] for _ in range(self.comm.size)]
@@ -219,10 +200,20 @@ class SharedContext:
                 ghost.agent.load(update[1])
 
     def _pre_synch_ghosts(self):
+        """Calls _pre_synch_ghosts on all "ghostable" projections
+        and value layers.
+        """
         for proj in self.projections.values():
             proj._pre_synch_ghosts(self._agent_manager)
 
     def _synch_ghosts(self, create_agent: Callable):
+        """Calls _synch_ghosts on all "ghostable" projections
+        and value layers.
+
+        Args:
+            create_agent: a Callable that when given serialized agent data
+            return an agent.
+        """
         self._update_ghosts()
         for proj in self.projections.values():
             proj._synch_ghosts(self._agent_manager, create_agent)
@@ -230,15 +221,15 @@ class SharedContext:
         for vl in self.value_layers:
             vl._synch_ghosts()
 
-    def synchronize(self, create_agent, sync_ghosts: bool=True):
+    def synchronize(self, create_agent: Callable, sync_ghosts: bool=True):
         """Synchronizes the model state across processes by moving agents, filling
-        projection buffers and so forth.
+        projection buffers with ghosts, and so forth.
 
         Args:
             create_agent: a callable that takes agent data and creates and returns an agent instance from
-            data. The data is a tuple consisting of the agent id tuple, and the serialized agent state
+                data. The data is a tuple consisting of the agent id tuple, and the serialized agent state
             sync_ghosts: if True, the ghosts in any SharedProjections and value layers associated
-            with this SharedContext are also synchronized. Defaults to True.
+                with this SharedContext are also synchronized. Defaults to True.
         """
 
         if sync_ghosts:
@@ -276,19 +267,22 @@ class SharedContext:
                         proj._synch_ghosts(self._agent_manager, create_agent)
 
     def agents(self, agent_type: int=None, shuffle: bool=False):
-        """Gets the agents in SharedContext, optionally of the specified type or shuffled.
+        """Gets the agents in this SharedContext, optionally of the specified type or shuffled.
 
         Args:
-            agent_type: the type id of the agent, defaults to None.
-            shuffle: whether or not the iteration order is shuffled. if true,
-            the order is shuffled. If false, the iteration order is the order of
-            insertion.
+            agent_type (int): the type id of the agent, defaults to None.
+            shuffle (bool): whether or not the iteration order is shuffled. If true,
+                the order is shuffled. If false, the iteration order is the order of
+                insertion.
 
         Returns:
-            iterable: An iterable over all the agents in the context.
+            iterable: An iterable over all the agents in the context. If the agent_type is not None then
+            an iterable over agents of that type will be returned.
 
-            If the agent_type is not None then an iterable over agents of that type will be
-            returned.
+        Examples:
+            >>> PERSON_AGENT_TYPE = 1
+            >>> for agent in ctx.agents(PERSON_AGENT_TYPE, shuffle=True)
+                   ...
         """
         if shuffle:
             if agent_type is None:
@@ -314,6 +308,11 @@ class SharedContext:
 
         Returns:
             The agent with the specified id or None if no such agent is found.
+
+        Examples:
+            >>> ctx = SharedContext(comm)
+            >>> # .. Agents Added
+            >>> agent1 = ctx.agent((1, 0, 1))
         """
         return self._agent_manager.get_local(agent_id)
 
@@ -325,7 +324,7 @@ class SharedContext:
             agent_id: the uid tuple of the agent to return
 
         Returns:
-            The agent with the specified id or None if no such agent is found.
+            The ghost agent with the specified id or None if no such agent is found.
         """
 
         return self._agent_manager.get_ghost(agent_id, incr=0)
@@ -335,7 +334,7 @@ class SharedContext:
 
         Args:
             agent_type_ids: a list of the agent type ids identifying the agent types to count.
-            If this is None then the total size is returned with an id of 0.
+                If this is None then the total size is returned with an id of -1.
 
         Returns:
             A dictionary containing the counts (the dict values) by type (the dict keys).
@@ -345,11 +344,17 @@ class SharedContext:
             for i in agent_type_ids:
                 counts[i] = len(self._agents_by_type[i])
         else:
-            counts[0] = len(self._agent_manager._local_agents)
+            counts[-1] = len(self._agent_manager._local_agents)
 
         return counts
 
     def _send_requests(self, requested_agents: List):
+        """Sends a request to specified ranks for specified agents.
+
+        Args:
+            requested_agents: a list of tuples where each tuple is
+                (id of requested agent, rank to request from)
+        """
         requests = [None for i in range(self.comm.size)]
         existing_ghosts = []
         for request in requested_agents:
@@ -376,14 +381,15 @@ class SharedContext:
         """Requests agents from other ranks to be copied to this rank as ghosts.
 
         This is a collective operation and all ranks must call it, regardless
-        of whether agents are being requested on that rank.
+        of whether agents are being requested by that rank. The requested agents
+        will be automatically added as ghosts to this rank.
 
         Args:
             requested_agents: A list of tuples specifying requested agents and the rank
-            to request from. Each tuple must contain the agents id tuple and the rank, for
-            example ((id, type, rank), requested_rank).
+                to request from. Each tuple must contain the agents id tuple and the rank, for
+                example ((id, type, rank), requested_rank).
             create_agent: a Callable that can take the result of an agent save() and
-            return an agent.
+                return an agent.
         Returns:
             The list of requested agents.
         """
@@ -423,7 +429,7 @@ class SharedContext:
         """Moves agents from this rank to another rank where it becomes a
         local agent.
 
-        This list of agents to move must be agent currently, local to
+        The list of agents to move must be agents currently local to
         this rank. This performs a synchronize after moving the agents
         in order synchronize the new location of the agents.
         This is a collective operation and all ranks must call it, regardless
@@ -431,12 +437,10 @@ class SharedContext:
 
         Args:
             agents_to_move: A list of tuples specifying agents to move and the rank
-            to request from. Each tuple must contain the agents id tuple and the rank, for
-            example ((id, type, rank), rank_to_move_to).
+                to request from. Each tuple must contain the agents id tuple and the rank, for
+                example ((id, type, rank), rank_to_move_to).
             create_agent: a Callable that can take the result of an agent save() and
-            return an agent.
-        Returns:
-            The list of requested agents.
+                return an agent.
         """
         sent_agents = [[] for i in range(self.comm.size)]
         moved_agents = []

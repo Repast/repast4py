@@ -1,3 +1,6 @@
+"""This module implements core functionality used by both contexts
+and projections.
+"""
 import collections
 import numpy as np
 from ._core import Agent

@@ -31,6 +31,14 @@ https://www.sphinx-doc.org/en/1.8/usage/extensions/example_google.html?highlight
 
 * Pep 484 type hints - when these are present then they do not need to be included in the doc string
 
+### Generating Docs ###
+
+If a new module is added then, from within the docs directory `sphinx-apidoc -e -o source ../src/repast4py` 
+to generate the rst for that module.
+
+And `make html` to create the html docs.
+
+`make clean` followed by `make html` will build from scratch.
 
 ## Multi Process Seg Fault Debugging
 

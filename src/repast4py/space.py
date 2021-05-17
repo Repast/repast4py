@@ -16,6 +16,7 @@ from collections import namedtuple
 import sys
 
 
+
 class BorderType:
     Sticky = 0
     Periodic = 1

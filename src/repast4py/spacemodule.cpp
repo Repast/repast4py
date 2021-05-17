@@ -149,12 +149,24 @@ static PyObject* DiscretePoint_get_z(R4Py_DiscretePoint* self, void* closure) {
     return PyLong_FromLong(((long*)PyArray_DATA(self->coords))[2]);
 }
 
+PyDoc_STRVAR(dp_x,
+    "int: Gets this DiscretePoint's x coordinate.");
+
+PyDoc_STRVAR(dp_y,
+    "int: Gets this DiscretePoint's y coordinate.");
+
+PyDoc_STRVAR(dp_z,
+    "int: Gets this DiscretePoint's z coordinate.");
+
+PyDoc_STRVAR(dp_c,
+    "numpy.array: Gets this DiscretePoint's coordinates as 3 element numpy array.");
+
 
 static PyGetSetDef DiscretePoint_get_setters[] = {
-    {(char*)"x", (getter)DiscretePoint_get_x, NULL, (char*)"discrete point x", NULL},
-    {(char*)"y", (getter)DiscretePoint_get_y, NULL, (char*)"discrete point y", NULL},
-    {(char*)"z", (getter)DiscretePoint_get_z, NULL, (char*)"discrete point z", NULL},
-    {(char*)"coordinates", (getter)DiscretePoint_get_coords, NULL, (char*)"discrete point coordinates", NULL},
+    {(char*)"x", (getter)DiscretePoint_get_x, NULL, dp_x, NULL},
+    {(char*)"y", (getter)DiscretePoint_get_y, NULL, dp_y, NULL},
+    {(char*)"z", (getter)DiscretePoint_get_z, NULL, dp_z, NULL},
+    {(char*)"coordinates", (getter)DiscretePoint_get_coords, NULL, dp_c, NULL},
     {NULL}
 };
 
@@ -187,6 +199,16 @@ static PyObject* DiscretePoint_richcmp(PyObject* self, PyObject* other, int op) 
     Py_RETURN_NOTIMPLEMENTED;
 }
 
+PyDoc_STRVAR(dp_dp,
+    "DiscretePoint(x, y, z=0)\n"
+    "--\n\n"
+    "A 3D point with discrete (int) coordinates.\n\n"
+    "Args:\n"
+    "   x (int): the x coordinate.\n"
+    "   y (int): the y coordinate.\n"
+    "   z (int, optional): the z coordinate. Defaults to 0");
+    
+
 
 static PyTypeObject DiscretePointType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
@@ -209,7 +231,7 @@ static PyTypeObject DiscretePointType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "DiscretePoint Object",                         /* tp_doc */
+    dp_dp,                         /* tp_doc */
     0,                                        /* tp_traverse */
     0,                                        /* tp_clear */
     DiscretePoint_richcmp,                    /* tp_richcompare */
