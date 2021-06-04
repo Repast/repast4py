@@ -1189,27 +1189,6 @@ static PyObject* SharedGrid_move(PyObject* self, PyObject* args) {
     }
 }
 
-static PyObject* SharedGrid_moveBufferAgent(PyObject* self, PyObject* args) {
-    PyObject* agent, *pt;
-    if (!PyArg_ParseTuple(args, "O!O!", &R4Py_AgentType, &agent, &DiscretePointType, &pt)) {
-        return NULL;
-    }
-
-    try {
-        R4Py_DiscretePoint* ret = ((R4Py_SharedGrid*)self)->grid->moveBufferAgent((R4Py_Agent*)agent, (R4Py_DiscretePoint*)pt);
-        if (ret) {
-            Py_INCREF(ret);
-            return (PyObject*)ret;
-        } else {
-            Py_INCREF(Py_None);
-            return Py_None;
-        }
-    } catch (std::invalid_argument& ex) {
-        PyErr_SetString(PyExc_RuntimeError, ex.what());
-        return NULL;
-    }
-}
-
 static PyObject* SharedGrid_synchMove(PyObject* self, PyObject* args) {
     PyArrayObject* obj;
     R4Py_Agent* agent;
@@ -1398,7 +1377,6 @@ static PyMethodDef SharedGrid_methods[] = {
     {"remove", SharedGrid_remove, METH_VARARGS, sgrd_rm},
     {"move", SharedGrid_move, METH_VARARGS, sgrd_move},
     {"contains", SharedGrid_contains, METH_VARARGS, sgrd_cnt},
-    {"_move_buffer_agent", SharedGrid_moveBufferAgent, METH_VARARGS, "Moves the specified agent to the specified buffer location in this shared grid projection"},
     {"get_location", SharedGrid_getLocation, METH_VARARGS, sgrd_location},
     {"get_agent", SharedGrid_getAgent, METH_VARARGS, sgrd_geta},
     {"get_agents", SharedGrid_getAgents, METH_VARARGS, sgrd_getas},
@@ -1888,27 +1866,6 @@ static PyObject* SharedCSpace_move(PyObject* self, PyObject* args) {
     }
 }
 
-static PyObject* SharedCSpace_moveBufferAgent(PyObject* self, PyObject* args) {
-    PyObject* agent, *pt;
-    if (!PyArg_ParseTuple(args, "O!O!", &R4Py_AgentType, &agent, &ContinuousPointType, &pt)) {
-        return NULL;
-    }
-
-    try {
-        R4Py_ContinuousPoint* ret = ((R4Py_SharedCSpace*)self)->space->moveBufferAgent((R4Py_Agent*)agent, (R4Py_ContinuousPoint*)pt);
-        if (ret) {
-            Py_INCREF(ret);
-            return (PyObject*)ret;
-        } else {
-            Py_INCREF(Py_None);
-            return Py_None;
-        }
-    } catch (std::invalid_argument& ex) {
-        PyErr_SetString(PyExc_RuntimeError, ex.what());
-        return NULL;
-    }
-}
-
 static PyObject* SharedCSpace_synchMove(PyObject* self, PyObject* args) {
     PyArrayObject* obj;
     R4Py_Agent* agent;
@@ -2045,7 +2002,6 @@ static PyMethodDef SharedCSpace_methods[] = {
     {"remove", SharedCSpace_remove, METH_VARARGS, "Removes the specified agent from this shared continuous space projection"},
     {"move", SharedCSpace_move, METH_VARARGS, "Moves the specified agent to the specified location in this shared continuous space projection"},
     {"contains", SharedCSpace_contains, METH_VARARGS, "Gets whether or not this grid projection contains the specified agent"},
-    {"_move_buffer_agent", SharedCSpace_moveBufferAgent, METH_VARARGS, "Moves the specified agent to the specified buffer location in this shared continuous space projection"},
     {"get_location", SharedCSpace_getLocation, METH_VARARGS, "Gets the location of the specified agent in this shared continuous space projection"},
     {"get_agent", SharedCSpace_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this shared continuous space projection"},
     {"get_agents", SharedCSpace_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this shared continuous space projection"},
