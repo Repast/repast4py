@@ -13,8 +13,6 @@ from .geometry import BoundingBox
 from .core import AgentManager, Agent
 
 from collections import namedtuple
-import sys
-
 
 
 class BorderType:

@@ -5,29 +5,6 @@ from numba import jit, int64
 # from numba.core.types import NamedTuple
 
 
-# class BoundingBox:
-
-#     def __init__(self, xmin, xextent, ymin=0, yextent=0, zmin=0, zextent=0):
-#         self.xmin = xmin
-#         self.xextent = xextent
-#         self.xmax = xmin + xextent
-#         self.ymin = ymin
-#         self.yextent = yextent
-#         self.ymax = ymin + yextent
-#         self.zmin = zmin
-#         self.zextent = zextent
-#         self.zmax = zmin + zextent
-
-#     def x_within(self, pt):
-#         return pt[0] >= self.xmin and pt[0] < self.xmax
-
-#     def y_within(self, pt):
-#         return pt[1] >= self.ymin and pt[1] < self.ymax
-
-#     def z_within(self, pt):
-#         return pt[2] >= self.zmin and pt[2] < self.zmax
-
-
 if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
     BoundingBox = namedtuple('BoundingBox', ['xmin', 'xextent', 'ymin', 'yextent', 'zmin', 'zextent'],
                              defaults=[0, 0])

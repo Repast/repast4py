@@ -382,12 +382,25 @@ static PyObject* ContinuousPoint_get_z(R4Py_ContinuousPoint* self, void* closure
     return PyFloat_FromDouble(((double*)PyArray_DATA(self->coords))[2]);
 }
 
+PyDoc_STRVAR(cp_x,
+    "float: Gets this ContinuousPoint's x coordinate.");
+
+PyDoc_STRVAR(cp_y,
+    "float: Gets this ContinuousPoint's y coordinate.");
+
+PyDoc_STRVAR(cp_z,
+    "float: Gets this ContinuousPoint's z coordinate.");
+
+PyDoc_STRVAR(cp_c,
+    "numpy.array: Gets this ContinuousPoint's coordinates as 3 element numpy array.");
+ 
+
 
 static PyGetSetDef ContinuousPoint_get_setters[] = {
-    {(char*)"x", (getter)ContinuousPoint_get_x, NULL, (char*)"continuous point x", NULL},
-    {(char*)"y", (getter)ContinuousPoint_get_y, NULL, (char*)"continuous point y", NULL},
-    {(char*)"z", (getter)ContinuousPoint_get_z, NULL, (char*)"continuous point z", NULL},
-    {(char*)"coordinates", (getter)ContinuousPoint_get_coords, NULL, (char*)"continuous point coordinates", NULL},
+    {(char*)"x", (getter)ContinuousPoint_get_x, NULL, cp_x, NULL},
+    {(char*)"y", (getter)ContinuousPoint_get_y, NULL, cp_y, NULL},
+    {(char*)"z", (getter)ContinuousPoint_get_z, NULL, cp_z, NULL},
+    {(char*)"coordinates", (getter)ContinuousPoint_get_coords, NULL, cp_c, NULL},
     {NULL}
 };
 
@@ -422,6 +435,15 @@ static PyObject* ContinuousPoint_richcmp(PyObject* self, PyObject* other, int op
     Py_RETURN_NOTIMPLEMENTED;
 }
 
+PyDoc_STRVAR(cp_cp,
+    "ContinuousPoint(x, y, z=0)\n"
+    "--\n\n"
+    "A 3D point with continous (float) coordinates.\n\n"
+    "Args:\n"
+    "   x (float): the x coordinate.\n"
+    "   y (float): the y coordinate.\n"
+    "   z (float, optional): the z coordinate. Defaults to 0.0");
+
 
 static PyTypeObject ContinuousPointType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
@@ -444,7 +466,7 @@ static PyTypeObject ContinuousPointType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "ContinuousPoint Object",                         /* tp_doc */
+    cp_cp,                         /* tp_doc */
     0,                                        /* tp_traverse */
     0,                                        /* tp_clear */
     ContinuousPoint_richcmp,                    /* tp_richcompare */
@@ -509,6 +531,15 @@ static int GridStickyBorders_init(R4Py_GridStickyBorders* self, PyObject* args, 
     return 0;
 }
 
+PyDoc_STRVAR(gsb_trans,
+    "_transform(pt1, pt2)\n"
+    "--\n\n"
+    "Transforms pt1 according to sticky semantics, assigning the result to pt2\n\n"
+    "Args:\n"
+    "   pt1 (repast4py.space.DiscretePoint): the point to transform.\n"
+    "   pt2 (repast4py.space.DiscretePoint): the result of the transform."
+);
+
 static PyObject* GridStickyBorders_transform(PyObject* self, PyObject* args) {
     PyObject* pt, *ret_pt;
     if (!PyArg_ParseTuple(args, "O!O!", &DiscretePointType, &pt, &DiscretePointType, &ret_pt)) {
@@ -519,9 +550,19 @@ static PyObject* GridStickyBorders_transform(PyObject* self, PyObject* args) {
 }
 
 static PyMethodDef GridStickyBorders_methods[] = {
-    {"_transform", GridStickyBorders_transform, METH_VARARGS, ""},
+    {"_transform", GridStickyBorders_transform, METH_VARARGS, gsb_trans},
      {NULL, NULL, 0, NULL}
 };
+
+PyDoc_STRVAR(gsb_gsb,
+    "GridStickyBorders(bounding_box)\n"
+    "--\n\n"
+    "Grid Borders with \"sticky\" semantics.\n\n"
+    "Borders objects can transform a coordinate depending on the border semantics. Sticky "
+    "borders will clip the coordinates to the current bounds if the coordinates are outside "
+    " the current bounds.\n\n"
+    "Args:\n"
+    "   bounding_box (repast4py.space.BoundingBox): the dimensions of the grid.");
 
 static PyTypeObject R4Py_GridStickyBordersType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
@@ -544,7 +585,7 @@ static PyTypeObject R4Py_GridStickyBordersType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "GridStickyBorders Object",                         /* tp_doc */
+    gsb_gsb,                         /* tp_doc */
     0,                                        /* tp_traverse */
     0,                                        /* tp_clear */
     0,                 /* tp_richcompare */
@@ -619,10 +660,29 @@ static PyObject* GridPeriodicBorders_transform(PyObject* self, PyObject* args) {
     Py_RETURN_NONE;
 }
 
+PyDoc_STRVAR(gpb_trans,
+    "_transform(pt1, pt2)\n"
+    "--\n\n"
+    "Transforms pt1 according to periodic (wrapping) semantics, assigning the result to pt2\n\n"
+    "Args:\n"
+    "   pt1 (repast4py.space.DiscretePoint): the point to transform.\n"
+    "   pt2 (repast4py.space.DiscretePoint): the result of the transform."
+);
+
 static PyMethodDef GridPeriodicBorders_methods[] = {
-    {"_transform", GridPeriodicBorders_transform, METH_VARARGS, ""},
+    {"_transform", GridPeriodicBorders_transform, METH_VARARGS, gpb_trans},
      {NULL, NULL, 0, NULL}
 };
+
+PyDoc_STRVAR(gpb_gpb,
+    "GridPeriodicBorders(bounding_box)\n"
+    "--\n\n"
+    "Grid Borders with periodic semantics.\n\n"
+    "Borders objects can transform a coordinate depending on the border semantics. Periodic "
+    "borders will wrap a coordinate along the appropriate dimension if a coordinate is outside "
+    " the current bounds.\n\n"
+    "Args:\n"
+    "   bounding_box (repast4py.space.BoundingBox): the dimensions of the grid.");
 
 static PyTypeObject R4Py_GridPeriodicBordersType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
@@ -645,7 +705,7 @@ static PyTypeObject R4Py_GridPeriodicBordersType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "GridPeriodicBorders Object",                         /* tp_doc */
+    gpb_gpb,                         /* tp_doc */
     0,                                        /* tp_traverse */
     0,                                        /* tp_clear */
     0,                 /* tp_richcompare */
@@ -834,21 +894,107 @@ static PyObject* Grid_getName(PyObject* self, PyObject* args) {
     return PyUnicode_FromString(((R4Py_Grid*)self)->grid->name().c_str());
 }
 
+PyDoc_STRVAR(grd_name,
+    "str: Gets the name of this grid.");
+
 static PyGetSetDef Grid_get_setters[] = {
-    {(char*)"name", (getter)Grid_getName, NULL, (char*)"grid name", NULL},
+    {(char*)"name", (getter)Grid_getName, NULL, grd_name, NULL},
     {NULL}
 };
 
+PyDoc_STRVAR(grd_add,
+    "add(agent)\n"
+    "--\n\n"
+    "Adds the specified agent to this grid projection.\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent to add."
+);
+
+PyDoc_STRVAR(grd_rm,
+    "remove(agent)\n"
+    "--\n\n"
+    "Removes the specified agent from this grid projection.\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent to remove."
+);
+
+PyDoc_STRVAR(grd_cnt,
+    "contains(agent)\n"
+    "--\n\n"
+    "Gets whether or not this grid projection contains the specified agent.\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent to check.\n\n"
+    "Returns:\n"
+    "    bool: true if this grid contains the specified agent, otherwise false"
+);
+
+PyDoc_STRVAR(grd_move,
+    "move(agent, pt)\n"
+    "--\n\n"
+    "Moves the specified agent to the specified location, returning the moved to location.\n\n"
+    "If the agent does not move beyond the grid's bounds, then the returned location will be "
+    "be the same as the argument location. If the agent does move out of bounds, then the location "
+    "is determined by the grid border's semantics (e.g., a location on the border if using \"sticky\" borders.\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent to move.\n"
+    "    pt(repast4py.space.DiscretePoint): the location to move to.\n\n"
+    "Returns:\n"
+    "    repast4py.space.DiscretePoint: the location the agent has moved to"
+);
+
+PyDoc_STRVAR(grd_location,
+    "get_location(agent)\n"
+    "--\n\n"
+    "Gets the location of the specified agent\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent whose location we want to get.\n\n"
+    "Returns:\n"
+    "    repast4py.space.DiscretePoint: the location of the specified agent."
+);
+
+PyDoc_STRVAR(grd_geta,
+    "get_agent(pt)\n"
+    "--\n\n"
+    "Gets the agent at the specified location. If more than one agent exists at "
+    "the specified location, the first agent to move to that location from among those currently at that location "
+    "will be returned.\n\n"
+    "Args:\n"
+    "    pt(repast4py.space.DiscretePoint): the location to get the agent at.\n\n"
+    "Returns:\n"
+    "    repast4py.core.Agent: the agent at that location, or None if the location is empty"
+);
+
+PyDoc_STRVAR(grd_getas,
+    "get_agents(pt)\n"
+    "--\n\n"
+    "Gets an iterator over all agents at the specified location.\n\n"
+    "Args:\n"
+    "    pt(repast4py.space.DiscretePoint): the location to get the agents at.\n\n"
+    "Returns:\n"
+    "    iterator: an iterator over all the agents at the specified location."
+);
+
 static PyMethodDef Grid_methods[] = {
-    {"add", Grid_add, METH_VARARGS, "Adds the specified agent to this grid projection"},
-    {"remove", Grid_remove, METH_VARARGS, "Removes the specified agent from this grid projection"},
-    {"contains", Grid_contains, METH_VARARGS, "Gets whether or not this grid projection contains the specified agent"},
-    {"move", Grid_move, METH_VARARGS, "Moves the specified agent to the specified location in this grid projection"},
-    {"get_location", Grid_getLocation, METH_VARARGS, "Gets the location of the specified agent in this grid projection"},
-    {"get_agent", Grid_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this grid projection"},
-    {"get_agents", Grid_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this grid projection"},
+    {"add", Grid_add, METH_VARARGS, grd_add},
+    {"remove", Grid_remove, METH_VARARGS, grd_rm},
+    {"contains", Grid_contains, METH_VARARGS, grd_cnt},
+    {"move", Grid_move, METH_VARARGS, grd_move},
+    {"get_location", Grid_getLocation, METH_VARARGS, grd_location},
+    {"get_agent", Grid_getAgent, METH_VARARGS, grd_geta},
+    {"get_agents", Grid_getAgents, METH_VARARGS, grd_getas},
     {NULL, NULL, 0, NULL}
 };
+
+PyDoc_STRVAR(grd_grd,
+    "Grid(name, bounds, borders, occupancy)\n"
+    "--\n\n"
+    "An N-dimensional discrete grid through which agents can move.\n\n"
+    "Args:\n"
+    "   name (str): the name of the grid.\n"
+    "   bounds (repast4py.geometry.BoundingBox): the dimensions of the grid.\n"
+    "   borders (repast4py.space.BorderType): the border semantics: BorderType.Sticky or BorderType.Periodic\n"
+    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple."
+);
 
 static PyTypeObject R4Py_GridType = {
     PyVarObject_HEAD_INIT(NULL, 0) 
@@ -871,7 +1017,7 @@ static PyTypeObject R4Py_GridType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "Grid Object",                         /* tp_doc */
+    grd_grd,                         /* tp_doc */
     0,                                        /* tp_traverse */
     0,                                        /* tp_clear */
     0,                                        /* tp_richcompare */
@@ -1161,18 +1307,104 @@ static PyMemberDef SharedGrid_members[] = {
     {NULL}
 };
 
+PyDoc_STRVAR(sgrd_add,
+    "add(agent)\n"
+    "--\n\n"
+    "Adds the specified agent to this shared grid projection.\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent to add."
+);
+
+PyDoc_STRVAR(sgrd_rm,
+    "remove(agent)\n"
+    "--\n\n"
+    "Removes the specified agent from this shared grid projection.\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent to remove."
+);
+
+PyDoc_STRVAR(sgrd_cnt,
+    "contains(agent)\n"
+    "--\n\n"
+    "Gets whether or not this shared grid projection contains the specified agent.\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent to check.\n\n"
+    "Returns:\n"
+    "    bool: true if this shared grid contains the specified agent, otherwise false"
+);
+
+PyDoc_STRVAR(sgrd_move,
+    "move(agent, pt)\n"
+    "--\n\n"
+    "Moves the specified agent to the specified location, returning the moved to location.\n\n"
+    "If the agent does not move beyond the shared grid's bounds, then the returned location will be "
+    "be the same as the argument location. If the agent does move out of bounds, then the location "
+    "is determined by the shared grid border's semantics (e.g., a location on the border if using "
+    "\"sticky\" borders.\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent to move.\n"
+    "    pt(repast4py.space.DiscretePoint): the location to move to.\n\n"
+    "Returns:\n"
+    "    repast4py.space.DiscretePoint: the location the agent has moved to"
+);
+
+PyDoc_STRVAR(sgrd_location,
+    "get_location(agent)\n"
+    "--\n\n"
+    "Gets the location of the specified agent\n\n"
+    "Args:\n"
+    "    agent(repast4py.core.Agent): the agent whose location we want to get.\n\n"
+    "Returns:\n"
+    "    repast4py.space.DiscretePoint: the location of the specified agent."
+);
+
+PyDoc_STRVAR(sgrd_geta,
+    "get_agent(pt)\n"
+    "--\n\n"
+    "Gets the agent at the specified location. If more than one agent exists at "
+    "the specified location, the first agent to move to that location from among those currently at that location "
+    "will be returned.\n\n"
+    "Args:\n"
+    "    pt(repast4py.space.DiscretePoint): the location to get the agent at.\n\n"
+    "Returns:\n"
+    "    repast4py.core.Agent: the agent at that location, or None if the location is empty"
+);
+
+PyDoc_STRVAR(sgrd_getas,
+    "get_agents(pt)\n"
+    "--\n\n"
+    "Gets an iterator over all agents at the specified location.\n\n"
+    "Args:\n"
+    "    pt(repast4py.space.DiscretePoint): the location to get the agents at.\n\n"
+    "Returns:\n"
+    "    iterator: an iterator over all the agents at the specified location."
+);
+
+PyDoc_STRVAR(sgrd_lb,
+    "get_local_bounds()\n"
+    "--\n\n"
+    "Gets the local bounds of this shared grid.\n\n"
+    "The local bounds are the bounds of this shared grid on the current rank. For example, if "
+    "the global bounds are 100 in the x dimension and 100 in the y dimension, and there are 4 ranks, "
+    "then the local bounds will be some quadrant of those global bounds (0 - 50) x (0 - 50) for example.\n\n"
+    "Returns:\n"
+    "    repast4py.geometry.BoundingBox: the local bounds as a BoundingBox."
+);
+
+
+
 static PyMethodDef SharedGrid_methods[] = {
-    {"add", SharedGrid_add, METH_VARARGS, "Adds the specified agent to this shared grid projection"},
-    {"remove", SharedGrid_remove, METH_VARARGS, "Removes the specified agent from this shared grid projection"},
-    {"move", SharedGrid_move, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection"},
-    {"contains", SharedGrid_contains, METH_VARARGS, "Gets whether or not this grid projection contains the specified agent"},
+    {"add", SharedGrid_add, METH_VARARGS, sgrd_add},
+    {"remove", SharedGrid_remove, METH_VARARGS, sgrd_rm},
+    {"move", SharedGrid_move, METH_VARARGS, sgrd_move},
+    {"contains", SharedGrid_contains, METH_VARARGS, sgrd_cnt},
     {"_move_buffer_agent", SharedGrid_moveBufferAgent, METH_VARARGS, "Moves the specified agent to the specified buffer location in this shared grid projection"},
-    {"get_location", SharedGrid_getLocation, METH_VARARGS, "Gets the location of the specified agent in this shared grid projection"},
-    {"get_agent", SharedGrid_getAgent, METH_VARARGS, "Gets the first agent at the specified location in this shared grid projection"},
-    {"get_agents", SharedGrid_getAgents, METH_VARARGS, "Gets all the agents at the specified location in this shared grid projection"},
+    {"get_location", SharedGrid_getLocation, METH_VARARGS, sgrd_location},
+    {"get_agent", SharedGrid_getAgent, METH_VARARGS, sgrd_geta},
+    {"get_agents", SharedGrid_getAgents, METH_VARARGS, sgrd_getas},
     {"_get_oob", SharedGrid_getOOBData, METH_VARARGS, "Gets the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
     {"_clear_oob", SharedGrid_clearOOBData, METH_VARARGS, "Clears the out of bounds data for any agents that are out of the local bounds in this shared grid projection"},
-    {"get_local_bounds", SharedGrid_getLocalBounds, METH_VARARGS, "Gets the local bounds for this shared grid projection"},
+    {"get_local_bounds", SharedGrid_getLocalBounds, METH_VARARGS, sgrd_lb},
     {"_move_oob_agent", SharedGrid_synchMove, METH_VARARGS, "Moves the specified agent to the specified location in this shared grid projection as part of a movement synchronization"},
     {"_get_buffer_data", SharedGrid_getBufferData, METH_VARARGS, "Gets the buffer data for synchronizing neighboring buffers of this shared grid projetion - a list of tuples of the form info for where and what range, tuple: (rank, (xmin, xmax, ymin, ymax, zmin, zmax))"},
     {NULL, NULL, 0, NULL}

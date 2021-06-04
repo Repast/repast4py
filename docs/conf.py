@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.abspath('../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'repast4py'
-copyright = '2021, Nick Collier, Jonathan Ozik, Eric Tatara'
-author = 'Nick Collier, Jonathan Ozik, Eric Tatara'
+copyright = '2021, Nick Collier, Jonathan Ozik, Eric Tatara, Sara Rimer'
+author = 'Nick Collier, Jonathan Ozik, Eric Tatara, Sara Rimer'
 
 
 # -- General configuration ---------------------------------------------------
@@ -74,4 +74,5 @@ def setup(app):
     import repast4py.space
     repast4py.space.__all__ = ['DiscretePoint', 'ContinuousPoint', 'GridStickyBorders',
                                'GridPeriodicBorders', 'CartesianTopology', 'BoundingBox',
-                               'BorderType', 'OccupancyType', 'SharedGrid', 'SharedCSpace']
+                               'BorderType', 'OccupancyType', 'SharedGrid', 'SharedCSpace',
+                               'Grid', 'ContinuousSpace']
