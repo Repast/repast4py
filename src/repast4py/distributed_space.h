@@ -99,7 +99,6 @@ public:
     AgentList getAgentsAt(PointType* pt);
     PointType* getLocation(R4Py_Agent* agent);
     PointType* move(R4Py_Agent* agent, PointType* to);
-    PointType* moveBufferAgent(R4Py_Agent* agent, PointType* to);
     std::shared_ptr<AIDPyObjMapT> getOOBData();
     std::shared_ptr<std::vector<CTNeighbor>> getNeighborData();
     void clearOOBData();
@@ -195,12 +194,6 @@ void DistributedCartesianSpace<BaseSpaceType, PointType>::getAgentsWithin(const 
 }
 
 template<typename BaseSpaceType, typename PointType>
-PointType* DistributedCartesianSpace<BaseSpaceType, PointType>::moveBufferAgent(R4Py_Agent* agent, PointType* to) {
-    PointType* pt = base_space->move(agent, to);
-    return pt;
-}
-
-template<typename BaseSpaceType, typename PointType>
 PointType* DistributedCartesianSpace<BaseSpaceType, PointType>::move(R4Py_Agent* agent, PointType* to) {
    
     PointType* pt = base_space->move(agent, to);
@@ -269,7 +262,6 @@ public:
     virtual AgentList getAgentsAt(R4Py_DiscretePoint* pt) = 0;
     virtual R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
-    virtual R4Py_DiscretePoint* moveBufferAgent(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
     virtual std::shared_ptr<AIDPyObjMapT> getOOBData() = 0;
     virtual std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() = 0;
     virtual void clearOOBData() = 0;
@@ -299,7 +291,6 @@ public:
     AgentList getAgentsAt(R4Py_DiscretePoint* pt) override;
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) override;
     R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
-    R4Py_DiscretePoint* moveBufferAgent(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
     std::shared_ptr<AIDPyObjMapT> getOOBData() override;
     std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() override;
     void clearOOBData() override;
@@ -354,11 +345,6 @@ R4Py_DiscretePoint* SharedGrid<DelegateType>::move(R4Py_Agent* agent, R4Py_Discr
 }
 
 template<typename DelegateType>
-R4Py_DiscretePoint* SharedGrid<DelegateType>::moveBufferAgent(R4Py_Agent* agent, R4Py_DiscretePoint* to) {
-    return delegate->moveBufferAgent(agent, to);
-}
-
-template<typename DelegateType>
 std::shared_ptr<AIDPyObjMapT> SharedGrid<DelegateType>::getOOBData() {
     return delegate->getOOBData();
 }
@@ -408,7 +394,6 @@ public:
     virtual AgentList getAgentsAt(R4Py_ContinuousPoint* pt) = 0;
     virtual R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
-    virtual R4Py_ContinuousPoint* moveBufferAgent(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
     virtual std::shared_ptr<AIDPyObjMapT> getOOBData() = 0;
     virtual std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() = 0;
     virtual void clearOOBData() = 0;
@@ -438,7 +423,6 @@ public:
     AgentList getAgentsAt(R4Py_ContinuousPoint* pt) override;
     R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) override;
     R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
-    R4Py_ContinuousPoint* moveBufferAgent(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
     std::shared_ptr<AIDPyObjMapT> getOOBData() override;
     std::shared_ptr<std::vector<CTNeighbor>> getNeighborData() override;
     void clearOOBData() override;
@@ -494,11 +478,6 @@ R4Py_ContinuousPoint* SharedContinuousSpace<DelegateType>::getLocation(R4Py_Agen
 template<typename DelegateType>
 R4Py_ContinuousPoint* SharedContinuousSpace<DelegateType>::move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) {
     return delegate->move(agent, to);
-}
-
-template<typename DelegateType>
-R4Py_ContinuousPoint* SharedContinuousSpace<DelegateType>::moveBufferAgent(R4Py_Agent* agent, R4Py_ContinuousPoint* to) {
-    return delegate->moveBufferAgent(agent, to);
 }
 
 template<typename DelegateType>
