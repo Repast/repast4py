@@ -1,4 +1,5 @@
 from typing import Callable, List
+import mpi4py
 
 from ._space import DiscretePoint, ContinuousPoint
 from ._space import SharedGrid as _SharedGrid
@@ -16,17 +17,59 @@ from collections import namedtuple
 
 
 class BorderType:
+    """An enum defining the border types that can be used with a space or grid.
+
+    The border type determines an agents location when the location is beyond the grid's or space's
+    bounds. For example, during agent movement, and that movement carries the agent beyond the
+    borders of a grid or space. Valid values are "Sticky" and "Periodic":
+    * Sticky: clips any point coordinates to the maximum or minimum value when the coordinates are less than or
+      greater than the grid or spaces maximum or minimum value. For example, if the minimum grid x location is 0, and
+      an agent moves to an x of -1, then movment in the x dimension is stopped at 0.
+    * Periodic: wraps any point coordinates when they coordinates coordinates are less than or
+      greater than the grid or spaces maximum or minimum value. For example, if the minimum grid x location is 0,
+      the maximum is 20, and an agent moves to an x of -2, then the new x coordinate is 19.
+
+    """
     Sticky = 0
     Periodic = 1
 
 
 class OccupancyType:
+    """An enum defining the occupancy types of a location in a space or grid.
+
+    Currently only "Multiple" is supported.
+    * Multiple: allows any number of agents to exist in the same location. 
+    """
     Multiple = 0
 
 
 class SharedGrid(_SharedGrid):
+    """An N-dimensional cartesian discrete space shared across ranks, where agents can occupy locations defined by
+    a discretete integer coordinate.
 
-    def __init__(self, name, bounds, borders, occupancy, buffersize, comm):
+    The grid is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
+    some number of smaller grids, one for each rank. For example, given a global grid size of (100 x 25) and
+    2 ranks, the global grid will be split along the x dimension such that the SharedGrid in the first MPI rank
+    covers (0-50 x 0-25) and the second rank (50-100 x 0-25). Each rank's SharedGrid contains buffers of a specified
+    size that duplicate or "ghosts" an adjacent
+    area of the neighboring rank's SharedGrid. In the above example, the rank 1 grid buffers the area from
+    (50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate
+    to any agent behavior. For example, if an agent can "see" 3 units away and take some action based on what it
+    perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of
+    its own local SharedGrid. When an agent moves beyond the borders of its current SharedGrid, it will be transferred
+    from its current rank, and into that containing the section of the global grid that it has moved into.
+
+    Args:
+        name: the name of the grid.
+        bounds: the global dimensions of the grid.
+        borders: the border semantics: BorderType.Sticky or BorderType.Periodic
+        occupancy: the type of occupancy in each cell: OccupancyType.Multiple.
+        buffersize: the size of this SharedGrid buffered area. This single value is used for all dimensions.
+        comm: the communicator containing all the ranks over which this SharedGrid is shared.
+    """
+
+    def __init__(self, name: str, bounds: BoundingBox, borders: BorderType, occupancy: OccupancyType, buffersize: int,
+                 comm: mpi4py.MPI.Intracomm):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm)
         self.buffered_agents = []
         self.rank = comm.Get_rank()
@@ -132,8 +175,36 @@ class SharedGrid(_SharedGrid):
 
 
 class SharedCSpace(_SharedContinuousSpace):
+    """An N-dimensional cartesian discrete space where agents can occupy locations defined by
+    a continuous floating point coordinate.
+    The space is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
+    some number of smaller spaces, one for each rank. For example, given a global spaces size of (100 x 25) and
+    2 ranks, the global space will be split along the x dimension such that the SharedContinuousSpace in the first
+    MPI rank covers (0-50 x 0-25) and the second rank (50-100 x 0-25). 
+    Each rank's SharedContinuousSpace contains a buffer of the specified size that duplicates or "ghosts" an adjacent
+    area of the neighboring rank's SharedContinuousSpace. In the above example, the rank 1 space buffers the area from
+    (50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate
+    to any agent behavior. For example, if an agent can "see" 3 units away and take some action based on what it
+    perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of
+    its own local SharedContinuousSpace. When an agent moves beyond the borders of its current SharedContinuousSpace,
+    it will be transferred
+    from its current rank, and into that containing the section of the global grid that it has moved into.
+    The SharedContinuousSpace uses a `tree <https://en.wikipedia.org/wiki/Quadtree>`_ (quad or oct depending on the number of 
+    dimensions) to speed up spatial queries. The tree can be tuned using the tree threshold parameter.
 
-    def __init__(self, name, bounds, borders, occupancy, buffersize, comm, tree_threshold):
+    Args:
+       name: the name of the grid.
+       bounds: the global dimensions of the grid.
+       borders: the border semantics: BorderType.Sticky or BorderType.Periodic
+       occupancy: the type of occupancy in each cell: OccupancyType.Multiple.
+       buffersize: the size of this SharedContinuousSpace's buffered area. This single value is used for all dimensions.
+       comm: the communicator containing all the ranks over which this SharedGrid is shared.
+       tree_threshold: the space's tree cell maximum capacity. When this capacity is reached, the cell splits.
+
+    """
+
+    def __init__(self, name: str, bounds: BoundingBox, borders: BorderType, occupancy: OccupancyType, 
+                 buffersize: int, comm: mpi4py.MPI.Intracomm, tree_threshold: int):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
         self.buffered_agents = []
 

@@ -499,7 +499,7 @@ class UndirectedSharedNetwork(SharedNetwork):
         graph (networkx.OrderedGraph): a network graph object responsible for
         network operations.
         comm (MPI.Comm): the communicator over which the network is shared.
-        names (str): the name of this network.
+        name (str): the name of this network.
     """
 
     def __init__(self, name: str, comm: MPI.Comm):
