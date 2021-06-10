@@ -4,8 +4,6 @@ from mpi4py import MPI
 import unittest
 from collections import OrderedDict
 
-from networkx.generators.random_graphs import extended_barabasi_albert_graph
-
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
 from repast4py.network import UndirectedSharedNetwork, DirectedSharedNetwork
