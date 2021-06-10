@@ -4,3 +4,4 @@ numba
 mpi4py
 coverage
 torch
+networkx
