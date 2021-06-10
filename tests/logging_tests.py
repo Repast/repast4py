@@ -181,6 +181,6 @@ class LoggingTests(unittest.TestCase):
         p = find_free_filename('./test_data/test_file.csv')
         self.assertEqual('test_data/test_file_1.csv', str(p))
 
-        # file exits, no ext
+        # file exists, no ext
         p = find_free_filename('./test_data/test_file')
         self.assertEqual('test_data/test_file_1', str(p))

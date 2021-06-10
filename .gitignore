@@ -51,6 +51,8 @@ turbine-directory.txt
 *.tsv
 *.out
 
+!test_data/*.csv
+
 # IDE
 .vscode
 
