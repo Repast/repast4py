@@ -373,6 +373,83 @@ class GridTests(unittest.TestCase):
         agent = grid.get_agent(pt)
         self.assertEqual(agent, a1)
 
+    def test_single_occ(self):
+        a1 = core.Agent(1, 0)
+        a2 = core.Agent(2, 0)
+
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
+        grid = space.Grid("grid", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Single)
+        self.assertEqual('grid', grid.name)
+
+        grid.add(a1)
+
+        # move after initial add
+        grid.move(a1, space.DiscretePoint(2, 4))
+        pt = grid.get_location(a1)
+        self.assertEqual(2, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        grid.add(a2)
+        pt = grid.move(a2, space.DiscretePoint(2, 4))
+        self.assertIsNone(pt)
+        agents = []
+        for a in grid.get_agents(space.DiscretePoint(2, 4)):
+            agents.append(a)
+        self.assertEqual(1, len(agents))
+        self.assertEqual(a1, agents[0])
+
+        pt = grid.move(a2, space.DiscretePoint(3, 4))
+        self.assertIsNotNone(pt)
+        self.assertEqual(3, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        pt = grid.move(a1, space.DiscretePoint(3, 4))
+        self.assertIsNone(pt)
+        pt = grid.get_location(a1)
+        self.assertEqual(2, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        pt = grid.move(a2, space.DiscretePoint(4, 4))
+        a = grid.get_agent(space.DiscretePoint(3, 4))
+        self.assertIsNone(a)
+
+        grid.remove(a2)
+        pt = grid.get_location(a2)
+        self.assertIsNone(pt)
+        a = grid.get_agent(space.DiscretePoint(4, 4))
+        self.assertIsNone(a)
+
+        pt = grid.move(a1, space.DiscretePoint(4, 4))
+        self.assertIsNotNone(pt)
+        self.assertEqual(4, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        # Test tha periodic + single returns valid object
+        grid = space.Grid("grid", bounds=box, borders=BorderType.Periodic, occupancy=OccupancyType.Single)
+        self.assertEqual('grid', grid.name)
+
+        grid.add(a1)
+
+        # move after initial add
+        grid.move(a1, space.DiscretePoint(2, 4))
+        pt = grid.get_location(a1)
+        self.assertEqual(2, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        grid.add(a2)
+        pt = grid.move(a2, space.DiscretePoint(2, 4))
+        self.assertIsNone(pt)
+        agents = []
+        for a in grid.get_agents(space.DiscretePoint(2, 4)):
+            agents.append(a)
+        self.assertEqual(1, len(agents))
+        self.assertEqual(a1, agents[0])
+
 
 class CSpaceTests(unittest.TestCase):
 
@@ -551,6 +628,80 @@ class CSpaceTests(unittest.TestCase):
         self.assertTrue(ret)
         ret = cspace.get_location(agent)
         self.assertIsNone(ret)
+
+    def test_single_occ(self):
+        a1 = core.Agent(1, 0)
+        a2 = core.Agent(2, 0)
+
+        box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)
+        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Single, tree_threshold=100)
+
+        cspace.add(a1)
+
+        # move after initial add
+        cspace.move(a1, space.ContinuousPoint(2, 4))
+        pt = cspace.get_location(a1)
+        self.assertEqual(2, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        cspace.add(a2)
+        pt = cspace.move(a2, space.ContinuousPoint(2, 4))
+        self.assertIsNone(pt)
+        agents = []
+        for a in cspace.get_agents(space.ContinuousPoint(2, 4)):
+            agents.append(a)
+        self.assertEqual(1, len(agents))
+        self.assertEqual(a1, agents[0])
+
+        pt = cspace.move(a2, space.ContinuousPoint(3, 4))
+        self.assertIsNotNone(pt)
+        self.assertEqual(3, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        pt = cspace.move(a1, space.ContinuousPoint(3, 4))
+        self.assertIsNone(pt)
+        pt = cspace.get_location(a1)
+        self.assertEqual(2, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        pt = cspace.move(a2, space.ContinuousPoint(4, 4))
+        a = cspace.get_agent(space.ContinuousPoint(3, 4))
+        self.assertIsNone(a)
+
+        cspace.remove(a2)
+        pt = cspace.get_location(a2)
+        self.assertIsNone(pt)
+        a = cspace.get_agent(space.ContinuousPoint(4, 4))
+        self.assertIsNone(a)
+
+        pt = cspace.move(a1, space.ContinuousPoint(4, 4))
+        self.assertIsNotNone(pt)
+        self.assertEqual(4, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        cspace = space.ContinuousSpace("cspace", bounds=box, borders=BorderType.Periodic, occupancy=OccupancyType.Single, tree_threshold=100)
+
+        cspace.add(a1)
+
+        # move after initial add
+        cspace.move(a1, space.ContinuousPoint(2, 4))
+        pt = cspace.get_location(a1)
+        self.assertEqual(2, pt.x)
+        self.assertEqual(4, pt.y)
+        self.assertEqual(0, pt.z)
+
+        cspace.add(a2)
+        pt = cspace.move(a2, space.ContinuousPoint(2, 4))
+        self.assertIsNone(pt)
+        agents = []
+        for a in cspace.get_agents(space.ContinuousPoint(2, 4)):
+            agents.append(a)
+        self.assertEqual(1, len(agents))
+        self.assertEqual(a1, agents[0])
 
     def test_get(self):
         box = space.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=25, zmin=-1, zextent=5)

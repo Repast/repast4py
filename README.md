@@ -36,6 +36,7 @@ There are 3 types of python unit tests:
 ```
 mpirun -n 9 python -m unittest tests.shared_obj_tests
 mpirun -n 9 python -m unittest tests.shared_vl_tests
+mpirun -n 9 python -m unittest tests.ctopo_tests
 ```
 
 3. Multiprocess (18 procs) mpi tests for 3D spaces. Run with:

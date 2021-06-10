@@ -21,6 +21,7 @@ using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::wpt;
 using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::name_;
 
 public:
+    using PointType = R4Py_DiscretePoint;
     BaseGrid(const std::string& name, const BoundingBox& bounds);
     ~BaseGrid();
 
@@ -161,9 +162,12 @@ bool Grid<DelegateType>::contains(R4Py_Agent* agent) const {
 
 
 // typedefs for Discrete Grid with multi occupancy and sticky borders
-using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint>, R4Py_DiscretePoint>;
+using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint, AgentList>, R4Py_DiscretePoint>;
+using DiscreteSOType = SingleOccupancyAccessor<LocationMapType<R4Py_DiscretePoint, R4Py_Agent*>, R4Py_DiscretePoint>;
 using MOSGrid = BaseGrid<DiscreteMOType, GridStickyBorders>;
 using MOPGrid = BaseGrid<DiscreteMOType, GridPeriodicBorders>;
+using SOSGrid = BaseGrid<DiscreteSOType, GridStickyBorders>;
+using SOPGrid = BaseGrid<DiscreteSOType, GridPeriodicBorders>;
 
 template<>
 struct is_periodic<MOSGrid> {
@@ -174,6 +178,17 @@ template<>
 struct is_periodic<MOPGrid> {
     static constexpr bool value {true};
 };
+
+template<>
+struct is_periodic<SOSGrid> {
+    static constexpr bool value {false};
+};
+
+template<>
+struct is_periodic<SOPGrid> {
+    static constexpr bool value {true};
+};
+
 
 struct R4Py_Grid {
     PyObject_HEAD

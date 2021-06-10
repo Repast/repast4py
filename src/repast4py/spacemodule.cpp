@@ -20,6 +20,12 @@
 
 using namespace repast4py;
 
+constexpr int STICKY_BRDR = 0;
+constexpr int PERIODIC_BRDR = 1;
+
+constexpr int MULT_OT = 0;
+constexpr int SINGLE_OT = 1;
+
 
 //////////////////// DiscretePoint ///////////////////////
 
@@ -766,17 +772,20 @@ static int Grid_init(R4Py_Grid* self, PyObject* args, PyObject* kwds) {
     }
 
     BoundingBox box(xmin, width, ymin, height, zmin, depth);
-    if (border_type == 0) {
-        if (occ_type == 0) {
+    if (border_type == STICKY_BRDR) {
+        if (occ_type == MULT_OT) {
             self->grid = new Grid<MOSGrid>(name, box);
-
+        } else if (occ_type == SINGLE_OT) {
+            self->grid = new Grid<SOSGrid>(name, box);
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
         }
-    } else if (border_type == 1) {
-        if (occ_type == 0) {
+    } else if (border_type == PERIODIC_BRDR) {
+        if (occ_type == MULT_OT) {
             self->grid = new Grid<MOPGrid>(name, box);
+        } else if (occ_type == SINGLE_OT) {
+            self->grid = new Grid<SOPGrid>(name, box);
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
@@ -1085,26 +1094,28 @@ static int SharedGrid_init(R4Py_SharedGrid* self, PyObject* args, PyObject* kwds
     MPI_Comm* comm_p = PyMPIComm_Get(py_comm);
 
     BoundingBox box(xmin, x_extent, ymin, y_extent, zmin, z_extent);
-    if (border_type == 0) {
-        if (occ_type == 0) {
-            self->grid = new SharedGrid<DistributedCartesianSpace<MOSGrid, R4Py_DiscretePoint>>(name, box, buffer_size, 
+    if (border_type == STICKY_BRDR) {
+        if (occ_type == MULT_OT) {
+            self->grid = new SharedGrid<DistributedCartesianSpace<MOSGrid>>(name, box, buffer_size, 
             *comm_p);
-
+        } else if (occ_type == SINGLE_OT) {
+            self->grid = new SharedGrid<DistributedCartesianSpace<SOSGrid>>(name, box, buffer_size, 
+            *comm_p);
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
         }
-    } else if (border_type == 1) {
-        if (occ_type == 0) {
-            self->grid = new SharedGrid<DistributedCartesianSpace<MOPGrid, R4Py_DiscretePoint>>(name, box, buffer_size, 
+    } else if (border_type == PERIODIC_BRDR) {
+        if (occ_type == MULT_OT) {
+            self->grid = new SharedGrid<DistributedCartesianSpace<MOPGrid>>(name, box, buffer_size, 
             *comm_p);
-
+        } else if (occ_type == SINGLE_OT) {
+            self->grid = new SharedGrid<DistributedCartesianSpace<SOPGrid>>(name, box, buffer_size, 
+            *comm_p);
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
         }
-
-   
     } else {
         PyErr_SetString(PyExc_RuntimeError, "Invalid border type");
         return -1;
@@ -1544,17 +1555,20 @@ static int CSpace_init(R4Py_CSpace* self, PyObject* args, PyObject* kwds) {
     }
 
     BoundingBox box(xmin, width, ymin, height, zmin, depth);
-    if (border_type == 0) {
-        if (occ_type == 0) {
+    if (border_type == STICKY_BRDR) {
+        if (occ_type == MULT_OT) {
             self->space = new CSpace<MOSCSpace>(name, box, tree_threshold);
-
+        } else if (occ_type == SINGLE_OT) {
+            self->space = new CSpace<SOSCSpace>(name, box, tree_threshold);
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
         }
-    } else if (border_type == 1) {
-        if (occ_type == 0) {
+    } else if (border_type == PERIODIC_BRDR) {
+        if (occ_type == MULT_OT) {
             self->space = new CSpace<MOPCSpace>(name, box, tree_threshold);
+        } else if (occ_type == SINGLE_OT) {
+            self->space = new CSpace<SOPCSpace>(name, box, tree_threshold);
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
@@ -1917,20 +1931,24 @@ static int SharedCSpace_init(R4Py_SharedCSpace* self, PyObject* args, PyObject* 
     MPI_Comm* comm_p = PyMPIComm_Get(py_comm);
 
     BoundingBox box(xmin, x_extent, ymin, y_extent, zmin, z_extent);
-    if (border_type == 0) {
-        if (occ_type == 0) {
-            self->space = new SharedContinuousSpace<DistributedCartesianSpace<MOSCSpace, R4Py_ContinuousPoint>>(name, box, buffer_size, 
+    if (border_type == STICKY_BRDR) {
+        if (occ_type == MULT_OT) {
+            self->space = new SharedContinuousSpace<DistributedCartesianSpace<MOSCSpace>>(name, box, buffer_size, 
             *comm_p, tree_threshold);
-
+        } else if (occ_type == SINGLE_OT) {
+            self->space = new SharedContinuousSpace<DistributedCartesianSpace<SOSCSpace>>(name, box, buffer_size, 
+            *comm_p, tree_threshold);
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;
         }
-    } else if (border_type == 1) {
-        if (occ_type == 0) {
-            self->space = new SharedContinuousSpace<DistributedCartesianSpace<MOPCSpace, R4Py_ContinuousPoint>>(name, box, buffer_size, 
+    } else if (border_type == PERIODIC_BRDR) {
+        if (occ_type == MULT_OT) {
+            self->space = new SharedContinuousSpace<DistributedCartesianSpace<MOPCSpace>>(name, box, buffer_size, 
             *comm_p, tree_threshold);
-
+        } else if (occ_type == SINGLE_OT) {
+            self->space = new SharedContinuousSpace<DistributedCartesianSpace<SOPCSpace>>(name, box, buffer_size, 
+            *comm_p, tree_threshold);
         } else {
             PyErr_SetString(PyExc_RuntimeError, "Invalid occupancy type");
             return -1;

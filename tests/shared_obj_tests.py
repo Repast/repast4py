@@ -1113,7 +1113,7 @@ class SharedContextTests1(unittest.TestCase):
             context.add(a2)
 
             counts = context.size()
-            self.assertEqual(3, counts[0])
+            self.assertEqual(3, counts[-1])
 
             counts = context.size([0, 1])
             self.assertEqual(2, len(counts))

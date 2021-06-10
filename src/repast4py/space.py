@@ -30,6 +30,7 @@ class BorderType:
       the maximum is 20, and an agent moves to an x of -2, then the new x coordinate is 19.
 
     """
+    # NOTE: IF THESE CHANGE THE C++ GRID INIT AND SPACE INIT CODE NEEDS TO CHANGE TOO
     Sticky = 0
     Periodic = 1
 
@@ -40,7 +41,9 @@ class OccupancyType:
     Currently only "Multiple" is supported.
     * Multiple: allows any number of agents to exist in the same location. 
     """
+    # NOTE: IF THESE CHANGE THE C++ GRID INIT AND SPACE INIT CODE NEEDS TO CHANGE TOO
     Multiple = 0
+    Single = 1
 
 
 class SharedGrid(_SharedGrid):

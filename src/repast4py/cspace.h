@@ -24,6 +24,7 @@ private:
 
 
 public:
+    using PointType = R4Py_ContinuousPoint;
     BaseCSpace(const std::string& name, const BoundingBox& bounds, int tree_threshold);
     ~BaseCSpace();
 
@@ -200,9 +201,13 @@ bool CSpace<DelegateType>::contains(R4Py_Agent* agent) const {
 }
 
 // aliases for  CSpace with multi occupancy and sticky borders
-using ContinuousMOType = MultiOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint>, R4Py_ContinuousPoint>;
+using ContinuousMOType = MultiOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint, AgentList>, R4Py_ContinuousPoint>;
+using ContinuousSOType = SingleOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint, R4Py_Agent*>, R4Py_ContinuousPoint>;
 using MOSCSpace = BaseCSpace<ContinuousMOType, CSStickyBorders>;
 using MOPCSpace = BaseCSpace<ContinuousMOType, CSPeriodicBorders>;
+using SOSCSpace = BaseCSpace<ContinuousSOType, CSStickyBorders>;
+using SOPCSpace = BaseCSpace<ContinuousSOType, CSPeriodicBorders>;
+
 
 template<>
 struct is_periodic<MOSCSpace> {
@@ -211,6 +216,16 @@ struct is_periodic<MOSCSpace> {
 
 template<>
 struct is_periodic<MOPCSpace> {
+    static constexpr bool value {true};
+};
+
+template<>
+struct is_periodic<SOSCSpace> {
+    static constexpr bool value {false};
+};
+
+template<>
+struct is_periodic<SOPCSpace> {
     static constexpr bool value {true};
 };
 
