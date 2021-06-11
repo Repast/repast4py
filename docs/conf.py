@@ -75,6 +75,9 @@ def setup(app):
     # to determine what to pydoc, the objects from space are returned.
     import repast4py.space
     repast4py.space.__all__ = ['DiscretePoint', 'ContinuousPoint', 'GridStickyBorders',
-                               'GridPeriodicBorders', 'CartesianTopology', 'BoundingBox',
+                               'GridPeriodicBorders', 'CartesianTopology', 
                                'BorderType', 'OccupancyType', 'SharedGrid', 'SharedCSpace',
                                'Grid', 'ContinuousSpace']
+    import repast4py.core
+    repast4py.core.__all__ = ['Agent', 'GhostAgent', 'GhostedAgent', 'AgentManager',
+                              'SharedProjection', 'BoundedProjection']

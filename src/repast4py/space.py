@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, List, Tuple
 import mpi4py
 
 from ._space import DiscretePoint, ContinuousPoint
@@ -22,6 +22,7 @@ class BorderType:
     The border type determines an agents location when the location is beyond the grid's or space's
     bounds. For example, during agent movement, and that movement carries the agent beyond the
     borders of a grid or space. Valid values are "Sticky" and "Periodic":
+
     * Sticky: clips any point coordinates to the maximum or minimum value when the coordinates are less than or
       greater than the grid or spaces maximum or minimum value. For example, if the minimum grid x location is 0, and
       an agent moves to an x of -1, then movment in the x dimension is stopped at 0.
@@ -38,8 +39,9 @@ class BorderType:
 class OccupancyType:
     """An enum defining the occupancy types of a location in a space or grid.
 
-    Currently only "Multiple" is supported.
-    * Multiple: allows any number of agents to exist in the same location. 
+    Valid values are: Single and Multiple.
+    * Multiple: allows any number of agents to inhabit the same location.
+    * Single: only a single agent can inhabit a location.
     """
     # NOTE: IF THESE CHANGE THE C++ GRID INIT AND SPACE INIT CODE NEEDS TO CHANGE TOO
     Multiple = 0
@@ -87,6 +89,16 @@ class SharedGrid(_SharedGrid):
         return self.contains(agent)
 
     def _fill_send_data(self):
+        """Retrieves agents and locations from this SharedGrid for placement
+        in a neighboring SharedGrid's buffer.
+
+        This creates and returns a list of lists where the index of the nested list is the
+        rank to send to. Each nested list is a list of tuples to send to the index rank.
+        Each tuple consists of an agent and its location in this SharedGrid: (agent_data, (pt.x, pt.y, pt.z)
+
+        Returns:
+            List: a list of lists containing agent and location data.
+        """
         send_data = [[] for i in range(self._cart_comm.size)]
         # bd: (rank, (ranges)) e.g., (1, (8, 10, 0, 0, 0, 0))
         for bd in self._get_buffer_data():
@@ -97,7 +109,18 @@ class SharedGrid(_SharedGrid):
 
         return send_data
 
-    def _process_recv_data(self, recv_data, agent_manager: AgentManager, create_agent):
+    def _process_recv_data(self, recv_data: List, agent_manager: AgentManager, create_agent: Callable):
+        """Processes received agent data into this SharedGrid's buffer area.
+
+        This iterates over the specified recv_data agent data and location list, and creates
+        agents and places them in this SharedGrid using that data.
+
+        Args:
+            recv_data: a list of lists where the nested list contains tuples of agent and location data:
+            (agent_data, (pt.x, pt.y, pt.z)
+            agent_manager: the AgentManager used by this model to coordinate ghost agents.
+            create_agent: a callable that takes the agent tuple and returns an Agent
+        """
         pt = DiscretePoint(0, 0, 0)
         for sending_rank, data_list in enumerate(recv_data):
             for data in data_list:
@@ -127,8 +150,8 @@ class SharedGrid(_SharedGrid):
             agent_manager.remove_ghost(agent)
         self.buffered_agents.clear()
 
-    def _synch_ghosts(self, agent_manager: AgentManager, create_agent):
-        """Synchronizes the ghosted part of this projection
+    def _synch_ghosts(self, agent_manager: AgentManager, create_agent: Callable):
+        """Synchronizes the buffers across the ranks of this SharedGrid.
 
         Args:
             agent_manager: this rank's AgentManager
@@ -139,7 +162,14 @@ class SharedGrid(_SharedGrid):
         recv_data = self._cart_comm.alltoall(send_data)
         self._process_recv_data(recv_data, agent_manager, create_agent)
 
-    def _gather_1d(self, data_list, ranges):
+    def _gather_1d(self, data_list: List, ranges: Tuple):
+        """Gathers the serialized agent and location data for agents in the specified 1D range. The
+        data is placed into the specified data_list.
+
+        Args:
+            data_list: a list into which the agent and location tuple (agent_data, (pt.x, pt.y, pt.z) is put.
+            ranges: the ranges in which to get the gather the agents
+        """
         pt = DiscretePoint(0, 0, 0)
         for x in range(ranges[0], ranges[1]):
             pt._reset1D(x)
@@ -148,6 +178,13 @@ class SharedGrid(_SharedGrid):
                 data_list.append((a.save(), (pt.x, pt.y, pt.z)))
 
     def _gather_2d(self, data_list, ranges):
+        """Gathers the serialized agent and location data for agents in the specified 2D range. The
+        data is placed into the specified data_list.
+
+        Args:
+            data_list: a list into which the agent and location tuple (agent_data, (pt.x, pt.y, pt.z) is put.
+            ranges: the ranges in which to get the gather the agents
+        """
         pt = DiscretePoint(0, 0, 0)
         for x in range(ranges[0], ranges[1]):
             for y in range(ranges[2], ranges[3]):
@@ -157,6 +194,13 @@ class SharedGrid(_SharedGrid):
                     data_list.append((a.save(), (pt.x, pt.y, pt.z)))
 
     def _gather_3d(self, data_list, ranges):
+        """Gathers the serialized agent and location data for agents in the specified 3D range. The
+        data is placed into the specified data_list.
+
+        Args:
+            data_list: a list into which the agent and location tuple (agent_data, (pt.x, pt.y, pt.z) is put.
+            ranges: the ranges in which to get the gather the agents
+        """
         pt = DiscretePoint(0, 0, 0)
         for x in range(ranges[0], ranges[1]):
             for y in range(ranges[2], ranges[3]):
@@ -183,7 +227,7 @@ class SharedCSpace(_SharedContinuousSpace):
     The space is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
     some number of smaller spaces, one for each rank. For example, given a global spaces size of (100 x 25) and
     2 ranks, the global space will be split along the x dimension such that the SharedContinuousSpace in the first
-    MPI rank covers (0-50 x 0-25) and the second rank (50-100 x 0-25). 
+    MPI rank covers (0-50 x 0-25) and the second rank (50-100 x 0-25).
     Each rank's SharedContinuousSpace contains a buffer of the specified size that duplicates or "ghosts" an adjacent
     area of the neighboring rank's SharedContinuousSpace. In the above example, the rank 1 space buffers the area from
     (50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate
@@ -192,7 +236,7 @@ class SharedCSpace(_SharedContinuousSpace):
     its own local SharedContinuousSpace. When an agent moves beyond the borders of its current SharedContinuousSpace,
     it will be transferred
     from its current rank, and into that containing the section of the global grid that it has moved into.
-    The SharedContinuousSpace uses a `tree <https://en.wikipedia.org/wiki/Quadtree>`_ (quad or oct depending on the number of 
+    The SharedContinuousSpace uses a `tree <https://en.wikipedia.org/wiki/Quadtree>`_ (quad or oct depending on the number of
     dimensions) to speed up spatial queries. The tree can be tuned using the tree threshold parameter.
 
     Args:
@@ -206,7 +250,7 @@ class SharedCSpace(_SharedContinuousSpace):
 
     """
 
-    def __init__(self, name: str, bounds: BoundingBox, borders: BorderType, occupancy: OccupancyType, 
+    def __init__(self, name: str, bounds: BoundingBox, borders: BorderType, occupancy: OccupancyType,
                  buffersize: int, comm: mpi4py.MPI.Intracomm, tree_threshold: int):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
         self.buffered_agents = []
@@ -230,6 +274,16 @@ class SharedCSpace(_SharedContinuousSpace):
         self.buffered_agents.clear()
 
     def _fill_send_data(self):
+        """Retrieves agents and locations from this SharedGrid for placement
+        in a neighboring SharedContinuousSpace's buffer.
+
+        This creates and returns a list of lists where the index of the nested list is the
+        rank to send to. Each nested list is a list of tuples to send to the index rank.
+        Each tuple consists of an agent and its location in this SharedContinuousSpace: (agent_data, (pt.x, pt.y, pt.z)
+
+        Returns:
+            List: a list of lists containing agent and location data.
+        """
         send_data = [[] for i in range(self._cart_comm.size)]
         # bd: (rank, (ranges)) e.g., (1, (8, 10, 0, 0, 0, 0))
 
@@ -245,6 +299,17 @@ class SharedCSpace(_SharedContinuousSpace):
         return send_data
 
     def _process_recv_data(self, recv_data, agent_manager: AgentManager, create_agent):
+        """Processes received agent data into this SharedContinuousSpace's buffer area.
+
+        This iterates over the specified recv_data agent data and location list, and creates
+        agents and places them in this SharedContinuousSpace using that data.
+
+        Args:
+            recv_data: a list of lists where the nested list contains tuples of agent and location data:
+            (agent_data, (pt.x, pt.y, pt.z)
+            agent_manager: the AgentManager used by this model to coordinate ghost agents.
+            create_agent: a callable that takes the agent tuple and returns an Agent
+        """
         pt = ContinuousPoint(0, 0, 0)
         for sending_rank, data_list in enumerate(recv_data):
             for agent_data, pt_data in data_list:
@@ -258,6 +323,13 @@ class SharedCSpace(_SharedContinuousSpace):
                 self.move(agent, pt)
 
     def _synch_ghosts(self, agent_manager: AgentManager, create_agent):
+        """Synchronizes the buffers across the ranks of this SharedContinuousSpace.
+
+        Args:
+            agent_manager: this rank's AgentManager
+            create_agent: a callable that can create an agent instance from
+            an agent id and data.
+        """
         send_data = self._fill_send_data()
         recv_data = self._cart_comm.alltoall(send_data)
         self._process_recv_data(recv_data, agent_manager, create_agent)

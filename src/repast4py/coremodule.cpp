@@ -240,19 +240,48 @@ static int Agent_set_local_rank(R4Py_Agent* self, PyObject* value, void* closure
     return 0;
 }
 
+PyDoc_STRVAR(ag_id,
+    "int: Gets the id component from this agent's unique id");
+
+PyDoc_STRVAR(ag_type,
+    "int: Gets the type component from this agent's unique id");
+
+PyDoc_STRVAR(ag_rank,
+    "int: Gets the rank component from this agent's unique id");
+
+PyDoc_STRVAR(ag_uid,
+    "Tuple(int, int, int): Gets this agent's unique id tuple (id, type, rank");
+
+PyDoc_STRVAR(ag_lr,
+    "int: Gets and sets the current local rank of this agent. Users should not need to **set** this value.");
+
+
 static PyGetSetDef Agent_get_setters[] = {
-    {(char*)"id", (getter)Agent_get_id, NULL, (char*)"agent id", NULL},
-    {(char*)"type", (getter)Agent_get_type, NULL, (char*)"agent type", NULL},
-    {(char*)"uid_rank", (getter)Agent_get_uid_rank, NULL, (char*)"agent rank", NULL},
-    {(char*)"uid", (getter)Agent_get_uid, NULL, (char*)"agent identifier", NULL},
-    {(char*)"local_rank", (getter)Agent_get_local_rank, (setter)Agent_set_local_rank, 
-        (char*)"the current local rank of the agent", NULL},
+    {(char*)"id", (getter)Agent_get_id, NULL, ag_id, NULL},
+    {(char*)"type", (getter)Agent_get_type, NULL, ag_type, NULL},
+    {(char*)"uid_rank", (getter)Agent_get_uid_rank, NULL, ag_rank, NULL},
+    {(char*)"uid", (getter)Agent_get_uid, NULL, ag_uid, NULL},
+    {(char*)"local_rank", (getter)Agent_get_local_rank, (setter)Agent_set_local_rank, ag_lr, NULL},
     {NULL}
 };
 
 static PyObject* Agent_repr(R4Py_Agent* self) {
     return PyUnicode_FromFormat("Agent(%ld, %d, %d)", self->aid->id, self->aid->type, self->aid->rank);
 }
+
+PyDoc_STRVAR(ag_ag,
+    "Agent(id, type, rank)\n\n"
+    "Parent class of all agents in a repast4py simulation.\n\n"
+    "Each agent must have an id that is unique among all agents over all the ranks of a simulation. "
+    "This id is composed of an integer id, an agent type id, and the integer rank on which the agent "
+    "is created. These components are the arguments to the Agent constructor\n\n"
+    "Args:\n"
+    "    id (int): an integer that uniquely identifies this agent from among those of the same type and "
+    "created on the same rank. Consequently, agents created on different ranks, or of different types but created on the same rank "
+    "can have the same id.\n"
+    "    type (int): an integer that specifies the type of this agent.\n"
+    "    rank (int): the rank on which this agent is created."
+);
 
 
 static PyTypeObject R4Py_AgentType = {
@@ -276,7 +305,7 @@ static PyTypeObject R4Py_AgentType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "Agent Object",                         /* tp_doc */
+    ag_ag,                         /* tp_doc */
     0,                                        /* tp_traverse */
     0,                                        /* tp_clear */
     0,                                        /* tp_richcompare */

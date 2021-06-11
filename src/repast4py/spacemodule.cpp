@@ -946,7 +946,8 @@ PyDoc_STRVAR(grd_move,
     "    agent(repast4py.core.Agent): the agent to move.\n"
     "    pt(repast4py.space.DiscretePoint): the location to move to.\n\n"
     "Returns:\n"
-    "    repast4py.space.DiscretePoint: the location the agent has moved to"
+    "    repast4py.space.DiscretePoint: the location the agent has moved to or None if the agent cannot move to the specified location (e.g., if "
+    "    occupancy type is single and the location is occupied."
 );
 
 PyDoc_STRVAR(grd_location,
@@ -1000,7 +1001,7 @@ PyDoc_STRVAR(grd_grd,
     "   name (str): the name of the grid.\n"
     "   bounds (repast4py.geometry.BoundingBox): the dimensions of the grid.\n"
     "   borders (repast4py.space.BorderType): the border semantics: BorderType.Sticky or BorderType.Periodic\n"
-    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple."
+    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple or OccupancyType.Single"
 );
 
 static PyTypeObject R4Py_GridType = {
@@ -1332,7 +1333,8 @@ PyDoc_STRVAR(sgrd_move,
     "    agent(repast4py.core.Agent): the agent to move.\n"
     "    pt(repast4py.space.DiscretePoint): the location to move to.\n\n"
     "Returns:\n"
-    "    repast4py.space.DiscretePoint: the location the agent has moved to"
+    "    repast4py.space.DiscretePoint: the location the agent has moved to or None if the agent cannot move to the specified location (e.g., if "
+    "    occupancy type is single and the location is occupied."
 );
 
 PyDoc_STRVAR(sgrd_location,
@@ -1468,7 +1470,7 @@ PyDoc_STRVAR(sgrd_sgrd,
     "   name (str): the name of the grid.\n"
     "   bounds (repast4py.geometry.BoundingBox): the global dimensions of the grid.\n"
     "   borders (repast4py.space.BorderType): the border semantics: BorderType.Sticky or BorderType.Periodic\n"
-    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple.\n"
+    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple or OccupancyType.Single.\n"
     "   buffersize (int): the size of this SharedGrid buffered area. This single value is used for all dimensions.\n"
     "   comm (mpi4py.MPI.Intracomm): the communicator containing all the ranks over which this SharedGrid is shared."
 );
@@ -1756,7 +1758,8 @@ PyDoc_STRVAR(cspace_move,
     "    agent(repast4py.core.Agent): the agent to move.\n"
     "    pt(repast4py.space.ContinuousPoint): the location to move to.\n\n"
     "Returns:\n"
-    "    repast4py.space.ContinuousPoint: the location the agent has moved to"
+    "    repast4py.space.ContinuousPoint: the location the agent has moved to or None if the agent cannot move to the specified location (e.g., if "
+    "    occupancy type is single and the location is occupied."
 );
 
 PyDoc_STRVAR(cspace_location,
@@ -1824,7 +1827,7 @@ PyDoc_STRVAR(cspace_cspace,
     "   name (str): the name of the grid.\n"
     "   bounds (repast4py.geometry.BoundingBox): the dimensions of the grid.\n"
     "   borders (repast4py.space.BorderType): the border semantics: BorderType.Sticky or BorderType.Periodic\n"
-    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple.\n"
+    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple or OccupancyType.Single.\n"
     "   tree_threshold (int): the space's tree cell maximum capacity. When this capacity is reached, the cell splits."
 );
 
@@ -2222,7 +2225,8 @@ PyDoc_STRVAR(scspace_move,
     "    agent(repast4py.core.Agent): the agent to move.\n"
     "    pt(repast4py.space.ContinuousPoint): the location to move to.\n\n"
     "Returns:\n"
-    "    repast4py.space.ContinuousPoint: the location the agent has moved to"
+    "    repast4py.space.ContinuousPoint: the location the agent has moved to or None if the agent cannot move to the specified location (e.g., if "
+    "    occupancy type is single and the location is occupied."
 );
 
 PyDoc_STRVAR(scspace_location,
@@ -2359,7 +2363,7 @@ PyDoc_STRVAR(scspace_scspace,
     "   name (str): the name of the grid.\n"
     "   bounds (repast4py.geometry.BoundingBox): the global dimensions of the grid.\n"
     "   borders (repast4py.space.BorderType): the border semantics: BorderType.Sticky or BorderType.Periodic\n"
-    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple.\n"
+    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple or OccupancyType.Single.\n"
     "   buffersize (int): the size of this SharedContinuousSpace's buffered area. This single value is used for all dimensions.\n"
     "   comm (mpi4py.MPI.Intracomm): the communicator containing all the ranks over which this SharedGrid is shared.\n"
     "   tree_threshold (int): the space's tree cell maximum capacity. When this capacity is reached, the cell splits."
