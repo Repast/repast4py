@@ -236,7 +236,7 @@ class SharedCSpace(_SharedContinuousSpace):
     its own local SharedCSpace. When an agent moves beyond the borders of its current SharedCSpace,
     it will be transferred
     from its current rank, and into that containing the section of the global space that it has moved into.
-    The SharedContinuousSpace uses a `tree <https://en.wikipedia.org/wiki/Quadtree>`_ (quad or oct depending on the number of
+    The SharedCSpace uses a `tree <https://en.wikipedia.org/wiki/Quadtree>`_ (quad or oct depending on the number of
     dimensions) to speed up spatial queries. The tree can be tuned using the tree threshold parameter.
 
     Args:
@@ -275,11 +275,11 @@ class SharedCSpace(_SharedContinuousSpace):
 
     def _fill_send_data(self):
         """Retrieves agents and locations from this SharedGrid for placement
-        in a neighboring SharedContinuousSpace's buffer.
+        in a neighboring SharedCSpace's buffer.
 
         This creates and returns a list of lists where the index of the nested list is the
         rank to send to. Each nested list is a list of tuples to send to the index rank.
-        Each tuple consists of an agent and its location in this SharedContinuousSpace: (agent_data, (pt.x, pt.y, pt.z)
+        Each tuple consists of an agent and its location in this SharedCSpace: (agent_data, (pt.x, pt.y, pt.z)
 
         Returns:
             List: a list of lists containing agent and location data.
@@ -299,10 +299,10 @@ class SharedCSpace(_SharedContinuousSpace):
         return send_data
 
     def _process_recv_data(self, recv_data, agent_manager: AgentManager, create_agent):
-        """Processes received agent data into this SharedContinuousSpace's buffer area.
+        """Processes received agent data into this SharedCSpace's buffer area.
 
         This iterates over the specified recv_data agent data and location list, and creates
-        agents and places them in this SharedContinuousSpace using that data.
+        agents and places them in this SharedCSpace using that data.
 
         Args:
             recv_data: a list of lists where the nested list contains tuples of agent and location data:
@@ -323,7 +323,7 @@ class SharedCSpace(_SharedContinuousSpace):
                 self.move(agent, pt)
 
     def _synch_ghosts(self, agent_manager: AgentManager, create_agent):
-        """Synchronizes the buffers across the ranks of this SharedContinuousSpace.
+        """Synchronizes the buffers across the ranks of this SharedCSpace.
 
         Args:
             agent_manager: this rank's AgentManager
