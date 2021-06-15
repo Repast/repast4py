@@ -1,45 +1,42 @@
-import time
-from mpi4py import MPI
-import numpy as np
-
 from typing import List
 from pathlib import Path
 
-class Timer:
 
-    def __init__(self):
-        self.times = {}
+# class Timer:
 
-    def start_timer(self, name):
-        if not name in self.times:
-            self.times[name] = [time.time(), 0, []]
-        else:
-            self.times[name][0] = time.time()
+#     def __init__(self):
+#         self.times = {}
 
-    def stop_timer(self, name):
-        t = time.time()
-        data = self.times[name]
-        data[1] = t
-        data[2].append(data[1] - data[0])
+#     def start_timer(self, name):
+#         if not name in self.times:
+#             self.times[name] = [time.time(), 0, []]
+#         else:
+#             self.times[name][0] = time.time()
 
-    def print_times(self):
-        comm = MPI.COMM_WORLD
-        all_timings = comm.gather(self.times)
-        rank = MPI.COMM_WORLD.Get_rank()
-        if rank == 0:
-            print('{:<6s}{:<16s}{:>12s}{:>12s}{:>12s}{:>12s}{:>12s}'.
-                format('rank', 'timer_name', 'sum','min', 'max', 'mean', 'std'))
+#     def stop_timer(self, name):
+#         t = time.time()
+#         data = self.times[name]
+#         data[1] = t
+#         data[2].append(data[1] - data[0])
 
-            for r, timings in enumerate(all_timings):
-                for k, v in timings.items():
-                    mean = np.mean(v[2])
-                    sm = np.sum(v[2])
-                    mn = np.min(v[2])
-                    mx = np.max(v[2])
-                    std = np.std(v[2])
-                    print('{:<6d}{:<16s}{:>12.4f}{:>12.4f}{:>12.4f}{:>12.4f}{:>12.4f}'.
-                        format(r, k,
-                        sm, mn, mx, mean, std))
+#     def print_times(self):
+#         comm = MPI.COMM_WORLD
+#         all_timings = comm.gather(self.times)
+#         rank = MPI.COMM_WORLD.Get_rank()
+#         if rank == 0:
+#             print('{:<6s}{:<16s}{:>12s}{:>12s}{:>12s}{:>12s}{:>12s}'.
+#                 format('rank', 'timer_name', 'sum','min', 'max', 'mean', 'std'))
+
+#             for r, timings in enumerate(all_timings):
+#                 for k, v in timings.items():
+#                     mean = np.mean(v[2])
+#                     sm = np.sum(v[2])
+#                     mn = np.min(v[2])
+#                     mx = np.max(v[2])
+#                     std = np.std(v[2])
+#                     print('{:<6d}{:<16s}{:>12.4f}{:>12.4f}{:>12.4f}{:>12.4f}{:>12.4f}'.
+#                         format(r, k,
+#                         sm, mn, mx, mean, std))
 
 
 def is_empty(lst: List[List]) -> bool:
@@ -60,7 +57,7 @@ def is_empty(lst: List[List]) -> bool:
 def find_free_filename(file_path: str) -> Path:
     """Given a file path, check if that file exists,
     and if so, repeatedly add a numeric infix to that
-    file path until, the file does not exist.
+    file path until the file does not exist.
 
     For example, if output/counts.csv, exists check
     if counts_1.csv, counts_2.csv, and so exists until

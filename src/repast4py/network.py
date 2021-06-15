@@ -19,17 +19,27 @@ class GhostedEdge:
 
 
 class SharedNetwork:
+    """A network that can be shared across multiple process ranks through
+    ghost nodes and edges.
+
+    This wraps a networkx Graph object and delegates all the network
+    related operations to it. That Graph is exposed as the `graph`
+    attribute. See the networkx Graph documentation for more information
+    on the network functionality that it provides. The network structure
+    should _NOT_ be changed using the networkx functions and methods
+    (adding and removing nodes, for example). Use this class'
+    methods for manipulating the network structure.
+
+    Attributes:
+        graph (networkx Graph): a graph object that provides the network functionality.
+
+    Args:
+        name: the name of the SharedNetwork
+        comm: the communicator over which this SharedNetwork is distributed
+        graph (networkx Graph): the networkx graph object that provides the network functionality.
+    """
 
     def __init__(self, name: str, comm: MPI.Comm, graph):
-        """Creates a SharedNetwork with the specified name, communicator,
-        and wrapping the specified networkx.Graph
-
-        Args:
-            name: the name of the SharedNetwork
-            comm: the communicator over which this SharedNetwork is distributed
-            graph (networkx Graph): the networkx graph object responsible for
-            network related operations
-        """
         self.name = name
         self.comm = comm
         self.graph = graph
@@ -169,7 +179,7 @@ class SharedNetwork:
         self.ghosted_edges.clear()
 
     def contains_edge(self, u_agent: Agent, v_agent: Agent) -> bool:
-        """Gets whether or not an edge exists between u_agent and v_agent.
+        """Gets whether or not an edge exists between the u_agent and v_agent.
 
         Returns:
             True if an edge exists, otherwise False.
@@ -225,8 +235,9 @@ class SharedNetwork:
         method, so that edge can be created on the ghost rank as well.
 
         Args:
-            agent_manager
+            agent_manager: the agent manager for this model
             create_agent: a callable used to create any necessary agents
+
         Returns:
             A nested list of the edge data tuples, (u.uid, v.uid, edge_attributes), for
             edges created betwee agents local to this rank and ghosts on this rank. The
@@ -273,9 +284,9 @@ class SharedNetwork:
 
         Args:
             sync_edges: a nested list of the edge data tuples, (u.uid, v.uid, edge_attributes), for
-            edges created betwee agents local to this rank and ghosts on this rank. The
-            list is formatted in "alltoall" format such that index of each nested element
-            is the rank where to send those elements.
+                edges created betwee agents local to this rank and ghosts on this rank. The
+                list is formatted in "alltoall" format such that index of each nested element
+                is the rank where to send those elements.
             agent_manager: the AgentManager
         """
         recv_edges = self.comm.alltoall(sync_edges)
@@ -300,7 +311,7 @@ class SharedNetwork:
         Args:
             agent_manager: the AgentManager
             create_agent: a callable that can create an agent instance from
-            an agent id and data.
+                an agent id and data.
         """
         self._sync_removed(agent_manager)
         sync_edges = self._sync_vertices(agent_manager, create_agent)
@@ -340,7 +351,7 @@ class SharedNetwork:
         Args:
             agent_manager: the AgentManager
             create_agent: a callable that can create an agent instance from
-            an agent id and data.
+                an agent id and data.
         """
         for u_id, v_id, edge_attr in self._agent_moved_edges:
             u = agent_manager.get_local(u_id)
@@ -372,10 +383,10 @@ class SharedNetwork:
             moving_agent: the agent that is moving.
             dest_rank: the destination rank
             moving_agent_data: A list where the first element is the serialized agent data. The
-            list may also contain a second element that is a dictionary where the keys are the
-            ranks the agent is currently ghosted to and the value is the number of projections
-            using that ghost. Projections can add to this dictionary if they ghost an agent
-            to another rank as part of their projection synchronization (e.g. ghosting edge).
+                list may also contain a second element that is a dictionary where the keys are the
+                ranks the agent is currently ghosted to and the value is the number of projections
+                using that ghost. Projections can add to this dictionary if they ghost an agent
+                to another rank as part of their projection synchronization (e.g. ghosting edge).
             agent_manager: the AgentManager
 
         """
@@ -440,8 +451,8 @@ class SharedNetwork:
 
         Args:
             moved_agents: a list of tuples (agent.uid, destination rank) where each tuple
-            is a moved agent. The list includes all the agents that have moved on all ranks
-            EXCEPT for those moved off of the current rank.
+                is a moved agent. The list includes all the agents that have moved on all ranks
+                EXCEPT for those moved off of the current rank.
             agent_manager: AgentManager
         """
         stop_ghosting_ids = self.comm.alltoall(self._no_longer_ghosts)
@@ -497,20 +508,17 @@ class UndirectedSharedNetwork(SharedNetwork):
 
     Attributes:
         graph (networkx.OrderedGraph): a network graph object responsible for
-        network operations.
+            network operations.
         comm (MPI.Comm): the communicator over which the network is shared.
         name (str): the name of this network.
+
+    Args:
+        name: the name of the SharedNetwork
+        comm: the communicator over which this SharedNetwork is distributed
+        directed: specifies whether this SharedNetwork is directed or not
     """
 
     def __init__(self, name: str, comm: MPI.Comm):
-        """Creates a SharedNetwork with the specified name, communicator
-        and type (directed or not).
-
-        Args:
-            name: the name of the SharedNetwork
-            comm: the communicator over which this SharedNetwork is distributed
-            directed: specifies whether this SharedNetwork is directed or not
-        """
         super().__init__(name, comm, OrderedGraph())
         self.canonical_edge_keys = {}
 
@@ -644,17 +652,13 @@ class DirectedSharedNetwork(SharedNetwork):
         network operations.
         comm (MPI.Comm): the communicator over which the network is shared.
         names (str): the name of this network.
+
+    Args:
+        name: the name of the SharedNetwork
+        comm: the communicator over which this DirectedSharedNetwork is distributed
     """
 
     def __init__(self, name: str, comm: MPI.Comm):
-        """Creates a SharedNetwork with the specified name, communicator
-        and type (directed or not).
-
-        Args:
-            name: the name of the SharedNetwork
-            comm: the communicator over which this DirectedSharedNetwork is distributed
-            directed: specifies whether this DirectedSharedNetwork is directed or not
-        """
         super().__init__(name, comm, OrderedDiGraph())
 
     @property

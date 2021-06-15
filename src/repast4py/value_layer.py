@@ -2,7 +2,7 @@ from numpy.testing._private.utils import clear_and_catch_warnings
 import torch
 import numpy as np
 
-from typing import Callable
+from typing import Callable, Tuple
 
 from . import geometry
 
@@ -11,9 +11,10 @@ from .space import DiscretePoint as dpt
 from .space import DiscretePoint
 
 from .core import AgentManager
+import repast4py
 
 
-class Impl1D:
+class _Impl1D:
 
     def __init__(self, bounds, borders, init_value, dtype):
         self.tpt = dpt(0, 0, 0)
@@ -94,7 +95,7 @@ class Impl1D:
         self.grid[self._compute_slice(key)] = val
 
 
-class Impl2D:
+class _Impl2D:
 
     def __init__(self, bounds, borders, init_value, dtype):
         self.tpt = dpt(0, 0, 0)
@@ -200,7 +201,7 @@ class Impl2D:
         self.grid[self._compute_slice(key)] = val
 
 
-class Impl3D:
+class _Impl3D:
     # Torch 3D tensor of shape (3, 4, 2)
     # is 3 arrays of 4 rows and 2 columns:
     # thus (z, y, x)
@@ -336,23 +337,42 @@ class Impl3D:
 
 
 class ValueLayer:
+    """N-dimensional raster type matrix where each discrete integer coordinate
+    contains a numeric value.
 
-    def __init__(self, bounds, borders, init_value, dtype=torch.float64):
+    A ValueLayer delegates its matrix storage to a pytorch tensor. The 'grid' property
+    provides access to this tensor. The ValueLayer can be initialized with a specified value or
+    with 'random' to initialize the matrix with a random value.
+
+    Args:
+        bounds: the dimensions of the ValueLayer
+        borders: the border semantics: BorderType.Sticky or BorderType.Periodic.
+        init_value: the initial value of each cell in this ValueLayer: either a numeric value or
+            'random' to specify a random initialization.
+        dtype (torch.dtype): the numeric type of this ValueLayer. Defaults to torch.float64.
+
+    """
+
+    def __init__(self, bounds: BoundingBox, borders: BorderType, init_value, dtype=torch.float64):
 
         if bounds.yextent == 0:
-            self.impl = Impl1D(bounds, borders, init_value, dtype)
+            self.impl = _Impl1D(bounds, borders, init_value, dtype)
         elif bounds.zextent == 0:
-            self.impl = Impl2D(bounds, borders, init_value, dtype)
+            self.impl = _Impl2D(bounds, borders, init_value, dtype)
         else:
-            self.impl = Impl3D(bounds, borders, init_value, dtype)
+            self.impl = _Impl3D(bounds, borders, init_value, dtype)
         self.bbounds = bounds
 
     @property
     def grid(self):
+        """pytorch.tensor: Gets the pytorch tensor that stores the values in this ValueLayer. Note that
+        the tensor is not addressed in x, y, z order so see the pytorch docs when using the tensor directly.
+        """
         return self.impl.grid
 
     @property
     def bounds(self):
+        """BoundingBox: Gets the dimensions of this ValueLayer."""
         return self.bbounds
 
     def get(self, pt: DiscretePoint):
@@ -360,6 +380,9 @@ class ValueLayer:
 
         Args:
             pt: the location to get the value of
+
+        Returns:
+            The value at the specified location.
         """
         return self.impl.get(pt)
 
@@ -378,17 +401,25 @@ class ValueLayer:
     # def __setitem__(self, key, val):
     #     self.impl.__setitem__(key, val)
 
-    def get_nghs(self, pt: DiscretePoint):
+    def get_nghs(self, pt: DiscretePoint) -> Tuple:
         """Gets the neighboring values and locations around the specified point.
 
         Args:
             pt: the point whose neighbors to get
+
+        Returns:
+            Tuple: A two elelment tuple consisting of the neighboring values as pytorch tensor, and
+            the neighboring locations as an np.array: (values, ngh_locations). The first value in
+            the values tensor corresponds to the first location in the ngh_locations array, and so forth.
         """
         return self.impl.get_nghs(pt)
 
 
 def _compute_meta_data_counts(meta_data, num_dims, offset, num_slices):
-    # np.apply_along_axis(lambda row: np.prod(row[:2]) + np.prod(row[6:8]), 1, meta_data_send)
+    """Depending on the dimensions, borders and ranks of a SharedValueLayer, the size
+    of the metadata (data used to synchronize among ranks) arrays is different. This
+    computes the size of the arrays.
+    """
     if num_slices == 1:
         return np.apply_along_axis(lambda row: np.prod(row[:num_dims]), 1, meta_data)
     elif num_slices == 2:
@@ -397,31 +428,59 @@ def _compute_meta_data_counts(meta_data, num_dims, offset, num_slices):
             lambda row: np.prod(row[:num_dims]) + np.prod(row[offset: offset + num_dims]), 1, meta_data)
     elif num_slices == 3:
         return np.apply_along_axis(
-            lambda row: np.prod(row[:num_dims]) +
-            np.prod(row[offset: offset + num_dims]) +
-            np.prod(row[offset * 2: offset * 2 + num_dims]),
+            lambda row: np.prod(row[:num_dims])
+            + np.prod(row[offset: offset + num_dims])
+            + np.prod(row[offset * 2: offset * 2 + num_dims]),
             1, meta_data)
     elif num_slices == 4:
         return np.apply_along_axis(
-            lambda row: np.prod(row[:num_dims]) +
-            np.prod(row[offset: offset + num_dims]) +
-            np.prod(row[offset * 2: offset * 2 + num_dims]) +
-            np.prod(row[offset * 3: offset * 3 + num_dims]),
+            lambda row: np.prod(row[:num_dims])
+            + np.prod(row[offset: offset + num_dims])
+            + np.prod(row[offset * 2: offset * 2 + num_dims])
+            + np.prod(row[offset * 3: offset * 3 + num_dims]),
             1, meta_data)
     elif num_slices == 6:
         return np.apply_along_axis(
-            lambda row: np.prod(row[:num_dims]) +
-            np.prod(row[offset: offset + num_dims]) +
-            np.prod(row[offset * 2: offset * 2 + num_dims]) +
-            np.prod(row[offset * 3: offset * 3 + num_dims]) +
-            np.prod(row[offset * 4: offset * 4 + num_dims]) +
-            np.prod(row[offset * 5: offset * 5 + num_dims]),
+            lambda row: np.prod(row[:num_dims])
+            + np.prod(row[offset: offset + num_dims])
+            + np.prod(row[offset * 2: offset * 2 + num_dims])
+            + np.prod(row[offset * 3: offset * 3 + num_dims])
+            + np.prod(row[offset * 4: offset * 4 + num_dims])
+            + np.prod(row[offset * 5: offset * 5 + num_dims]),
             1, meta_data)
 
 
 class SharedValueLayer(ValueLayer):
+    """A cross-process shared N-dimensional raster type matrix where each discrete integer coordinate
+    contains a numeric value.
 
-    def __init__(self, comm, bounds, borders, buffer_size, init_value, dtype=torch.float64):
+    The SharedValueLayer is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
+    some number of smaller value layers, one for each rank. For example, given a global size of (100 x 25) and
+    2 ranks, the global space will be split along the x dimension such that the SharedValueLayer in the first
+    MPI rank covers (0-50 x 0-25) and the second rank (50-100 x 0-25).
+    Each rank's SharedValueLayer contains a buffer of the specified size that duplicates or "ghosts" an adjacent
+    area of the neighboring rank's SharedValueLayer. In the above example, the rank 1 space buffers the area from
+    (50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate
+    to any agent behavior. For example, if an agent can "see" 3 units away and take some action based on what it
+    perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of
+    its own local SharedValueLayer.
+
+    A ValueLayer delegates its matrix storage to a pytorch tensor. The 'grid' property
+    provides access to this tensor. The ValueLayer can be initialized with a specified value or
+    with 'random' to initialize the matrix with a random value.
+
+    Args:
+        comm (mpi4py.MPI.Intracomm): the communicator containing all the ranks over which this SharedValueLayer is shared.
+        bounds: the dimensions of the ValueLayer
+        borders: the border semantics: BorderType.Sticky or BorderType.Periodic.
+        buffersize: the size of this  ValueLayers's buffered area. This single value is used for all dimensions.
+        init_value: the initial value of each cell in this ValueLayer: either a numeric value or
+            'random' to specify a random initialization.
+        dtype (torch.dtype): the numeric type of this ValueLayer. Defaults to torch.float64.
+
+    """
+
+    def __init__(self, comm, bounds: BoundingBox, borders: BorderType, buffer_size: int, init_value, dtype=torch.float64):
         self.periodic = borders == BorderType.Periodic
         topo = CartesianTopology(comm, bounds, self.periodic)
         self.cart_comm = topo.comm
@@ -920,39 +979,102 @@ class SharedValueLayer(ValueLayer):
 
 
 class ReadWriteValueLayer:
+    """Wraps two :class:`repast4py.value_layer.SharedValueLayer`, one of which functions as a read layer,
+    and the other as the write layer.
 
-    def __init__(self, comm, bounds, borders, buffer_size, init_value, dtype=torch.float64):
+    All write operations will be performed on the write layer, and all read operations on the read layer.
+    The two can be swapped using the swap_layers method. The intention is to provide all agents with the
+    equivalent value layer state, such that they read from the read layer, but when making changes to
+    the value layer, these changes are not available via a read until the layers are swapped. This removes any
+    ordering effects such as a "first moved advantage."
+
+    A cross-process shared N-dimensional raster type matrix where each discrete integer coordinate
+    contains a numeric value.
+
+    A SharedValueLayer is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
+    some number of smaller value layers, one for each rank. For example, given a global size of (100 x 25) and
+    2 ranks, the global space will be split along the x dimension such that the SharedValueLayer in the first
+    MPI rank covers (0-50 x 0-25) and the second rank (50-100 x 0-25).
+    Each rank's SharedValueLayer contains a buffer of the specified size that duplicates or "ghosts" an adjacent
+    area of the neighboring rank's SharedValueLayer. In the above example, the rank 1 space buffers the area from
+    (50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate
+    to any agent behavior. For example, if an agent can "see" 3 units away and take some action based on what it
+    perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of
+    its own local SharedValueLayer.
+
+    A ValueLayer delegates its matrix storage to a pytorch tensor. The 'grid' property
+    provides access to this tensor. The ValueLayer can be initialized with a specified value or
+    with 'random' to initialize the matrix with a random value.
+
+    Args:
+        comm (mpi4py.MPI.Intracomm): the communicator containing all the ranks over which this SharedValueLayer is shared.
+        bounds: the dimensions of the ValueLayer
+        borders: the border semantics: BorderType.Sticky or BorderType.Periodic.
+        buffersize: the size of this  ValueLayers's buffered area. This single value is used for all dimensions.
+        init_value: the initial value of each cell in this ValueLayer: either a numeric value or
+            'random' to specify a random initialization.
+        dtype (torch.dtype): the numeric type of this ValueLayer. Defaults to torch.float64.
+
+    """
+    def __init__(self, comm, bounds: BoundingBox, borders: BorderType, buffer_size: int, init_value, dtype=torch.float64):
         self.read_layer = SharedValueLayer(comm, bounds, borders, buffer_size, init_value, dtype)
         self.write_layer = SharedValueLayer(comm, bounds, borders, buffer_size, init_value, dtype)
 
     def swap_layers(self):
+        """Swaps the two layers. The write layer becomes the read and the read becomes the write"""
         self.read_layer, self.write_layer = self.write_layer, self.read_layer
 
-    def grid(self):
-        return self.impl.grid
+    @property
+    def read_grid(self):
+        """pytorch.tensor: Gets the pytorch tensor that stores the values in the read layer. Note that
+        the tensor is not addressed in x, y, z order so see the pytorch docs when using the tensor directly.
+        """
+        return self.read_layer.grid
+
+    @property
+    def write_grid(self):
+        """pytorch.tensor: Gets the pytorch tensor that stores the values in the write layer. Note that
+        the tensor is not addressed in x, y, z order so see the pytorch docs when using the tensor directly.
+        """
+        return self.write_layer.grid
 
     @property
     def bounds(self):
-        return self.read.bbounds
+        """BoundingBox: Gets the dimensions of the read and write layers."""
+        return self.read_layer.bbounds
 
     def get(self, pt):
-        return self.read.get(pt)
+        """Gets the value at the specified point from the read layer.
+
+        Args:
+            pt: the location to get the value of
+
+        Returns:
+            The value at the specified location.
+        """
+        return self.read_layer.get(pt)
 
     def set(self, pt, val):
-        self.write.set(pt, val)
+        """Sets the value at the specified location on the write layer.
 
-    def __getitem__(self, key):
-        return self.read.__getitem__(key)
-
-    def __setitem__(self, key, val):
-        self.write.__setitem__(key, val)
-
-    def get_nghs(self, pt, extent=1):
-        """ Gets the neighboring values and locations around the specified point.
-        :param pt: the point whose neighbors to get
-        :param extent: the extent of the neighborhood
+        Args:
+            pt: the location to set the value of
+            val: the value to set the location to
         """
-        return self.read.get_nghs(pt, extent)
+        self.write_layer.set(pt, val)
+
+    def get_nghs(self, pt) -> Tuple:
+        """Gets the neighboring values and locations around the specified point.
+
+        Args:
+            pt: the point whose neighbors to get
+
+        Returns:
+            Tuple: A two elelment tuple consisting of the neighboring values as pytorch tensor, and
+            the neighboring locations as an np.array: (values, ngh_locations). The first value in
+            the values tensor corresponds to the first location in the ngh_locations array, and so forth.
+        """
+        return self.read.get_nghs(pt)
 
     def _pre_synch_ghosts(self, agent_manager: AgentManager):
         """Called prior to synchronizing ghosts and before any cross-rank movement
@@ -964,7 +1086,7 @@ class ReadWriteValueLayer:
         pass
 
     def _synch_ghosts(self, agent_manager: AgentManager, create_agent: Callable):
-        """Synchronizes the ghosted part of this projection
+        """Synchronizes the ghosted buffer parts of the read and write value layers.
 
         Args:
             agent_manager: this rank's AgentManager
@@ -973,6 +1095,3 @@ class ReadWriteValueLayer:
         """
         self.write_layer._synch_ghosts()
         self.read_layer._synch_ghosts()
-
-    def apply(self, func):
-        func(self)

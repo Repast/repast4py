@@ -21,17 +21,19 @@ _zoffset_3d = np.array([-1] * 9 + [0] * 9 + [1] * 9)
 
 
 @jit(nopython=True)
-def find_1d_nghs_sticky(pt, min_max):
+def find_1d_nghs_sticky(pt: np.array, min_max: np.array):
     """Finds the neighboring 1D coordinate indices of the specifed point, bounded
-    by the specified min_max sticky bounds.
+    by the specified min_max sticky bounds. See :class:`repast4py.space.BorderType` and
+    :class:`repast4py.space.GridStickyBorders` for more on sticky border semantics.
 
     For example, in a 1D array with a bounds of 2 - 10, a pt of 4
     has 3 and 5 as its neighbors.
     Args:
         pt: A numpy scalar array with at least one element
         min_max: A numpy array of format [min_x, max_x]
-    Returns: A 1d numpy array with the neighboring points according to sticky border
-    semantics.
+    Returns:
+        A 1d numpy array with the neighboring points according to sticky border
+        semantics.
     """
     x_pts = pt[0] + _xoffset_1d
     x_idxs = (x_pts >= min_max[0]) & (x_pts <= min_max[1])
@@ -40,17 +42,19 @@ def find_1d_nghs_sticky(pt, min_max):
 
 
 @jit(nopython=True)
-def find_2d_nghs_sticky(pt, min_max, pytorch_order: bool=False):
+def find_2d_nghs_sticky(pt: np.array, min_max: np.array, pytorch_order: bool=False):
     """Finds the neighboring 2D coordinate indices of the specifed point, bounded
-    by the specified min_max sticky bounds.
+    by the specified min_max sticky bounds. See :class:`repast4py.space.BorderType` and
+    :class:`repast4py.space.GridStickyBorders` for more on sticky border semantics.
 
     Args:
         pt: A numpy scalar array with at least two elements
         min_max: A numpy array of format [min_x, max_x, min_y, max_y]
         pytorch_order: determines the order in which the neighbors are returned. If True,
-        the y coordinates are returned first, otherwise, the x coordinates are returned first.
-    Returns: A 2d numpy array with the neighboring points according to sticky border
-    semantics, in the order determined by the pytorch_order argument.
+            the y coordinates are returned first, otherwise, the x coordinates are returned first.
+    Returns:
+        A 2d numpy array with the neighboring points according to sticky border
+        semantics, in the order determined by the pytorch_order argument.
     """
     x_pts = pt[0] + _xoffset_2d
     y_pts = pt[1] + _yoffset_2d
@@ -69,17 +73,19 @@ def find_2d_nghs_sticky(pt, min_max, pytorch_order: bool=False):
 
 
 @jit(nopython=True)
-def find_3d_nghs_sticky(pt, min_max, pytorch_order=False):
+def find_3d_nghs_sticky(pt: np.array, min_max: np.array, pytorch_order=False):
     """Finds the neighboring 3D coordinate indices of the specifed point, bounded
-    by the specified min_max sticky bounds.
+    by the specified min_max sticky bounds. See :class:`repast4py.space.BorderType` and
+    :class:`repast4py.space.GridStickyBorders` for more on sticky border semantics.
 
     Args:
         pt: A numpy scalar array with at least three elements
         min_max: A numpy array of format [min_x, max_x, min_y, max_y, min_z, max_z]
         pytorch_order: determines the order in which the neighbors are returned. If True,
-        the y coordinates are returned first, otherwise, the x coordinates are returned first.
-    Returns: A 3d numpy array with the neighboring points according to sticky border
-    semantics, in the order determined by the pytorch_order argument.
+            the y coordinates are returned first, otherwise, the x coordinates are returned first.
+    Returns:
+        A 3d numpy array with the neighboring points according to sticky border
+        semantics, in the order determined by the pytorch_order argument.
     """
     x_pts = pt[0] + _xoffset_3d
     y_pts = pt[1] + _yoffset_3d
@@ -107,17 +113,21 @@ def find_3d_nghs_sticky(pt, min_max, pytorch_order=False):
 
 
 @jit(nopython=True)
-def find_1d_nghs_periodic(pt, min_max):
+def find_1d_nghs_periodic(pt: np.array, min_max: np.array):
     """Finds the neighboring 1D coordinate indices of the specifed point, bounded
-    by the specified min_max periodic bounds.
+    by the specified min_max periodic bounds. See :class:`repast4py.space.BorderType` and
+    :class:`repast4py.space.GridPeriodicBorders` for more on periodic border semantics.
 
     For example, in a 1D array with a bounds of 2 - 10, a pt of 4
     has 3 and 5 as its neighbors.
+
     Args:
         pt: A numpy scalar array with at least one element
         min_max: A numpy array of format [min_x, max_x]
-    Returns: A 1d numpy array with the neighboring points according to periodic border
-    semantics.
+
+    Returns:
+        A 1d numpy array with the neighboring points according to periodic border
+        semantics.
     """
     x_extent = min_max[1] - min_max[0] + 1
     x_pts = pt[0] + _xoffset_1d
@@ -127,17 +137,20 @@ def find_1d_nghs_periodic(pt, min_max):
 
 
 @jit(nopython=True)
-def find_2d_nghs_periodic(pt, min_max, pytorch_order=False):
-    """Finds the neighboring 2D coordinate indices of the specifed point, bounded
-    by the specified min_max periodic bounds.
+def find_2d_nghs_periodic(pt: np.array, min_max: np.array, pytorch_order=False):
+    """Finds the neighboring 2D coordinate indices of the specified point, bounded
+    by the specified min_max periodic bounds. See :class:`repast4py.space.BorderType` and
+    :class:`repast4py.space.GridPeriodicBorders` for more on periodic border semantics.
 
     Args:
         pt: A numpy scalar array with at least two elements
         min_max: A numpy array of format [min_x, max_x, min_y, max_y]
         pytorch_order: determines the order in which the neighbors are returned. If True,
-        the y coordinates are returned first, otherwise, the x coordinates are returned first.
-    Returns: A 2d numpy array with the neighboring points according to periodic border
-    semantics, in the order determined by the pytorch_order argument.
+            the y coordinates are returned first, otherwise, the x coordinates are returned first.
+
+    Returns:
+        A 2d numpy array with the neighboring points according to periodic border
+        semantics, in the order determined by the pytorch_order argument.
     """
     x_extent = min_max[1] - min_max[0] + 1
     x_pts = pt[0] + _xoffset_2d
@@ -153,17 +166,19 @@ def find_2d_nghs_periodic(pt, min_max, pytorch_order=False):
 
 
 @jit(nopython=True)
-def find_3d_nghs_periodic(pt, min_max, pytorch_order=False):
+def find_3d_nghs_periodic(pt: np.array, min_max: np.array, pytorch_order=False):
     """Finds the neighboring 3D coordinate indices of the specifed point, bounded
-    by the specified min_max periodic bounds.
+    by the specified min_max periodic bounds. See :class:`repast4py.space.BorderType` and
+    :class:`repast4py.space.GridPeriodicBorders` for more on periodic border semantics.
 
     Args:
         pt: A numpy scalar array with at least three elements
         min_max: A numpy array of format [min_x, max_x, min_y, max_y, min_z, max_z]
         pytorch_order: determines the order in which the neighbors are returned. If True,
-        the y coordinates are returned first, otherwise, the x coordinates are returned first.
-    Returns: A 3d numpy array with the neighboring points according to periodic border
-    semantics, in the order determined by the pytorch_order argument.
+            the y coordinates are returned first, otherwise, the x coordinates are returned first.
+    Returns:
+        A 3d numpy array with the neighboring points according to periodic border
+        semantics, in the order determined by the pytorch_order argument.
     """
     x_extent = min_max[1] - min_max[0] + 1
     x_pts = pt[0] + _xoffset_3d

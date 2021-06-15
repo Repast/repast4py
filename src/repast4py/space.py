@@ -226,16 +226,16 @@ class SharedCSpace(_SharedContinuousSpace):
     a continuous floating point coordinate.
     The space is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
     some number of smaller spaces, one for each rank. For example, given a global spaces size of (100 x 25) and
-    2 ranks, the global space will be split along the x dimension such that the SharedContinuousSpace in the first
+    2 ranks, the global space will be split along the x dimension such that the SharedCSpace in the first
     MPI rank covers (0-50 x 0-25) and the second rank (50-100 x 0-25).
-    Each rank's SharedContinuousSpace contains a buffer of the specified size that duplicates or "ghosts" an adjacent
-    area of the neighboring rank's SharedContinuousSpace. In the above example, the rank 1 space buffers the area from
+    Each rank's SharedCSpace contains a buffer of the specified size that duplicates or "ghosts" an adjacent
+    area of the neighboring rank's SharedCSpace. In the above example, the rank 1 space buffers the area from
     (50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate
     to any agent behavior. For example, if an agent can "see" 3 units away and take some action based on what it
     perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of
-    its own local SharedContinuousSpace. When an agent moves beyond the borders of its current SharedContinuousSpace,
+    its own local SharedCSpace. When an agent moves beyond the borders of its current SharedCSpace,
     it will be transferred
-    from its current rank, and into that containing the section of the global grid that it has moved into.
+    from its current rank, and into that containing the section of the global space that it has moved into.
     The SharedContinuousSpace uses a `tree <https://en.wikipedia.org/wiki/Quadtree>`_ (quad or oct depending on the number of
     dimensions) to speed up spatial queries. The tree can be tuned using the tree threshold parameter.
 
@@ -245,7 +245,7 @@ class SharedCSpace(_SharedContinuousSpace):
        borders: the border semantics: BorderType.Sticky or BorderType.Periodic
        occupancy: the type of occupancy in each cell: OccupancyType.Multiple.
        buffersize: the size of this SharedContinuousSpace's buffered area. This single value is used for all dimensions.
-       comm: the communicator containing all the ranks over which this SharedGrid is shared.
+       comm: the communicator containing all the ranks over which this SharedCSpace is shared.
        tree_threshold: the space's tree cell maximum capacity. When this capacity is reached, the cell splits.
 
     """
