@@ -17,14 +17,13 @@ class SharedContext:
     impose a relational structure on the agents in the context. It also
     provides functionality for synchronizing agents across processes, moving
     agents from one processe to another and managing any ghosting strategy.
+
+    Args:
+            comm (mpi4py.MPI.Intracomm): the communicator used to communicate
+            among SharedContexts in the distributed model
+
     """
     def __init__(self, comm):
-        """Initializes this SharedContext with the specified communicator.
-
-        Args:
-            comm (mpi4py communicator): the communicator used to communicate
-                among SharedContexts in the distributed model
-        """
         self._agent_manager = AgentManager(comm.Get_rank(), comm.Get_size())
         self._agents_by_type = {}
         self.projections = {}
@@ -43,6 +42,7 @@ class SharedContext:
 
         Args:
             agent: the agent to add
+
         """
         self._agent_manager.add_local(agent)
         self._agents_by_type.setdefault(agent.uid[1], collections.OrderedDict())[agent.uid] = agent
@@ -105,11 +105,11 @@ class SharedContext:
 
     def _gather_oob_data(self, oob_agents: List):
         """Gets the agent data from any agents that have moved out-of-bounds
-        (oob), and adds to the specified list the agent data and the rank where the agent 
+        (oob), and adds to the specified list the agent data and the rank where the agent
         will move.
 
         Args:
-            oob_agents: an empty list into which a tuple (agent_data, ngh_rank) for
+            oob_agents: an empty list into which a tuple (agent, ngh_rank) for
                 each oob agent will be added.
         Return:
             A list of lists where the position in the first list is the rank
@@ -142,7 +142,17 @@ class SharedContext:
 
         return send_data
 
-    def _process_recv_oob_data(self, recv_data, ghosts_to_remove: List, create_agent: Callable):
+    def _process_recv_oob_data(self, recv_data: List, ghosts_to_remove: List, create_agent: Callable):
+        """Adds any agents that are recevied by this rank from another rank when those agents have
+        gone out of bounds and entered this rank.
+
+        Args:
+            recv_data: a list of lists where the inner list contains tuples of the type: 
+            [(agent id tuple, agent state), optional ghosting data]. 
+            ghosts_to_remove: if the received agent is currently a ghost on this rank, then
+            it is added to this list for later ghost removal.
+            create_agent: a callable that can create an agent from the agent state data.
+        """
         for data_list in recv_data:
             for data in data_list:
                 # agent_data_list: [(agent id tuple, agent state), optional ghosting data]
@@ -171,6 +181,9 @@ class SharedContext:
                 self.bounded_projs[proj_data[0]]._move_oob_agent(agent, proj_data[1])
 
     def _update_removed_ghosts(self):
+        """Updates other ranks that agents ghosted from this rank
+        have been removed from the simulation.
+        """
         # send ghosted removed updates
         send_data = [[] for i in range(self.comm.size)]
         for gh in self.removed_ghosteds:
@@ -187,6 +200,8 @@ class SharedContext:
         self.removed_ghosteds.clear()
 
     def _update_ghosts(self):
+        """Updates the state of any agents ghosted from this rank to other ranks.
+        """
         self._update_removed_ghosts()
         # send agent state updates to ghosts
         send_data = [[] for _ in range(self.comm.size)]
@@ -207,12 +222,12 @@ class SharedContext:
             proj._pre_synch_ghosts(self._agent_manager)
 
     def _synch_ghosts(self, create_agent: Callable):
-        """Calls _synch_ghosts on all "ghostable" projections
-        and value layers.
+        """Synchronizes ghosts on all "ghostable" projections
+        and value layers associated with this SharedContext.
 
         Args:
             create_agent: a Callable that when given serialized agent data
-            return an agent.
+            returns an agent.
         """
         self._update_ghosts()
         for proj in self.projections.values():
@@ -223,7 +238,7 @@ class SharedContext:
 
     def synchronize(self, create_agent: Callable, sync_ghosts: bool=True):
         """Synchronizes the model state across processes by moving agents, filling
-        projection buffers with ghosts, and so forth.
+        projection buffers with ghosts, updating ghosted state and so forth.
 
         Args:
             create_agent: a callable that takes agent data and creates and returns an agent instance from
@@ -281,7 +296,7 @@ class SharedContext:
 
         Examples:
             >>> PERSON_AGENT_TYPE = 1
-            >>> for agent in ctx.agents(PERSON_AGENT_TYPE, shuffle=True)
+            >>> for agent in ctx.agents(PERSON_AGENT_TYPE, shuffle=True):
                    ...
         """
         if shuffle:
@@ -330,7 +345,7 @@ class SharedContext:
         return self._agent_manager.get_ghost(agent_id, incr=0)
 
     def size(self, agent_type_ids: List[int]=None) -> dict:
-        """Gets the number of agents in this SharedContext, optionally by type.
+        """Gets the number of local agents in this SharedContext, optionally by type.
 
         Args:
             agent_type_ids: a list of the agent type ids identifying the agent types to count.

@@ -15,6 +15,10 @@ from .util import find_free_filename
 
 
 class DataSource(Protocol):
+    """Protocol class for objects that can be used during logging as a
+    source of data. Such objects must have a name, a type, and be able return
+    the data to log via a "value" property.
+    """
 
     @property
     def name(self) -> str:
@@ -29,10 +33,10 @@ class DataSource(Protocol):
     # int is acceptable when float is type
     # https://stackoverflow.com/questions/50928592/mypy-type-hint-unionfloat-int-is-there-a-number-type
     def value(self) -> float:
-        """Gets the value of this DataSource.
+        """Gets the value (i.e., the data to log) of this DataSource.
 
         Returns:
-            The value of this DataSource.
+            The value (i.e., the data to log) of this DataSource.
         """
         pass
 
@@ -68,7 +72,8 @@ class ReducingDataLogger:
 
     @property
     def name(self) -> str:
-        """Gets the name of this ReducingDataLogger. 
+        """Gets the name of this ReducingDataLogger.
+
         This is forwarded from the data source.
 
         Returns:
@@ -106,11 +111,14 @@ class ReducingDataLogger:
         self._data[self._idx] = self._data_source.value
         self._idx += 1
 
-    def reduce(self, comm: MPI.Comm) -> np.array:
-        """Reduces the values on all processes within the specified
+    def reduce(self, comm: MPI.Intracomm) -> np.array:
+        """Reduces the values on all processes in the specified
         communicator to single values using the op specified in the
         constructor. The reduction is performed on each logged value
         at which point, the logged values are discarded.
+
+        Args:
+            comm: the communicator over whose ranks the reduction is performed.
 
         Returns:
             A numpy array containing the reduced values.
@@ -126,14 +134,14 @@ class ReducingDataLogger:
 
 # creates a datasource from a dataclass field
 class DCDataSource:
-    """A DCDataSource implements the :py:class logging.DataSource protocol for
-    :py:class dataclasses.dataclass objects. Each DCDataSource gets its returned
-    value from a dataclass field.
+    """A DCDataSource implements the :class:`repast4py.logging.DataSource` protocol for
+    :py:obj:`dataclasses.dataclass` objects. Each DCDataSource gets its data to log
+    from a dataclass field.
     """
 
     def __init__(self, data_class: dataclass, field_name: str, ds_name: str=None):
-        """Creates a DCDataSource that will log the specified field of the
-        specified dataclass. By default field name will be used as the data source
+        """The constructor creates a DCDataSource that will log the specified field of the
+        specified dataclass. By default, the field name will be used as the data source
         name, but an optional data source name can be supplied. The data source
         name will become the column header in the logged tabular data.
 
@@ -141,8 +149,8 @@ class DCDataSource:
             data_class: the dataclass containing the values to log
             field_name: the name of the field in the dataclass to log
             ds_name: an optional name that will be used as the column
-            header if supplied, otherwise the field_name will be
-            used.
+                header if supplied, otherwise the field_name will be
+                used.
         """
         self.data_class = data_class
         self.field_name = field_name
@@ -201,8 +209,8 @@ def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str]=N
         op: an mpi reduction operator (e.g., MPI.SUM)
         rank: the rank of this process
         names: dict where the keys are the names of the dataclass fields to log, and the values
-        are the names of the datasource (i.e., the column header in the output tabular data). If
-        value is None, then the dataclass field name will be used as the data source name.
+            are the names of the datasource (i.e., the column header in the output tabular data). If
+            value is None, then the dataclass field name will be used as the data source name.
 
     Returns:
         A list of ReducingDataLoggers that can be added to a ReducingDataSet for logging.
@@ -277,7 +285,7 @@ class ReducingDataSet:
         log on each data logger contained in this ReducingDataSet.
 
         Args:
-            tick: the tick (timestamp) for which the data is logged.
+            tick: the tick (timestamp) at which the data is logged.
         """
         if self._rank == 0:
             self.ticks.append(tick)
