@@ -244,7 +244,7 @@ class SharedCSpace(_SharedContinuousSpace):
        bounds: the global dimensions of the grid.
        borders: the border semantics: BorderType.Sticky or BorderType.Periodic
        occupancy: the type of occupancy in each cell: OccupancyType.Multiple.
-       buffersize: the size of this SharedContinuousSpace's buffered area. This single value is used for all dimensions.
+       buffersize: the size of this SharedCSpace's buffered area. This single value is used for all dimensions.
        comm: the communicator containing all the ranks over which this SharedCSpace is shared.
        tree_threshold: the space's tree cell maximum capacity. When this capacity is reached, the cell splits.
 
