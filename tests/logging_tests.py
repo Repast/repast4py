@@ -10,6 +10,7 @@ sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
 from repast4py import logging
 
+
 @dataclass
 class Counts:
     a: int = 0

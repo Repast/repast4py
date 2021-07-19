@@ -9,6 +9,7 @@
 * nptyping (`pip install nptyping`)
 * numba
 * typing-extensions if < 3.8
+* pyyaml
 
 
 ## Linting ##

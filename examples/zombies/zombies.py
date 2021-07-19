@@ -1,35 +1,30 @@
-from mpi4py import MPI
 import sys
-import configparser
-import random
 import math
 import numpy as np
 import argparse
-import json
 import time
+from typing import Dict, Tuple
+from mpi4py import MPI
+from dataclasses import dataclass
 
 import numba
-from numba import int32
+from numba import int32, int64
 from numba.experimental import jitclass
 
-from repast4py import core, space, util, schedule
+from repast4py import core, space, schedule, logging, random
 from repast4py import context as ctx
+from repast4py.util import parse_params
 
 from repast4py.space import ContinuousPoint as cpt
 from repast4py.space import DiscretePoint as dpt
 from repast4py.space import BorderType, OccupancyType
 
-timer = util.Timer()
 model = None
-
-
-def printf(msg):
-    print(msg)
-    sys.stdout.flush()
 
 
 @numba.jit(nopython=True)
 def find_min_zombies(nghs, grid):
+    """Given """
     minimum = [[], sys.maxsize]
     at = dpt(0, 0, 0)
     for ngh in nghs:
@@ -44,10 +39,10 @@ def find_min_zombies(nghs, grid):
         elif count == minimum[1]:
             minimum[0].append(ngh)
 
-    return minimum[0][random.randint(0, len(minimum[0]) - 1)]
+    return minimum[0][random.default_rng.integers(0, len(minimum[0]))]
 
 
-# @numba.jit((int64[:], int64[:]), nopython=True)
+@numba.jit((int64[:], int64[:]), nopython=True)
 def is_equal(a1, a2):
     return a1[0] == a2[0] and a1[1] == a2[1]
 
@@ -98,29 +93,36 @@ class GridNghFinder:
 
 
 class Human(core.Agent):
+    """The Human Agent
+
+    Args:
+        a_id: a integer that uniquely identifies this Human on its starting rank
+        rank: the starting MPI rank of this Human.
+    """
 
     ID = 0
 
-    def __init__(self, a_id, rank):
+    def __init__(self, a_id: int, rank: int):
         super().__init__(id=a_id, type=Human.ID, rank=rank)
         self.infected = False
         self.infected_duration = 0
 
-    def save(self):
-        return (self.uid, self.infected, self.infected_duration)
+    def save(self) -> Tuple:
+        """Saves the state of this Human as a Tuple.
 
-    def restore(self, data):
-        self.infected = data[1]
-        self.infected_duration = data[2]
+        Used to move this Human from one MPI rank to another.
+
+        Returns:
+            The saved state of this Human.
+        """
+        return (self.uid, self.infected, self.infected_duration)
 
     def infect(self):
         self.infected = True
 
     # @profile
     def step(self):
-        timer.start_timer('s_get_location')
         space_pt = model.space.get_location(self)
-        timer.stop_timer('s_get_location')
         alive = True
         if self.infected:
             self.infected_duration += 1
@@ -128,10 +130,7 @@ class Human(core.Agent):
 
         if alive:
             grid = model.grid
-            timer.start_timer('g_get_location')
             pt = grid.get_location(self)
-            timer.stop_timer('g_get_location')
-            timer.start_timer('ngh_finder')
             nghs = model.ngh_finder.find(pt.x, pt.y)  # include_origin=True)
             # timer.stop_timer('ngh_finder')
 
@@ -150,19 +149,15 @@ class Human(core.Agent):
                 elif count == minimum[1]:
                     minimum[0].append(ngh)
 
-            min_ngh = minimum[0][random.randint(0, len(minimum[0]) - 1)]
+            min_ngh = minimum[0][random.default_rng.integers(0, len(minimum[0]))]
             # timer.stop_timer('zombie_finder')
 
-            timer.start_timer('do_move')
             # if not np.all(min_ngh == pt.coordinates):
             # if min_ngh[0] != pt.coordinates[0] or min_ngh[1] != pt.coordinates[1]:
             # if not np.array_equal(min_ngh, pt.coordinates):
             if not is_equal(min_ngh, pt.coordinates):
                 direction = (min_ngh - pt.coordinates) * 0.5
-                timer.start_timer('human_move')
                 model.move(self, space_pt.x + direction[0], space_pt.y + direction[1])
-                timer.stop_timer('human_move')
-            timer.stop_timer('do_move')
 
         return (not alive, space_pt)
 
@@ -176,9 +171,6 @@ class Zombie(core.Agent):
 
     def save(self):
         return (self.uid,)
-
-    def restore(self):
-        pass
 
     def step(self):
         grid = model.grid
@@ -199,7 +191,7 @@ class Zombie(core.Agent):
             elif count == maximum[1]:
                 maximum[0].append(ngh)
 
-        max_ngh = maximum[0][random.randint(0, len(maximum[0]) - 1)]
+        max_ngh = maximum[0][random.default_rng.integers(0, len(maximum[0]))]
 
         if not np.all(max_ngh == pt.coordinates):
             direction = (max_ngh - pt.coordinates[0:3]) * 0.25
@@ -215,45 +207,87 @@ class Zombie(core.Agent):
                 break
 
 
-def create_agent(agent_data):
+human_cache = {}
+zombie_cache = {}
+
+
+def create_agent(agent_data: Tuple):
+    """Creates an agent from the specified agent_data.
+
+    This is used to re-create agents when they have moved from one MPI rank to another.
+    The tuple returned by the agent's save() method is moved between ranks, and create_agent
+    is called for each tuple in order to create the agent on that rank. Here we also use
+    a cache to cache any agents already created on this rank, and only update their state
+    rather than creating from scratch.
+
+    Args:
+        agent_data: the data to create the agent from. This is the tuple return from the agent's save() method
+                    where the first element is the agent id tuple, and the any remaining arguments encapsulate
+                    agent state.
+    """
     uid = agent_data[0]
     # 0 is id, 1 is type, 2 is rank
     if uid[1] == Human.ID:
-        h = Human(uid[0], uid[2])
+        if uid in human_cache:
+            h = human_cache[uid]
+        else:
+            h = Human(uid[0], uid[2])
+            human_cache[uid] = h
+
+        # restore the agent state from the agent_data tuple
         h.infected = agent_data[1]
         h.infected_duration = agent_data[2]
         return h
     else:
-        return Zombie(uid[0], uid[2])
+        # note that the zombie has not internal state
+        # so there's nothing to restore other than
+        # the Zombie itself
+        if uid in zombie_cache:
+            return zombie_cache[uid]
+        else:
+            z = Zombie(uid[0], uid[2])
+            zombie_cache[uid] = z
+            return z
+
+
+@dataclass
+class Counts:
+    """Dataclass used by repast4py aggregate logging to record
+    the number of Humans and Zombies after each tick.
+    """
+    humans: int = 0
+    zombies: int = 0
 
 
 class Model:
 
-    def __init__(self, comm, props):
+    def __init__(self, comm, params):
         self.comm = comm
         self.context = ctx.SharedContext(comm)
         self.rank = self.comm.Get_rank()
 
         self.runner = schedule.SharedScheduleRunner(comm)
         self.runner.schedule_repeating_event(1, 1, self.step)
-        self.runner.schedule_stop(float(props['stop.at']))
+        self.runner.schedule_stop(float(params['stop.at']))
+        self.runner.schedule_end_event(self.at_end)
 
-        box = space.BoundingBox(0, int(props['world.width']), 0, int(props['world.height']), 0, 0)
-
+        box = space.BoundingBox(0, int(params['world.width']), 0, int(params['world.height']), 0, 0)
         self.grid = space.SharedGrid('grid', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
                                      buffersize=2, comm=comm)
         self.context.add_projection(self.grid)
-
         self.space = space.SharedCSpace('space', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
                                         buffersize=2, comm=comm, tree_threshold=100)
         self.context.add_projection(self.space)
-
         self.ngh_finder = GridNghFinder(0, 0, box.xextent, box.yextent)
+
+        self.counts = Counts()
+        loggers = logging.create_loggers(self.counts, op=MPI.SUM, rank=self.rank)
+        self.data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, params['counts_file'])
 
         local_bounds = self.space.get_local_bounds()
         world_size = comm.Get_size()
 
-        total_human_count = int(props['human.count'])
+        total_human_count = int(params['human.count'])
         pp_human_count = int(total_human_count / world_size)
         if self.rank < total_human_count % world_size:
             pp_human_count += 1
@@ -261,11 +295,11 @@ class Model:
         for i in range(pp_human_count):
             h = Human(i, self.rank)
             self.context.add(h)
-            x = random.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
-            y = random.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
+            x = random.default_rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+            y = random.default_rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
             self.move(h, x, y)
 
-        total_zombie_count = int(props['zombie.count'])
+        total_zombie_count = int(params['zombie.count'])
         pp_zombie_count = int(total_zombie_count / world_size)
         if self.rank < total_zombie_count % world_size:
             pp_zombie_count += 1
@@ -273,13 +307,14 @@ class Model:
         for i in range(pp_zombie_count):
             zo = Zombie(i, self.rank)
             self.context.add(zo)
-            x = random.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
-            y = random.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
+            x = random.default_rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+            y = random.default_rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
             self.move(zo, x, y)
 
         self.zombie_id = pp_zombie_count
 
-        self.calc_counts()
+    def at_end(self):
+        self.data_set.close()
 
     def move(self, agent, x, y):
         # timer.start_timer('space_move')
@@ -292,11 +327,7 @@ class Model:
     def step(self):
         # print("{}: {}".format(self.rank, len(self.context.local_agents)))
         tick = self.runner.schedule.tick
-        if tick % 10 == 0:
-            hc, zc = self.calc_counts()
-            if (self.rank == 0):
-                printf("Tick: {}, Human Count: {}, Zombie Count: {}".format(tick, hc, zc))
-
+        self.log_counts(tick)
         self.context.synchronize(create_agent)
 
         # timer.start_timer('z_step')
@@ -330,61 +361,47 @@ class Model:
         self.move(z, pt.x, pt.y)
         # print("Adding zombie at {}".format(pt))
 
-    def calc_counts(self):
-        human_count = np.zeros(1, dtype='int64')
-        zombie_count = np.zeros(1, dtype='int64')
+    def log_counts(self, tick):
+        # Get the current number of zombies and humans and log
         counts = self.context.size([Human.ID, Zombie.ID])
-        self.comm.Reduce(np.array([counts[Human.ID]], dtype='int64'), human_count, op=MPI.SUM, root=0)
-        self.comm.Reduce(np.array([counts[Zombie.ID]], dtype='int64'), zombie_count, op=MPI.SUM, root=0)
+        self.counts.humans = counts[Human.ID]
+        self.counts.zombies = counts[Zombie.ID]
+        self.data_set.log(tick)
 
-        return (human_count[0], zombie_count[0])
+        # Do the cross-rank reduction manually and print the result
+        if tick % 10 == 0:
+            human_count = np.zeros(1, dtype='int64')
+            zombie_count = np.zeros(1, dtype='int64')
+            self.comm.Reduce(np.array([self.counts.humans], dtype='int64'), human_count, op=MPI.SUM, root=0)
+            self.comm.Reduce(np.array([self.counts.zombies], dtype='int64'), zombie_count, op=MPI.SUM, root=0)
+            if (self.rank == 0):
+                print("Tick: {}, Human Count: {}, Zombie Count: {}".format(tick, human_count[0], zombie_count[0]),
+                      flush=True)
 
 
-def run(props):
+def run(params: Dict):
+    """Creates and runs the Zombies Model.
 
-    if 'random.seed' in props:
-        random.seed(int(props['random.seed']))
-
+    Args:
+        params: the model input parameters
+    """
     global model
-    model = Model(MPI.COMM_WORLD, props)
-    # timer.start_timer('all')
+    model = Model(MPI.COMM_WORLD, params)
     model.run()
-    # timer.stop_timer('all')
-    # timer.print_times()
 
 
 def parse_args():
+    """Parses command line arguments using argparse
+    """
     parser = argparse.ArgumentParser()
-    parser.add_argument("props_file", help="properties file")
+    parser.add_argument("parameters_file", help="parameters file (yaml format)")
     parser.add_argument("parameters", nargs="?", default="{}", help="json parameters string")
     return parser.parse_args()
-
-
-def parse_props(props_file, param_string):
-    with open(props_file, 'r') as f_in:
-        lines = f_in.readlines()
-        config_string = '[DEFAULT]\n{}'.format('\n'.join(lines))
-
-    config = configparser.ConfigParser()
-    config.read_string(config_string)
-    props = config['DEFAULT']
-
-    params = json.loads(param_string)
-    for p in params:
-        props[p] = str(params[p])
-
-    return props
 
 
 if __name__ == "__main__":
     args = parse_args()
     start_time = time.time()
-    props = parse_props(args.props_file, args.parameters)
-    run(props)
-    end_time = time.time()
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        size = MPI.COMM_WORLD.Get_size()
-        line = '{},{},{},{},{},{}'.format(size, props['human.count'], props['zombie.count'], props['run.number'], props['random.seed'], end_time - start_time)
-        with open('runtimes_{}p_{}h_{}z_{}_{}.csv'.format(size, props['human.count'], props['zombie.count'], props['run.number'], props['random.seed']), 'w') as f_out:
-            print('Runtime: {}'.format(line))
-            f_out.write('{}\n'.format(line))
+    args = parse_args()
+    params = parse_params(args.parameters_file, args.parameters)
+    run(params)
