@@ -1,5 +1,9 @@
-from typing import List
+from typing import List, Dict
 from pathlib import Path
+import yaml
+import json
+
+from repast4py import random
 
 
 # class Timer:
@@ -77,3 +81,28 @@ def find_free_filename(file_path: str) -> Path:
         infix += 1
 
     return p
+
+
+def parse_params(parameters_file: str, parameters: str) -> Dict:
+    """Parses model input parameters.
+
+    Parameter parsing reads the parameters file, overrides
+    any of those properties with those in the parameters string,
+    and then executes the code that creates the derived parameters.
+    Args:
+        parameters_file: yaml format file containing model parameters
+        parameters: json format string that overrides those in the file
+    Returns:
+        A dictionary containing the final model parameters.
+    """
+    params = {}
+    with open(parameters_file) as f_in:
+        params = yaml.load(f_in, Loader=yaml.SafeLoader)
+    if parameters != '':
+        params.update(json.loads(parameters))
+
+    # Set seed from params, but before derived params are evaluated.
+    if 'random.seed' in params:
+        random.init(int(params['random.seed']))
+
+    return params

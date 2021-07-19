@@ -9,8 +9,6 @@ from mpi4py import MPI
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
 from repast4py import logging
-from repast4py.util import find_free_filename
-
 
 @dataclass
 class Counts:
@@ -172,15 +170,3 @@ class LoggingTests(unittest.TestCase):
                         row = [float(row[0]), int(row[1]), round(float(row[2]), 1), round(float(row[3]), 1)]
                     self.assertEqual(exp, row)
             self.assertEqual(11, row_count)
-
-    def test_freefile(self):
-        p = find_free_filename('./test_data/a_file.csv')
-        self.assertEqual('test_data/a_file.csv', str(p))
-
-        # file exists
-        p = find_free_filename('./test_data/test_file.csv')
-        self.assertEqual('test_data/test_file_1.csv', str(p))
-
-        # file exists, no ext
-        p = find_free_filename('./test_data/test_file')
-        self.assertEqual('test_data/test_file_1', str(p))
