@@ -5,3 +5,4 @@ mpi4py
 coverage
 torch
 networkx
+yaml
