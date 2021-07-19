@@ -32,7 +32,7 @@ https://www.sphinx-doc.org/en/1.8/usage/extensions/example_google.html?highlight
 
 * Pep 484 type hints - when these are present then they do not need to be included in the doc string
 
-### Generating Docs ###
+## Generating API Docs ##
 
 If a new module is added then, from within the docs directory `sphinx-apidoc -e -o source ../src/repast4py` 
 to generate the rst for that module.
@@ -40,6 +40,17 @@ to generate the rst for that module.
 And `make html` to create the html docs.
 
 `make clean` followed by `make html` will build from scratch.
+
+
+## Generating ASCIIDoc Manual ##
+
+Install asciidoc3 using pip: https://www.asciidoc3.org/pypi.html
+
+To generate the user guide in html:
+
+`python ~/asciidoc3/asciidoc3.py -a toc -a toclevel=3 --backend=html5 -a icons -a iconsdir=~/asciidoc3/images/icons user_guide.adoc`
+
+The guide is written in asciidoc format.
 
 ## Multi Process Seg Fault Debugging
 

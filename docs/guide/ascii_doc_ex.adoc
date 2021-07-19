@@ -1,0 +1,7 @@
+== ASCIIDoc Examples
+
+
+TIP: In many cases, the default user_path.xml file does not need to be changed at all.
+
+NOTE: The only unique entry in the default user_path.xml file is the model name attribute
+which is the same as the project name.
