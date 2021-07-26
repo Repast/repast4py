@@ -207,46 +207,45 @@ class Zombie(core.Agent):
                 break
 
 
-human_cache = {}
-zombie_cache = {}
+agent_cache = {}
 
 
-def create_agent(agent_data: Tuple):
+def restore_agent(agent_data: Tuple):
     """Creates an agent from the specified agent_data.
 
     This is used to re-create agents when they have moved from one MPI rank to another.
-    The tuple returned by the agent's save() method is moved between ranks, and create_agent
+    The tuple returned by the agent's save() method is moved between ranks, and restore_agent
     is called for each tuple in order to create the agent on that rank. Here we also use
     a cache to cache any agents already created on this rank, and only update their state
     rather than creating from scratch.
 
     Args:
-        agent_data: the data to create the agent from. This is the tuple return from the agent's save() method
-                    where the first element is the agent id tuple, and the any remaining arguments encapsulate
+        agent_data: the data to create the agent from. This is the tuple returned from the agent's save() method
+                    where the first element is the agent id tuple, and any remaining arguments encapsulate
                     agent state.
     """
     uid = agent_data[0]
     # 0 is id, 1 is type, 2 is rank
     if uid[1] == Human.ID:
-        if uid in human_cache:
-            h = human_cache[uid]
+        if uid in agent_cache:
+            h = agent_cache[uid]
         else:
             h = Human(uid[0], uid[2])
-            human_cache[uid] = h
+            agent_cache[uid] = h
 
         # restore the agent state from the agent_data tuple
         h.infected = agent_data[1]
         h.infected_duration = agent_data[2]
         return h
     else:
-        # note that the zombie has not internal state
+        # note that the zombie has no internal state
         # so there's nothing to restore other than
         # the Zombie itself
-        if uid in zombie_cache:
-            return zombie_cache[uid]
+        if uid in agent_cache:
+            return agent_cache[uid]
         else:
             z = Zombie(uid[0], uid[2])
-            zombie_cache[uid] = z
+            agent_cache[uid] = z
             return z
 
 
@@ -328,7 +327,7 @@ class Model:
         # print("{}: {}".format(self.rank, len(self.context.local_agents)))
         tick = self.runner.schedule.tick
         self.log_counts(tick)
-        self.context.synchronize(create_agent)
+        self.context.synchronize(restore_agent)
 
         # timer.start_timer('z_step')
         for z in self.context.agents(Zombie.ID):

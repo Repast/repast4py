@@ -236,13 +236,13 @@ class SharedContext:
         for vl in self.value_layers:
             vl._synch_ghosts()
 
-    def synchronize(self, create_agent: Callable, sync_ghosts: bool=True):
+    def synchronize(self, restore_agent: Callable, sync_ghosts: bool=True):
         """Synchronizes the model state across processes by moving agents, filling
         projection buffers with ghosts, updating ghosted state and so forth.
 
         Args:
-            create_agent: a callable that takes agent data and creates and returns an agent instance from
-                data. The data is a tuple consisting of the agent id tuple, and the serialized agent state
+            restore_agent: a callable that takes agent state data and returns an agent instance from
+                that data. The data is a tuple consisting of the agent id tuple, and the serialized agent state
             sync_ghosts: if True, the ghosts in any SharedProjections and value layers associated
                 with this SharedContext are also synchronized. Defaults to True.
         """
@@ -257,7 +257,7 @@ class SharedContext:
         send_data = self._gather_oob_data(oob_moved_agents)
         recv_data = self.comm.alltoall(send_data)
         ghosts_to_remove = []
-        self._process_recv_oob_data(recv_data, ghosts_to_remove, create_agent)
+        self._process_recv_oob_data(recv_data, ghosts_to_remove, restore_agent)
         any_moved = self._agents_moved(oob_moved_agents, self.projections.values())
 
         if any_moved:
@@ -265,11 +265,11 @@ class SharedContext:
                 self._agent_manager.delete_ghost(gh_uid)
 
         if sync_ghosts:
-            self._synch_ghosts(create_agent)
+            self._synch_ghosts(restore_agent)
 
         if any_moved:
             for proj in self.projections.values():
-                proj._post_agents_moved_rank(self._agent_manager, create_agent)
+                proj._post_agents_moved_rank(self._agent_manager, restore_agent)
 
             # synch ghosts for non-oob projections -- they don't need a double synch
             # to maintain coherences
@@ -279,7 +279,7 @@ class SharedContext:
                 self._update_ghosts()
                 for pid, proj in self.projections.items():
                     if pid not in self.bounded_projs:
-                        proj._synch_ghosts(self._agent_manager, create_agent)
+                        proj._synch_ghosts(self._agent_manager, restore_agent)
 
     def agents(self, agent_type: int=None, shuffle: bool=False):
         """Gets the agents in this SharedContext, optionally of the specified type or shuffled.

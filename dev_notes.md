@@ -48,8 +48,10 @@ Install asciidoc3 using pip: https://www.asciidoc3.org/pypi.html
 
 To generate the user guide in html:
 
-`python ~/asciidoc3/asciidoc3.py -a toc -a toclevel=3 --backend=html5 -a icons -a iconsdir=~/asciidoc3/images/icons user_guide.adoc`
-
+```
+cd docs/guide
+python ~/asciidoc3/asciidoc3.py -a toc -a toclevel=3 --backend=html5 -a source-highlighter=pygments -a icons -a iconsdir=~/asciidoc3/images/icons user_guide.adoc
+```
 The guide is written in asciidoc format.
 
 ## Multi Process Seg Fault Debugging

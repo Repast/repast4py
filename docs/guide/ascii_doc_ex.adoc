@@ -8,7 +8,6 @@ which is the same as the project name.
 
 [source,python,numbered]
 ----
-
 for i in range(pp_human_count):  #<1>
     h = Human(i, self.rank)
     self.context.add(h)
