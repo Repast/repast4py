@@ -18,7 +18,7 @@ class Counts:
     c: float = 0.0
 
 
-class LoggingTests(unittest.TestCase):
+class DSLoggingTests(unittest.TestCase):
 
     def update(self, counts, data_set, rank):
         for i in range(10):
@@ -171,3 +171,33 @@ class LoggingTests(unittest.TestCase):
                         row = [float(row[0]), int(row[1]), round(float(row[2]), 1), round(float(row[3]), 1)]
                     self.assertEqual(exp, row)
             self.assertEqual(11, row_count)
+
+
+class TabularLoggingTests(unittest.TestCase):
+
+    def test_logging(self):
+        fpath = './test_out/test_log.csv'
+        rank = MPI.COMM_WORLD.Get_rank()
+        if rank == 0 and os.path.exists(fpath):
+            os.remove(fpath)
+
+        logger = logging.TabularLogger(MPI.COMM_WORLD, fpath, ['A', 'B', 'C'])
+        for i in range(1, 10):
+            logger.log_row(rank * i, rank * i + 2, str(rank))
+        logger.write()
+
+        if rank == 0:
+            expected = [['A', 'B', 'C']]
+            for r in range(4):
+                for i in range(1, 10):
+                    row = [str(r * i), str(r * i + 2), str(r)]
+                    expected.append(row)
+
+            row_count = 0
+            with open(fpath) as f_in:
+                reader = csv.reader(f_in)
+                for i, row in enumerate(reader):
+                    row_count += 1
+                    self.assertEqual(expected[i], row)
+
+            self.assertEqual(len(expected), row_count)

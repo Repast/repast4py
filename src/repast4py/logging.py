@@ -2,7 +2,8 @@ import numpy as np
 from mpi4py import MPI
 import os
 
-from typing import List, Dict
+from typing import List, Dict, Type
+import csv
 
 try:
     from typing import Protocol
@@ -238,7 +239,7 @@ class ReducingDataSet:
     """
 
     def __init__(self, data_loggers: List[ReducingDataLogger], comm: MPI.Comm,
-                 fpath: str, sep: str=',', buffer_size: int=1000):
+                 fpath: str, delimiter: str=',', buffer_size: int=1000):
         """Creates a ReducingDataSet whose columns are produced from
         the specified data loggers which are reduced across the specified
         communicator.
@@ -248,14 +249,13 @@ class ReducingDataSet:
             one data_logger per column.
             comm: the communicator to reduce over
             fpath: the file to write the data to
-            sep: the seperator to use to seperate the column values
+            delimiter: the seperator to use to seperate the column values
             buffer_size: the number of values to log before writing to a file.
         """
         self._data_loggers = data_loggers
-        self._sep = sep
+        self._delimiter = delimiter
         self._comm = comm
         self._rank = comm.Get_rank()
-        self._buf = None
         self._buffer_size = buffer_size
         self.fpath = find_free_filename(fpath)
 
@@ -263,14 +263,12 @@ class ReducingDataSet:
             parent = os.path.dirname(fpath)
             if not os.path.exists(parent):
                 os.makedirs(parent)
-
-            self._buf = np.zeros(2)
             self.ticks = []
 
             with open(self.fpath, 'w') as f_out:
                 f_out.write('tick')
                 for dl in data_loggers:
-                    f_out.write(self._sep)
+                    f_out.write(self._delimiter)
                     f_out.write(dl.name)
                 f_out.write('\n')
 
@@ -313,8 +311,75 @@ class ReducingDataSet:
                             f_out.write(str(vals[i]))
                             first = False
                         else:
-                            f_out.write(self._sep)
+                            f_out.write(self._delimiter)
                             f_out.write(str(vals[i]))
                     f_out.write('\n')
 
             self.ticks.clear()
+
+
+class TabularLogger:
+    """Logs arbitrary values by row in a delimited tabular format. All the rows
+    logged by each rank are concatenated on a write.
+
+    Args:
+        comm: the communicator to reduce over
+        fpath: the file to write the data to
+        headers: the header values for each column
+        delimiter: the seperator to use to seperate the column values
+    """
+    def __init__(self, comm: MPI.Comm, fpath: str, headers: List[str], delimiter: str=','):
+        self._delimiter = delimiter
+        self._comm = comm
+        self._rank = comm.Get_rank()
+        self._rows = []
+
+        if self._rank == 0:
+            self._fpath = find_free_filename(fpath)
+            parent = os.path.dirname(self._fpath)
+            if not os.path.exists(parent):
+                os.makedirs(parent)
+
+            with open(self._fpath, 'w') as fout:
+                writer = csv.writer(fout, delimiter=self._delimiter)
+                writer.writerow(headers)
+
+    def log_row(self, *args):
+        """Logs the specified values as row in the tabular output.
+
+        Each value in the argument list is written to a column in the
+        order they appear in the argument list.
+
+        Args:
+            args: variable length argument list containing the values to log. 
+                The order of the values should correspond to the headers argument
+                in the constructor.
+
+        Examples:
+            The following will log the value of the tick, person_id variables, and 12, and 24
+            as a row in the tabular data.
+
+            >>> logger.log_item(tick, person_id, 12, 24)
+        """
+        self._rows.append(args)
+
+    def write(self):
+        """Writes all the currently logged rows to a file by gathering all the
+        rows from all ranks, concatenating them, and writing them to
+        the file specified in the constructor. This is a collective
+        operation and must be called by all ranks in the communicator.
+        """
+        all_items = self._comm.gather(self._rows, root=0)
+        if self._rank == 0:
+            with open(self._fpath, 'a') as fout:
+                writer = csv.writer(fout, delimiter=self._delimiter)
+                for items in all_items:
+                    writer.writerows(items)
+
+        self._rows.clear()
+
+    def close(self):
+        """Closes this TabularLogger, writing any rows of
+        data to the file.
+        """
+        self.write()
