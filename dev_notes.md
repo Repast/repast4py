@@ -50,7 +50,7 @@ And `make html` to create the html docs.
   * With apt (Ubuntu): `sudo apt-get install -y asciidoctor`
   * Other OSes, see `https://docs.asciidoctor.org/asciidoctor/latest/install/`
 2. Install pygments for code syntax highlighting.
-  * Ubuntu: `sudo gem install pygments.rb`
+  * Ubuntu: `gem install --user-install pygments.rb`
   * Other OSes, see `https://docs.asciidoctor.org/asciidoctor/latest/syntax-highlighting/pygments/`
 
 ### Generating the Docs ###
