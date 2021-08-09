@@ -70,9 +70,7 @@ that local agents can interact with. Repast4Py provides the functionality to cre
 state synchronized from the ghosts' local ranks to the ranks on which they are ghosted. Ghosts are used to create
 projections, such as a network or grid that span across process ranks.
 
-// Image cross ref isn't working -- should work with <<img-network-ghost>> 
-// showing up as Figure 1. <<img-network-ghost,Figure 1>> works but link doesn't seem to
-Figure 1 illustrates how ghosts are used in a network projection. The top part of the figure shows that agent `A1` is local to process 1 and has
+<<img-network-ghost>> illustrates how ghosts are used in a network projection. The top part of the figure shows that agent `A1` is local to process 1 and has
 a directed netework link to agent `B2` which is local to process 2. Presumably, some aspect of the agent's behavior is conditional
 on the network link, chekcking some attribute of its network neighbors and responding
 accordingly, for example. Given that `B2` is on a different process there is no way for `A1` to
@@ -84,7 +82,7 @@ NOTE: The copying and synchronization of ghosts agent and ghost agent state is p
 user only needs to provide a minimal amount of code to handle the saving and restoring of agent state. This
 is described in more detail in subsequent sections. 
 
-[#img-network-ghost,reftext='{figure-caption} {counter:refnum}.']
+[#img-network-ghost,reftext='{figure-caption} {counter:refnum}']
 .Ghost Agents in a Shared Network
 image::shared_net_2.png[]
 
@@ -94,14 +92,14 @@ local process. The SharedContext component makes a clear distinction between the
 of agents, allowing the user to work with only the local agents.
 
 Spatial projections such as a grid or continuous space are stitched together through the use of 
-*_buffers_* and ghosts agents. This is illustrated in Figure 2.
+*_buffers_* and ghosts agents. This is illustrated in <<img-grid-buffer>>.
 
-[#img-grid-buffer,reftext='{figure-caption} {counter:refnum}.']
+[#img-grid-buffer,reftext='{figure-caption} {counter:refnum}']
 .Ghost Agents in a Buffered Area
 image::shared_grid_agents_800.png[]
 
-Here in Figure 2, the full 6x8 grid is distributed across 4 process ranks. Each rank is responsible for
-its own 3x4 quarter of the global grid. This is illustrated on the left hand side of Figure 2. 
+Here in <<img-grid-buffer>>, the full 6x8 grid is distributed across 4 process ranks. Each rank is responsible for
+its own 3x4 quarter of the global grid. This is illustrated on the left hand side of <<img-grid-buffer>>. 
 On the right hand side, we see how the quarters are stitched together. Each subsection
 of the grid contains a buffer that is a copy of the contents of the adjacent subsections. 
 The blue part of the image is the area for process 1's grid subsection. There, we can
@@ -110,7 +108,7 @@ agent `A1` can _see_ and interact with agent's `C3` and `B2`.
 
 TIP: Be sure to specify a buffer size appropriate for agent behavior. For example, if an agent can see 3 units away and take some action based on what it perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of its own local area.
 
-Agents can, of course, move around grids and continuous spaces. When an agent moves beyond the borders of its local subsection then it is moved from that rank to the rank of the subsection that it has moved to. For example, if in Figure 2, agent `D4` moves from grid coordinate 4,4 to 4,2 then it will be moved during repast4py's synchronization phase to process 2 where it becomes local
+Agents can, of course, move around grids and continuous spaces. When an agent moves beyond the borders of its local subsection then it is moved from that rank to the rank of the subsection that it has moved to. For example, if in <<img-grid-buffer>>, agent `D4` moves from grid coordinate 4,4 to 4,2 then it will be moved during repast4py's synchronization phase to process 2 where it becomes local
 to that process. Cross-process movement and synchronization will be discussed more in the next sections.
 
 

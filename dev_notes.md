@@ -44,15 +44,23 @@ And `make html` to create the html docs.
 
 ## Generating ASCIIDoc Manual ##
 
-Install asciidoc3 using pip: https://www.asciidoc3.org/pypi.html
+### Prerequisites ###
 
-To generate the user guide in html:
+1. Install asciidoctor.
+  * With apt (Ubuntu): `sudo apt-get install -y asciidoctor`
+  * Other OSes, see `https://docs.asciidoctor.org/asciidoctor/latest/install/`
+2. Install pygments for code syntax highlighting.
+  * Ubuntu: `sudo gem install pygments.rb`
+  * Other OSes, see `https://docs.asciidoctor.org/asciidoctor/latest/syntax-highlighting/pygments/`
+
+### Generating the Docs ###
 
 ```
 cd docs/guide
-python ~/asciidoc3/asciidoc3.py -a toc -a toclevel=3 --backend=html5 -a source-highlighter=pygments -a icons -a iconsdir=~/asciidoc3/images/icons user_guide.adoc
+asciidoctor user_guilde.adoc
 ```
-The guide is written in asciidoc format.
+
+This generates a user_guide.html that can be viewed in a browser.
 
 ## Multi Process Seg Fault Debugging
 

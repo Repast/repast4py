@@ -1,14 +1,12 @@
 = Repast for Python (Repast4Py) User Guide
 Version 1.0 September 2021
-// NO SPACES BETWEEN LEADING TEXT AND : OPTIONS
-// Note that the asciidoc toc2.css was changed to allow larger body and toc width,
-// and also added custom link styles so that links in TOC are not all underlined.
 :toc2:
-:icons: 
+:icons: font
 :numbered:
-:max-width: 50em
 :website: http://repast.github.io
 :xrefstyle: full
+:imagesdir: images
+:source-highlighter: pygments
 
 // Sections need line break between includes
 
