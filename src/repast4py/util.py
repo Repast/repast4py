@@ -2,6 +2,7 @@ from typing import List, Dict
 from pathlib import Path
 import yaml
 import json
+import argparse
 
 from repast4py import random
 
@@ -81,6 +82,32 @@ def find_free_filename(file_path: str) -> Path:
         infix += 1
 
     return p
+
+
+def create_args_parser():
+    """Creates an argparse parser with two arguments for
+    accepting a yaml format file containing model parameter input,
+    and an optional json dictionary string that can override that input.
+
+    The two added arguments are:
+    1. parameters_file: a yaml format file
+    2. parameters: a json dictionary string that can override the
+    parameters specified in the yaml format.
+
+    This function is intended to work in concert with the :func:`repast4py.util.parse_params`
+    function where the results of the argparse argument parsing are passed as arguments to
+    that function.
+
+    Examples:
+        >>> parser = create_args_parser()
+        >>> args = parser.parse_args()
+        >>> params = parse_params(args.parameters_file, args.parameters)
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("parameters_file", help="parameters file (yaml format)")
+    parser.add_argument("parameters", nargs="?", default="{}", help="json parameters string")
+
+    return parser
 
 
 def parse_params(parameters_file: str, parameters: str) -> Dict:

@@ -53,6 +53,9 @@ And `make html` to create the html docs.
   * Ubuntu: `gem install --user-install pygments.rb`
   * Other OSes, see `https://docs.asciidoctor.org/asciidoctor/latest/syntax-highlighting/pygments/`
 
+Currently (08/09/2021) the docs are generated as single html page. If we want multiple
+pages, see `https://github.com/owenh000/asciidoctor-multipage`
+
 ### Generating the Docs ###
 
 ```

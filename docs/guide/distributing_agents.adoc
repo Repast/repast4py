@@ -149,4 +149,3 @@ projection buffers with ghosts, updating ghosted state and so forth as necessary
 is performed by calling the `SharedContext.synchronize` method, passing it your restore function.
 The `synchronization` method will use the agent `save` method(s) and your restore fuction
 to synchronize the state the simulation across its processes. 
-

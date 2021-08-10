@@ -13,7 +13,7 @@ from numba.experimental import jitclass
 
 from repast4py import core, space, schedule, logging, random
 from repast4py import context as ctx
-from repast4py.util import parse_params
+from repast4py.util import create_args_parser, parse_params
 
 from repast4py.space import ContinuousPoint as cpt
 from repast4py.space import DiscretePoint as dpt
@@ -389,18 +389,8 @@ def run(params: Dict):
     model.run()
 
 
-def parse_args():
-    """Parses command line arguments using argparse
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("parameters_file", help="parameters file (yaml format)")
-    parser.add_argument("parameters", nargs="?", default="{}", help="json parameters string")
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    args = parse_args()
-    start_time = time.time()
-    args = parse_args()
+    parser = create_args_parser()
+    args = parser.parse_args()
     params = parse_params(args.parameters_file, args.parameters)
     run(params)

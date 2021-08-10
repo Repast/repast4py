@@ -89,7 +89,7 @@ image::shared_net_2.png[]
 IMPORTANT: Do not update the state of non-local ghost agents. They only exist to be _seen_ by
 local agents and objects. Any state changes to any agent must be performed on the agent's
 local process. The SharedContext component makes a clear distinction between the two types
-of agents, allowing the user to work with only the local agents.
+of agents, allowing you to work with only the local agents.
 
 Spatial projections such as a grid or continuous space are stitched together through the use of 
 *_buffers_* and ghosts agents. This is illustrated in <<img-grid-buffer>>.
