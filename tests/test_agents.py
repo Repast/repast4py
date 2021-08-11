@@ -45,3 +45,6 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(a1.local_rank, 3)
         a1.local_rank = 10
         self.assertEqual(10, a1.local_rank)
+
+    def test_type_pos(self):
+        self.assertRaises(ValueError, lambda: core.Agent(id=1, type=-1, rank=3))

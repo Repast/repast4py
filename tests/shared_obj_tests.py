@@ -45,6 +45,35 @@ class SharedCSTests(unittest.TestCase):
 
     long_message = True
 
+    def test_num_agents(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            a1 = core.Agent(1, 0, rank)
+            a2 = core.Agent(2, 0, rank)
+            b1 = core.Agent(1, 1, rank)
+
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
+                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        tree_threshold=100)
+
+            cspace.add(a1)
+            cspace.add(a2)
+            cspace.add(b1)
+
+            pt = CPt(1.1, 1.4, 0)
+            cspace.move(a1, pt)
+            cspace.move(a2, pt)
+            cspace.move(b1, pt)
+
+            self.assertEqual(3, cspace.get_num_agents(pt))
+            self.assertEqual(2, cspace.get_num_agents(pt, 0))
+            self.assertEqual(1, cspace.get_num_agents(pt, agent_type=1))
+
     def test_ops(self):
         # make 2 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
@@ -355,6 +384,35 @@ class SharedCSTests(unittest.TestCase):
 class SharedGridTests(unittest.TestCase):
 
     long_message = True
+
+    def test_num_agents(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            a1 = core.Agent(1, 0, rank)
+            a2 = core.Agent(2, 0, rank)
+            b1 = core.Agent(1, 1, rank)
+
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
+                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+            self.assertEqual('shared_grid', grid.name)
+
+            grid.add(a1)
+            grid.add(a2)
+            grid.add(b1)
+
+            pt = DPt(1, 1, 0)
+            grid.move(a1, pt)
+            grid.move(a2, pt)
+            grid.move(b1, pt)
+
+            self.assertEqual(3, grid.get_num_agents(pt))
+            self.assertEqual(2, grid.get_num_agents(pt, 0))
+            self.assertEqual(1, grid.get_num_agents(pt, agent_type=1))
 
     def test_ops(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])

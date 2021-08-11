@@ -199,6 +199,10 @@ static int Agent_init(R4Py_Agent* self, PyObject* args, PyObject* kwds) {
         return -1;
     }
     self->local_rank = self->aid->rank;
+    if (self->aid->type < 0) {
+        PyErr_SetString(PyExc_ValueError, "Type component of agent unique id must be a non-negative integer");
+        return -1;
+    }
     // TODO - maybe build this with PyTuple_New rather than parse the format string
     self->aid->as_tuple = Py_BuildValue("(liI)", self->aid->id, self->aid->type, self->aid->rank);
     return 0;

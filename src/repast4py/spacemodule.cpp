@@ -1253,6 +1253,30 @@ static PyObject* SharedGrid_getAgents(PyObject* self, PyObject* args) {
     return (PyObject*)agent_iter;
 }
 
+static PyObject* SharedGrid_getNumAgents(PyObject* self, PyObject* args, PyObject* kwds) {
+    static char* kwlist[] = {(char*)"pt",(char*)"agent_type", NULL};
+
+    PyObject* pt;
+    int agent_type = -1;
+    
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|i", kwlist, &DiscretePointType, &pt, &agent_type)) {
+        return NULL;
+    }
+
+    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
+    if (agent_type == -1) {
+        return PyLong_FromLong(list->size());
+    } else {
+        long count = 0;
+        for (auto agent : (*list)) {
+            if (agent->aid->type == agent_type) {
+                ++count;
+            }
+        }
+        return PyLong_FromLong(count);
+    } 
+}
+
 static PyObject* SharedGrid_getOOBData(PyObject* self, PyObject* args) {
     std::shared_ptr<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>> oob = ((R4Py_SharedGrid*)self)->grid->getOOBData();
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
@@ -1369,6 +1393,17 @@ PyDoc_STRVAR(sgrd_getas,
     "    iterator: an iterator over all the agents at the specified location."
 );
 
+PyDoc_STRVAR(sgrd_getnas,
+    "get_num_agents(pt, agent_type=None)\n\n"
+    
+    "Gets number of agents at the specified location, optionally fitered by agent type.\n\n"
+    "Args:\n"
+    "    pt(repast4py.space.DiscretePoint): the location to get the agents at.\n"
+    "    agent_type(int): the type id of the agents to get the number of.\n\n"
+    "Returns:\n"
+    "    int: the number of agents at the specified location."
+);
+
 PyDoc_STRVAR(sgrd_lb,
     "get_local_bounds()\n\n"
     
@@ -1430,6 +1465,7 @@ static PyMethodDef SharedGrid_methods[] = {
     {"get_location", SharedGrid_getLocation, METH_VARARGS, sgrd_location},
     {"get_agent", SharedGrid_getAgent, METH_VARARGS, sgrd_geta},
     {"get_agents", SharedGrid_getAgents, METH_VARARGS, sgrd_getas},
+    {"get_num_agents", (PyCFunction) SharedGrid_getNumAgents, METH_VARARGS | METH_KEYWORDS, sgrd_getnas},
     {"_get_oob", SharedGrid_getOOBData, METH_VARARGS, sgrd_oob},
     {"_clear_oob", SharedGrid_clearOOBData, METH_VARARGS, sgrd_coob},
     {"get_local_bounds", SharedGrid_getLocalBounds, METH_VARARGS, sgrd_lb},
@@ -2106,6 +2142,30 @@ static PyObject* SharedCSpace_getAgents(PyObject* self, PyObject* args) {
     return (PyObject*)agent_iter;
 }
 
+static PyObject* SharedCSpace_getNumAgents(PyObject* self, PyObject* args, PyObject* kwds) {
+    static char* kwlist[] = {(char*)"pt",(char*)"agent_type", NULL};
+
+    PyObject* pt;
+    int agent_type = -1;
+    
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|i", kwlist, &ContinuousPointType, &pt, &agent_type)) {
+        return NULL;
+    }
+
+    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
+    if (agent_type == -1) {
+        return PyLong_FromLong(list->size());
+    } else {
+        long count = 0;
+        for (auto agent : (*list)) {
+            if (agent->aid->type == agent_type) {
+                ++count;
+            }
+        }
+        return PyLong_FromLong(count);
+    } 
+}
+
 static PyObject* SharedCSpace_getOOBData(PyObject* self, PyObject* args) {
     std::shared_ptr<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>> oob = ((R4Py_SharedCSpace*)self)->space->getOOBData();
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
@@ -2261,6 +2321,17 @@ PyDoc_STRVAR(scspace_getas,
     "    iterator: an iterator over all the agents at the specified location."
 );
 
+PyDoc_STRVAR(scspace_getnas,
+    "get_num_agents(pt, agent_type=None)\n\n"
+    
+    "Gets number of agents at the specified location, optionally fitered by agent type.\n\n"
+    "Args:\n"
+    "    pt(repast4py.space.ContinuousPoint): the location to get the agents at.\n"
+    "    agent_type(int): the type id of the agents to get the number of.\n\n"
+    "Returns:\n"
+    "    int: the number of agents at the specified location."
+);
+
 PyDoc_STRVAR(scspace_lb,
     "get_local_bounds()\n\n"
     
@@ -2332,6 +2403,7 @@ static PyMethodDef SharedCSpace_methods[] = {
     {"get_location", SharedCSpace_getLocation, METH_VARARGS, scspace_location},
     {"get_agent", SharedCSpace_getAgent, METH_VARARGS, scspace_geta},
     {"get_agents", SharedCSpace_getAgents, METH_VARARGS, scspace_getas},
+    {"get_num_agents", (PyCFunction) SharedCSpace_getNumAgents, METH_VARARGS | METH_KEYWORDS, scspace_getnas},
     {"_get_oob", SharedCSpace_getOOBData, METH_VARARGS, scspace_oob},
     {"_clear_oob", SharedCSpace_clearOOBData, METH_VARARGS, scspace_coob},
     {"get_local_bounds", SharedCSpace_getLocalBounds, METH_VARARGS, scspace_lb},
