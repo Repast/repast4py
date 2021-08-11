@@ -1,7 +1,5 @@
 # Zombies README
 
-Run with:
-
 Requires compiled repast4py.
 
 Run with: 

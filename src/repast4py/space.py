@@ -1,5 +1,6 @@
 from typing import Callable, List, Tuple
 import mpi4py
+import numpy as np
 
 from ._space import DiscretePoint, ContinuousPoint
 from ._space import SharedGrid as _SharedGrid
@@ -9,7 +10,7 @@ from ._space import SharedContinuousSpace as _SharedContinuousSpace
 from ._space import GridStickyBorders, GridPeriodicBorders
 from ._space import CartesianTopology, Grid, ContinuousSpace
 
-from .geometry import BoundingBox
+from .geometry import BoundingBox, get_num_dims
 
 from .core import AgentManager, Agent
 
@@ -85,8 +86,44 @@ class SharedGrid(_SharedGrid):
         if bounds.zextent > 0:
             self.gather = self._gather_3d
 
+        local_bounds = self.get_local_bounds()
+        self.random_pt = self._create_random_pt_func(local_bounds)
+
+    def _create_random_pt_func(self, local_bounds):
+        nd = get_num_dims(local_bounds)
+        if nd == 1:
+            def f(rng):
+                x = rng.integers(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+                return DiscretePoint(x, 0, 0)
+            return f
+        elif nd == 2:
+            def f(rng):
+                x = rng.integers(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+                y = rng.integers(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
+                return DiscretePoint(x, y, 0)
+            return f
+        else:
+            def f(rng):
+                x = rng.integers(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+                y = rng.integers(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
+                z = rng.integers(local_bounds.zmin, local_bounds.zmin + local_bounds.zextent)
+                return DiscretePoint(x, y, z)
+            return f
+
     def __contains__(self, agent):
         return self.contains(agent)
+
+    def get_random_local_pt(self, rng: np.random.Generator) -> DiscretePoint:
+        """Gets a random location within the local bounds of the
+        section of the global space that the current rank is responsible for.
+
+        Args:
+            rng: the random number generator used to select the point.
+
+        Returns:
+            DiscretePoint: the random point location
+        """
+        return self.random_pt(rng)
 
     def _fill_send_data(self):
         """Retrieves agents and locations from this SharedGrid for placement
@@ -222,7 +259,7 @@ class SharedGrid(_SharedGrid):
 
 
 class SharedCSpace(_SharedContinuousSpace):
-    """An N-dimensional cartesian discrete space where agents can occupy locations defined by
+    """An N-dimensional cartesian space where agents can occupy locations defined by
     a continuous floating point coordinate.
     The space is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
     some number of smaller spaces, one for each rank. For example, given a global spaces size of (100 x 25) and
@@ -240,8 +277,8 @@ class SharedCSpace(_SharedContinuousSpace):
     dimensions) to speed up spatial queries. The tree can be tuned using the tree threshold parameter.
 
     Args:
-       name: the name of the grid.
-       bounds: the global dimensions of the grid.
+       name: the name of the space.
+       bounds: the global dimensions of the space.
        borders: the border semantics: BorderType.Sticky or BorderType.Periodic
        occupancy: the type of occupancy in each cell: OccupancyType.Multiple.
        buffersize: the size of this SharedCSpace's buffered area. This single value is used for all dimensions.
@@ -255,8 +292,44 @@ class SharedCSpace(_SharedContinuousSpace):
         super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
         self.buffered_agents = []
 
+        local_bounds = self.get_local_bounds()
+        self.random_pt = self._create_random_pt_func(local_bounds)
+
+    def _create_random_pt_func(self, local_bounds):
+        nd = get_num_dims(local_bounds)
+        if nd == 1:
+            def f(rng):
+                x = rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+                return ContinuousPoint(x, 0, 0)
+            return f
+        elif nd == 2:
+            def f(rng):
+                x = rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+                y = rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
+                return ContinuousPoint(x, y, 0)
+            return f
+        else:
+            def f(rng):
+                x = rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+                y = rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
+                z = rng.uniform(local_bounds.zmin, local_bounds.zmin + local_bounds.zextent)
+                return ContinuousPoint(x, y, z)
+            return f
+
     def __contains__(self, agent):
         return self.contains(agent)
+
+    def get_random_local_pt(self, rng: np.random.Generator) -> ContinuousPoint:
+        """Gets a random location within the local bounds of the
+        section of the global space that the current rank is responsible for.
+
+        Args:
+            rng: the random number generator used to select the point.
+
+        Returns:
+            ContinuousPoint: the random point location
+        """
+        return self.random_pt(rng)
 
     def _pre_synch_ghosts(self, agent_manager):
         """Called prior to synchronizing ghosts and before any cross-rank movement

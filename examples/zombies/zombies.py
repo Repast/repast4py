@@ -1,8 +1,6 @@
 import sys
 import math
 import numpy as np
-import argparse
-import time
 from typing import Dict, Tuple
 from mpi4py import MPI
 from dataclasses import dataclass
@@ -267,10 +265,10 @@ class Model:
 
         self.runner = schedule.SharedScheduleRunner(comm)
         self.runner.schedule_repeating_event(1, 1, self.step)
-        self.runner.schedule_stop(float(params['stop.at']))
+        self.runner.schedule_stop(params['stop.at'])
         self.runner.schedule_end_event(self.at_end)
 
-        box = space.BoundingBox(0, int(params['world.width']), 0, int(params['world.height']), 0, 0)
+        box = space.BoundingBox(0, params['world.width'], 0, params['world.height'], 0, 0)
         self.grid = space.SharedGrid('grid', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
                                      buffersize=2, comm=comm)
         self.context.add_projection(self.grid)
@@ -286,7 +284,7 @@ class Model:
         local_bounds = self.space.get_local_bounds()
         world_size = comm.Get_size()
 
-        total_human_count = int(params['human.count'])
+        total_human_count = params['human.count']
         pp_human_count = int(total_human_count / world_size)
         if self.rank < total_human_count % world_size:
             pp_human_count += 1
@@ -298,7 +296,7 @@ class Model:
             y = random.default_rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
             self.move(h, x, y)
 
-        total_zombie_count = int(params['zombie.count'])
+        total_zombie_count = params['zombie.count']
         pp_zombie_count = int(total_zombie_count / world_size)
         if self.rank < total_zombie_count % world_size:
             pp_zombie_count += 1

@@ -116,6 +116,10 @@ def parse_params(parameters_file: str, parameters: str) -> Dict:
     Parameter parsing reads the parameters file, overrides
     any of those properties with those in the parameters string,
     and then executes the code that creates the derived parameters.
+    This will automatically set the random number generator's seed
+    if the parameters file or the parameters string contain a
+    'random.seed' parameter.
+
     Args:
         parameters_file: yaml format file containing model parameters
         parameters: json format string that overrides those in the file

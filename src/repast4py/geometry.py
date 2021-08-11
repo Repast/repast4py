@@ -12,6 +12,21 @@ else:
     BoundingBox = namedtuple('BoundingBox', ['xmin', 'xextent', 'ymin', 'yextent', 'zmin', 'zextent'])
 
 
+def get_num_dims(box: BoundingBox) -> int:
+    """Gets the BoundingBox's number of dimensions.
+
+    Args:
+        box: the bounding box
+    Returns:
+        int: the number of dimensions.
+    """
+    if box.yextent == 0 and box.zextent == 0:
+        return 1
+    elif box.zextent == 0:
+        return 2
+    return 3
+
+
 _xoffset_1d = np.array([-1, 0, 1], dtype=np.int32)
 _xoffset_2d = np.tile(_xoffset_1d, 3)
 _yoffset_2d = np.array([-1, -1, -1, 0, 0, 0, 1, 1, 1], dtype=np.int32)
