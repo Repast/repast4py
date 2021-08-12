@@ -3,7 +3,6 @@ from mpi4py import MPI
 import numpy as np
 from dataclasses import dataclass
 
-from repast4py.util import create_args_parser, parse_params
 from repast4py import core, space, schedule, logging, parameters
 from repast4py import context as ctx
 from repast4py.random import default_rng as rng
