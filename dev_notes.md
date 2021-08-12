@@ -5,7 +5,7 @@
 * Python 3.7+
 * mpi4py
 * PyTorch
-* NumPy
+* NumPy >= 1.18
 * nptyping (`pip install nptyping`)
 * numba
 * typing-extensions if < 3.8

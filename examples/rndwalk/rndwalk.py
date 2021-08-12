@@ -4,7 +4,7 @@ import numpy as np
 from dataclasses import dataclass
 
 from repast4py.util import create_args_parser, parse_params
-from repast4py import core, space, schedule, logging
+from repast4py import core, space, schedule, logging, parameters
 from repast4py import context as ctx
 from repast4py.random import default_rng as rng
 from repast4py.space import DiscretePoint as dpt
@@ -19,11 +19,11 @@ class MeetLog:
 
 class Walker(core.Agent):
 
-    ID = 0
+    TYPE = 0
     OFFSETS = np.array([-1, 1])
 
     def __init__(self, local_id: int, rank: int, pt: dpt):
-        super().__init__(id=local_id, type=Walker.ID, rank=rank)
+        super().__init__(id=local_id, type=Walker.TYPE, rank=rank)
         self.pt = pt
         self.meet_count = 0
 
@@ -170,7 +170,7 @@ def run(params: Dict):
 
 
 if __name__ == "__main__":
-    parser = create_args_parser()
+    parser = parameters.create_args_parser()
     args = parser.parse_args()
-    params = parse_params(args.parameters_file, args.parameters)
+    params = parameters.init_params(args.parameters_file, args.parameters)
     run(params)
