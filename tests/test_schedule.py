@@ -16,6 +16,14 @@ class Agent:
         self.at = self.sched.tick
 
 
+class Agent2:
+    def __init__(self):
+        self.at = 0
+
+    def run(self):
+        self.at = schedule.runner().tick()
+
+
 # Run from parent dir: python -m unittest tests.schedule_tests
 class ScheduleTests(unittest.TestCase):
 
@@ -73,6 +81,27 @@ class ScheduleTests(unittest.TestCase):
         self.assertEqual(2, a1.at)
         self.assertEqual(2, a2.at)
         self.assertEqual(2, a3.at)
+
+    def test_default_schedule(self):
+        self.assertRaises(RuntimeError, lambda: schedule.runner())
+
+        a1 = Agent2()
+
+        from mpi4py import MPI
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+        runner.schedule_event(1.1, a1.run)
+        runner.schedule_stop(2.0)
+        runner.execute()
+        self.assertEqual(1.1, a1.at)
+
+        # test runner() function
+        a1.at = 0
+        schedule.init_schedule_runner(MPI.COMM_WORLD)
+        runner = schedule.runner()
+        runner.schedule_event(1.1, a1.run)
+        runner.schedule_stop(2.0)
+        runner.execute()
+        self.assertEqual(1.1, a1.at)
 
 
 if __name__ == "__main__":

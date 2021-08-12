@@ -231,7 +231,6 @@ class SharedScheduleRunner:
 
         Returns:
             float: the currently executing tick.
-
         """
         return self.schedule.tick
 
@@ -247,3 +246,55 @@ class SharedScheduleRunner:
 
         for evt in self.end_evts:
             evt()
+
+
+__runner = None
+
+
+def init_schedule_runner(comm: MPI.Intracomm) -> SharedScheduleRunner:
+    """Initializes the default schedule runner, a dynamic schedule of executable events shared and
+    synchronized across processes.
+
+    Events are added to the scheduled for execution at a particular "tick".
+    The first valid tick is 0.
+    Events will be executed in "tick" order, earliest before latest. Events
+    scheduled for the same tick will be executed in the order in which they
+    were added. If during the execution of a tick, an event is scheduled
+    before the executing tick (i.e., scheduled to occur in the past) then
+    that event is ignored. The scheduled is synchronized across process ranks
+    by determining the global cross-process minimum next scheduled even time, and executing events
+    for that time. In this way, no schedule runs ahead of any other.
+
+    Args:
+        comm: the communicator over which this scheduled is shared.
+    Returns:
+        SharedScheduleRunner: The default SharedScheduledRunner instance that can be used to 
+        schedule events.
+    """
+    global __runner
+    __runner = SharedScheduleRunner(comm)
+    return __runner
+
+
+def runner() -> SharedScheduleRunner:
+    """Gets the default schedule runner, a dynamic schedule of executable events shared and
+    synchronized across processes.
+
+    Events are added to the scheduled for execution at a particular "tick".
+    The first valid tick is 0.
+    Events will be executed in "tick" order, earliest before latest. Events
+    scheduled for the same tick will be executed in the order in which they
+    were added. If during the execution of a tick, an event is scheduled
+    before the executing tick (i.e., scheduled to occur in the past) then
+    that event is ignored. The scheduled is synchronized across process ranks
+    by determining the global cross-process minimum next scheduled even time, and executing events
+    for that time. In this way, no schedule runs ahead of any other.
+
+    Returns:
+        SharedScheduleRunner: The default SharedScheduledRunner instance that can be used to 
+        schedule events.
+    """
+
+    if not __runner:
+        raise RuntimeError('Schedule runner must be initialized with schedule.init_schedule_runner before being used')
+    return __runner
