@@ -263,7 +263,7 @@ class Model:
         self.context = ctx.SharedContext(comm)
         self.rank = self.comm.Get_rank()
 
-        self.runner = schedule.SharedScheduleRunner(comm)
+        self.runner = schedule.init_schedule_runner(comm)
         self.runner.schedule_repeating_event(1, 1, self.step)
         self.runner.schedule_stop(params['stop.at'])
         self.runner.schedule_end_event(self.at_end)

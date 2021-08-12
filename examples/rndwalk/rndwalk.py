@@ -20,7 +20,7 @@ class MeetLog:
 class Walker(core.Agent):
 
     ID = 0
-    OFFSETS = np.array([-1, 0, 1])
+    OFFSETS = np.array([-1, 1])
 
     def __init__(self, local_id: int, rank: int, pt: dpt):
         super().__init__(id=local_id, type=Walker.ID, rank=rank)
@@ -92,9 +92,9 @@ class Model:
 
     def __init__(self, comm: MPI.Intracomm, params: Dict):
         # create the schedule
-        self.runner = schedule.SharedScheduleRunner(comm)
+        self.runner = schedule.init_schedule_runner(comm)
         self.runner.schedule_repeating_event(1, 1, self.step)
-        self.runner.schedule_repeating_event(1.1, 1, self.log_agents)
+        self.runner.schedule_repeating_event(1.1, 10, self.log_agents)
         self.runner.schedule_stop(float(params['stop.at']))
         self.runner.schedule_end_event(self.at_end)
 
