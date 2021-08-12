@@ -26,7 +26,7 @@ def create_args_parser():
     Examples:
         >>> parser = create_args_parser()
         >>> args = parser.parse_args()
-        >>> params = parse_params(args.parameters_file, args.parameters)
+        >>> params = init_params(args.parameters_file, args.parameters)
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("parameters_file", help="parameters file (yaml format)")
@@ -57,8 +57,7 @@ def init_params(parameters_file: str, parameters: str) -> Dict:
     if parameters != '':
         params.update(json.loads(parameters))
 
-    # Set seed from params, but before derived params are evaluated.
     if 'random.seed' in params:
-        random.init(int(params['random.seed']))
+        random.init(params['random.seed'])
 
     return params
