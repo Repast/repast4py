@@ -1,4 +1,4 @@
-== Model 101: How to Write a Repast4Py Simulation
+== How to Write a Repast4Py Simulation
 
 This tutorial will guide you through coding a simple model, focusing on components
 and concepts common to every model. The simulation itself consists of some number
