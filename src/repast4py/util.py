@@ -77,4 +77,3 @@ def find_free_filename(file_path: str) -> Path:
         infix += 1
 
     return p
-

@@ -7,6 +7,9 @@ from repast4py import random
 
 
 params = {}
+"""
+Dict: once init
+"""
 
 
 def create_args_parser():

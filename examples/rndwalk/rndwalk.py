@@ -72,8 +72,7 @@ def restore_walker(walker_data: Tuple):
         walker_cache[uid] = walker
 
     walker.meet_count = walker_data[1]
-    pt = walker_data[2]
-    walker.pt = dpt(pt[0], pt[1], 0)
+    walker.pt = pt
     return walker
 
 
@@ -94,7 +93,7 @@ class Model:
         self.runner = schedule.init_schedule_runner(comm)
         self.runner.schedule_repeating_event(1, 1, self.step)
         self.runner.schedule_repeating_event(1.1, 10, self.log_agents)
-        self.runner.schedule_stop(float(params['stop.at']))
+        self.runner.schedule_stop(params['stop.at'])
         self.runner.schedule_end_event(self.at_end)
 
         # create the context to hold the agents and manage cross process
@@ -159,13 +158,13 @@ class Model:
         self.data_set.close()
         self.agent_logger.close()
 
-    def run(self):
+    def start(self):
         self.runner.execute()
 
 
 def run(params: Dict):
     model = Model(MPI.COMM_WORLD, params)
-    model.run()
+    model.start()
 
 
 if __name__ == "__main__":
