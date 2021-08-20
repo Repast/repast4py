@@ -107,8 +107,8 @@ class ReducingDataLogger:
         data source.
         """
         if self._idx == self._data.shape[0]:
-            self._data = np.concatenate(self._data, np.zeros(ReducingDataLogger.ARRAY_SIZE,
-                                                             dtype=self._data_source.dtype))
+            self._data = np.concatenate((self._data, np.zeros(ReducingDataLogger.ARRAY_SIZE,
+                                                              dtype=self._data_source.dtype)))
         self._data[self._idx] = self._data_source.value
         self._idx += 1
 
