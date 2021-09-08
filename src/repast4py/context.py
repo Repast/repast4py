@@ -88,6 +88,25 @@ class SharedContext:
 
         self.projection_id += 1
 
+    def get_projection(self, projection_name: str) -> SharedProjection:
+        """Gets the named projection.
+
+        Args:
+            projection_name: the name of the projection to get
+
+        Return:
+            The named projection.
+
+        Raises:
+            KeyError: If the collection of projections in this SharedContext does not
+                include the named projection.
+        """
+        for prj in self.projections.values():
+            if prj.name == projection_name:
+                return prj
+
+        raise KeyError(f'No projection with the name "{projection_name}" can be found.')
+
     def remove(self, agent: Agent):
         """Removes the specified agent from this SharedContext
 
@@ -349,10 +368,10 @@ class SharedContext:
 
         Args:
             agent_type_ids: a list of the agent type ids identifying the agent types to count.
-                If this is None then the total size is returned with an id of -1.
+                If this is None then the total size is returned with an agent type id of -1.
 
         Returns:
-            A dictionary containing the counts (the dict values) by type (the dict keys).
+            A dictionary containing the counts (the dict values) by agent type (the dict keys).
         """
         counts = {}
         if agent_type_ids:
@@ -368,7 +387,7 @@ class SharedContext:
 
         Args:
             requested_agents: a list of tuples where each tuple is
-                (id of requested agent, rank to request from)
+                (uid of requested agent, rank to request from)
         """
         requests = [None for i in range(self.comm.size)]
         existing_ghosts = []

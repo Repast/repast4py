@@ -1,14 +1,18 @@
 from mpi4py import MPI
-from networkx import OrderedGraph, OrderedDiGraph
 from dataclasses import dataclass
+import networkx as nx
 from itertools import chain
+import re
+import math
+import json
+from dataclasses import dataclass
 
 from typing import List, Iterable, Callable, Tuple, Dict
 
-from networkx.linalg.attrmatrix import attr_matrix
 
 from ._core import Agent
 from .core import AgentManager
+from . import random
 
 
 @dataclass
@@ -39,7 +43,7 @@ class SharedNetwork:
         graph (networkx Graph): the networkx graph object that provides the network functionality.
     """
 
-    def __init__(self, name: str, comm: MPI.Comm, graph):
+    def __init__(self, name: str, comm: MPI.Comm, graph: nx.Graph):
         self.name = name
         self.comm = comm
         self.graph = graph
@@ -519,7 +523,7 @@ class UndirectedSharedNetwork(SharedNetwork):
     """
 
     def __init__(self, name: str, comm: MPI.Comm):
-        super().__init__(name, comm, OrderedGraph())
+        super().__init__(name, comm, nx.OrderedGraph())
         self.canonical_edge_keys = {}
 
     @property
@@ -659,7 +663,7 @@ class DirectedSharedNetwork(SharedNetwork):
     """
 
     def __init__(self, name: str, comm: MPI.Comm):
-        super().__init__(name, comm, OrderedDiGraph())
+        super().__init__(name, comm, nx.OrderedDiGraph())
 
     @property
     def is_directed(self) -> bool:
@@ -769,3 +773,354 @@ class DirectedSharedNetwork(SharedNetwork):
             The number of edges that contain the specified agent
         """
         return len(self.graph.out_edges(agent)) + len(self.graph.in_edges(agent))
+
+
+def _parse_graph_description(line: str):
+    vals = line.split(' ')
+    if len(vals) != 2:
+        raise ValueError('Error reading graph description file. Invalid format on first line.')
+    try:
+        val = int(vals[1])
+    except Exception:
+        raise ValueError('Error reading graph description file. Invalid format on first line. Second value must be an integer')
+
+    return (val[0], val != 0)
+
+
+@dataclass
+class GraphData:
+    rank: int
+    agents: Dict
+    remote_agents: Dict
+    requested_agents: List
+    edges: List
+
+
+def _parse_graph_desc(line: str):
+    try:
+        vals = line.split(' ')
+        if len(vals) != 2:
+            raise ValueError
+
+        id = vals[0]
+        is_directed = int(vals[1]) != 0
+
+        return (id, is_directed)
+    except Exception:
+        raise ValueError('Error reading graph description file on line 1. Expected graph description with '
+                         'format: "id, [0|1]", where 0 indicates an undirected graph and 1 directed')
+
+
+_LINE_P = re.compile('\{[^}]+\}|\S+')
+_EMPTY_DICT = {}
+
+
+def _parse_node(line: str, line_num: int, graph_data: GraphData, ctx, create_agent: Callable):
+    try:
+        vals = _LINE_P.findall(line)
+        n_vals = len(vals)
+        if n_vals < 3 or n_vals > 4:
+            raise ValueError
+        n_id = int(vals[0])
+        agent_type = int(vals[1])
+        rank = int(vals[2])
+
+        if rank == graph_data.rank or graph_data.rank == -1:
+            attribs = _EMPTY_DICT
+            if n_vals == 4:
+                attribs = json.loads(vals[3])
+
+            agent = create_agent(n_id, agent_type, rank, **attribs)
+            ctx.add(agent)
+            graph_data.agents[n_id] = agent
+        else:
+            graph_data.remote_agents[n_id] = (n_id, agent_type, rank)
+
+    except Exception:
+        raise ValueError(f'Error reading graph description file on line {line_num}: "{line}". Expected node description with format: '
+                         '"node_id agent_type rank" following by an optional json agent attribute dictionary')
+
+
+def _request_remote_agents(graph_data: GraphData, ctx, create_agent: Callable):
+    requested_agents = ctx.request_agents(graph_data.requested_agents, create_agent)
+    for agent in requested_agents:
+        graph_data.agents[agent.uid[0]] = agent
+
+
+def _parse_edge(line: str, line_num: int, graph, graph_data: GraphData):
+    requested = set()
+    try:
+        vals = _LINE_P.findall(line)
+        n_vals = len(vals)
+        if n_vals < 2 or n_vals > 3:
+            raise ValueError
+
+        u_id = int(vals[0])
+        v_id = int(vals[1])
+
+        u_in = u_id in graph_data.agents
+        v_in = v_id in graph_data.agents
+
+        if u_in and v_in:
+            u = graph_data.agents[u_id]
+            v = graph_data.agents[v_id]
+            if n_vals == 3:
+                graph.add_edge(u, v, **(json.loads(vals[2])))
+            else:
+                graph.add_edge(u, v)
+        elif u_in and not v_in:
+            v_uid = graph_data.remote_agents[v_id]
+            if v_id not in requested:
+                graph_data.requested_agents.append((v_uid, v_uid[2]))
+                requested.add(v_id)
+
+            u_uid = graph_data.agents[u_id].uid
+            if n_vals == 3:
+                graph_data.edges.append((u_uid, v_uid, vals[2]))
+            else:
+                graph_data.edges.append((u_uid, v_uid))
+
+        elif not u_in and v_in:
+            u_uid = graph_data.remote_agents[u_id]
+            if u_id not in requested:
+                graph_data.requested_agents.append((u_uid, u_uid[2]))
+                requested.add(u_id)
+            v_uid = graph_data.agents[v_id].uid
+            if n_vals == 3:
+                graph_data.edges.append((u_uid, v_uid, vals[2]))
+            else:
+                graph_data.edges.append((u_uid, v_uid))
+
+    except KeyError:
+        raise ValueError(f'Error reading graph description file on line {line_num}. Agent with {u_id} or {v_id} cannot be found')
+
+    except Exception:
+        raise ValueError(f'Error reading graph description file on line {line_num}. Expected edge description with format: '
+                         '"u_id v_id" following by an optional json edge attribute dictionary')
+
+
+def _create_edges(graph, graph_data: GraphData):
+    for edge in graph_data.edges:
+        u = graph_data.agents[edge[0][0]]
+        v = graph_data.agents[edge[1][0]]
+
+        if len(edge) == 3:
+            graph.add_edge(u, v, **(json.loads(edge[2])))
+        else:
+            graph.add_edge(u, v)
+
+
+def read_network(fpath: str, ctx, create_agent: Callable, restore_agent: Callable):
+    """Creates and initializes the network described in the specified file.
+
+    The network will be created and added to the specified context as a projections. The nodes
+    defined in the file will be created as agents. Those agents with a local rank will be added
+    to the specified context, and those remote agents that participate in an edge with a local
+    agent with be added as ghost agents.
+
+    The format of the file is as follows. The first line consists of a network id followed by a space followed by 0 or 1, where
+    0 indicates that the network is undirected and 1 that it is directed. This first line is followed the node descriptions.
+    Each line defines a node and consists at least 3 space separated elements. These 3 are the node id, the agent type,
+    and the rank on which the agent should be created. These 3 are optionally followed by a json dictionary string
+    containing any attributes of that agent. The node descriptions should be followed by "EDGES" to indicate
+    that the edge descriptions follow in the remaining lines. Each line defines an edge and consists of at least 2
+    space separated elements. These two are the node ids of the u and v components of the edge. An optional 3rd
+    element, a json dictionary, defines any attributes (e.g., weight) to associate with that edge. For example,
+
+    ```
+    friend_network 0
+    1 0 1 {"age": 23}
+    2 0 1 {"age" : 24}
+    3 0 0 {"age" : 30}
+    EDGES
+    1 2 {"weight": 0.5}
+    3 1 {"weight": 0.75}
+    ```
+
+    Or without node or edge attributes:
+
+    ```
+    friend_network 0
+    1 0 1
+    2 0 1
+    3 0 0
+    EDGES
+    1 2
+    3 1
+    ```
+
+    When creating the agents from the node definitions, the node id, the type and the rank elements must be used to
+    create the agents' unique ids.
+
+    Args:
+        fpath: the path to the network description file.
+        ctx (repast4py.context.SharedContext): the context to add the agents to
+        create_agent: a function or method used to create an agent from a node description.
+            The signatured must be [node_id (int), agent_type (int), rank (int), agent_attributes (**kwargs)]
+            and return an agent.
+        restore_agent: the standard function or method used to deserialize agents from agent data sent from
+            another rank, that is, one that can take the result of an agent save() and return an agent.
+    """
+    with open(fpath) as f_in:
+        gid, is_directed = _parse_graph_desc(f_in.readline())
+        g = DirectedSharedNetwork(gid, ctx.comm) if is_directed else UndirectedSharedNetwork(gid, ctx.comm)
+        ctx.add_projection(g)
+        # -1 flags single proc run
+        gd_rank = ctx.rank if ctx.comm.size > 1 else -1
+        graph_data = GraphData(rank=gd_rank, agents={}, remote_agents={}, requested_agents=[],
+                               edges=[])
+        parse_nodes = True
+        for i, line in enumerate(f_in):
+            line = line.strip()
+            if parse_nodes:
+                if line == 'EDGES':
+                    parse_nodes = False
+
+                else:
+                    _parse_node(line, i + 2, graph_data, ctx, create_agent)
+            else:
+                _parse_edge(line, i + 2, g, graph_data)
+
+    _request_remote_agents(graph_data, ctx, restore_agent)
+    ctx.comm.Barrier()
+    _create_edges(g, graph_data)
+
+
+def _write_node(f_out, node_data: Tuple, rank: int):
+    n = node_data[0]
+    attrib = node_data[1]
+    agent_type = 0
+    if 'agent_type' in attrib:
+        try:
+            agent_type = int(attrib['agent_type'])
+            if agent_type < 0:
+                raise ValueError('Error generating graph description file. Node attribute "agent_type" must be a non-negative integer.')
+            attrib = attrib.copy()
+            del attrib['agent_type']
+        except Exception:
+            raise ValueError('Error generating graph description file. Node attribute "agent_type" must be a non-negative integer.')
+
+    line = f'{n} {agent_type} {rank}'
+    if (len(attrib) > 0):
+        line = f'{line} {json.dumps(attrib)}'
+
+    f_out.write(line)
+    f_out.write('\n')
+
+
+def _write_edges(f_out, graph: nx.Graph):
+    f_out.write('EDGES\n')
+    for u, v, attrib in graph.edges(data=True):
+        line = f'{u} {v}'
+        if (len(attrib) > 0):
+            line = f'{line} {json.dumps(attrib)}'
+
+        f_out.write(line)
+        f_out.write('\n')
+
+
+def _random_partition(graph: nx.Graph, network_name: str, fpath: str, n_ranks: int, **partitioning_args):
+    num_nodes = graph.number_of_nodes()
+    nodes_per_rank = num_nodes / n_ranks
+    assigned_ranks = [i for i in range(n_ranks)] * math.ceil(nodes_per_rank)
+    if 'rng' in partitioning_args:
+        rng_val = partitioning_args['rng']
+        if rng_val == 'default':
+            rng = random.default_rng
+        else:
+            rng = rng_val
+    else:
+        rng = random.default_rng
+    rng.shuffle(assigned_ranks)
+
+    if len(assigned_ranks) > num_nodes:
+        assigned_ranks = assigned_ranks[: num_nodes]
+
+    with open(fpath, 'w') as f_out:
+        is_d = 1 if nx.is_directed(graph) else 0
+        f_out.write(f'{network_name} {is_d}\n')
+        for i, nd in enumerate(graph.nodes(data=True)):
+            _write_node(f_out, nd, assigned_ranks[i])
+
+        _write_edges(f_out, graph)
+
+
+def _metis_partition(graph: nx.Graph, network_name: str, fpath: str, n_ranks: int, **partitioning_args):
+    # import here so that users without nxmetis can 
+    # use the other network code.
+    import nxmetis
+
+    _, partitions = nxmetis.partition(graph, n_ranks, **partitioning_args)
+
+    with open(fpath, 'w') as f_out:
+        is_d = 1 if nx.is_directed(graph) else 0
+        f_out.write(f'{network_name} {is_d}\n')
+        for i, partition in enumerate(partitions):
+            for nid in partition:
+                _write_node(f_out, (nid, graph.nodes[nid]), i)
+
+        _write_edges(f_out, graph)
+
+
+def write_network(graph: nx.Graph, network_name: str, fpath: str, n_ranks: int, **partition_args):
+    """
+    Partitions a network over the specified process ranks and writes the specified network to a file
+    in a format that can be read by the :func:repast4py.network.read_network function. The intention is
+    that `write_network` is used to create a distributed partitioned graph file outside of a running
+    simulation, and once created that file can then be read during simulation initialization to create
+     a repast4py network.
+
+    The format of the file is as follows. The first line consists of a network anem followed by a space followed by 0 or 1, where
+    0 indicates that the network is undirected and 1 that it is directed. This first line is followed the node descriptions.
+    Each line defines a node and consists at least 3 space separated elements. These 3 are the node id, the agent type id,
+    and the rank on which the agent should be created. These 3 are optionally followed by a json dictionary string
+    containing any attributes of that agent. The node descriptions is followed by a line containing "EDGES" to indicate
+    that the edge descriptions follow in the remaining lines. Each line defines an edge and consists of at least 2
+    space separated elements. These two are the node ids of the u and v components of the edge. An optional 3rd
+    element, a json dictionary, defines any attributes (e.g., weight) to associate with that edge. If a node in
+    the specified graph contains an 'agent_type' attribute  then that will written as the agent type id,
+    otherwise the type is 0.
+
+    The network is partitioned across process ranks by assigning each node to a rank. A `partition_method`
+    can be specified in the `partition_args` and can be one of 'random' or 'metis'. If no `partition_method`
+    is defined, then the method defaults to random where the nodes will be uniformly distributed among the process
+    ranks without any load balancing. A partition method of `metis` will use the metis
+    load balancer to allocate nodes to ranks. Metis is not included with repast4py and must be installed
+    seperately.  See the `networkx metis docs <https://networkx-metis.readthedocs.io/en/latest/index.html>`__ for
+    more information on installation and nxmetis. Note that installing from source or github may be necessary.
+
+    Args:
+        graph: the graph to partition and write out.
+        network_name: the id / name of the network to partition
+        fpath: the path of the file to write the partitioned network out to
+        n_ranks: the number of ranks to partition the network over
+        partition_args: named arguments that determine how the graph will be partitioned. The `partition_method`
+            argument is used to determine the partition method ('random' or 'metis'). Additional arguments are
+            fowared to the partition method itself. In the 'random' case, a `rng` argument specifies the random number
+            generator use in the random partitioning. Valid values are any numpy.random.Generator instance or 'default'
+            to use the repast4py.random.default_rng. If no 'rng' is specified then by default the
+            repast4py.random.default_rng is used. In the 'metis' case, the partition_args are forwared to the
+            nxmetis' partition function. The various arguments to that can be found in the
+            `networkx metis reference <https://networkx-metis.readthedocs.io/en/latest/reference/generated/nxmetis.partition.html>`__.
+
+    Examples:
+        >>> import networkx as nx
+        >>> g = nx.generators.dual_barabasi_albert_graph(60, 2, 1, 0.25)
+        >>> fname = './test_data/gen_net_test.txt'
+        >>> write_network(g, "test", fname, 3, partition_method='random', rng='default')
+
+        >>> g = nx.complete_graph(60)
+        >>> options = nxmetis.types.MetisOptions(seed=1)
+        >>> write_network(g, "metis_test", fname, 3, partition_method='metis', options=options)
+    """
+    if 'partition_method' in partition_args:
+        partition_method = partition_args['partition_method']
+        if partition_method == 'random':
+            _random_partition(graph, network_name, fpath, n_ranks, **partition_args)
+        elif partition_method == 'metis':
+            del partition_args['partition_method']
+            _metis_partition(graph, network_name, fpath, n_ranks, **partition_args)
+        else:
+            raise ValueError('Invalid partition method, must be one of "random" or "metis"')
+    else:
+        _random_partition(graph, network_name, fpath, n_ranks, **partition_args)
