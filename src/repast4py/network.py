@@ -5,6 +5,7 @@ from itertools import chain
 import re
 import math
 import json
+import array
 from dataclasses import dataclass
 
 from typing import List, Iterable, Callable, Tuple, Dict
@@ -1022,7 +1023,7 @@ def _write_edges(f_out, graph: nx.Graph):
 def _random_partition(graph: nx.Graph, network_name: str, fpath: str, n_ranks: int, **partitioning_args):
     num_nodes = graph.number_of_nodes()
     nodes_per_rank = num_nodes / n_ranks
-    assigned_ranks = [i for i in range(n_ranks)] * math.ceil(nodes_per_rank)
+    assigned_ranks = array.array('i', (i for i in range(n_ranks))) * math.ceil(nodes_per_rank)
     if 'rng' in partitioning_args:
         rng_val = partitioning_args['rng']
         if rng_val == 'default':
