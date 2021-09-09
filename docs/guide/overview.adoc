@@ -1,61 +1,84 @@
 == Overview
-Repast for Python (Repast4Py) is a distributed agent-based simulation toolkit written in Python.
-Modern CPUs typically contain multiple cores, each of which is capable of running concurrently.
-Repast4Py attempts to leverage this hardware by distributing a simulation over multiple processes
-running in parallel on these cores. A typical agent-based simulation consists of a population of agents 
-each of which performs some behavior each timestep or at some frequency. In practice, this
-is often implemented as a loop over the agent population in which each agent executes its behavior. 
-The time it takes to complete the loop depends on the number of agents and the complexity of the behavior.
-By distributing the agent population across multiple processes running in parallel, each process 
-executes its own loop over only a subset of the population, allowing for larger agent populations and more complex behavior without increasing the runtime. Repast4Py is also a natural fit for implementing
-agent-based simulations on high performance computers and clusters, such as those hosted by
-universities, national laboratories, and cloud computing providers. Such machines can have
-thousands or 10s of thousands of processor cores available, allowing for very large and
-complex simulations.
+
+Repast for Python (Repast4Py) is a distributed agent-based simulation toolkit written in Python, and is a part of the broader https://repast.github.io[Repast Suite] of free and open source agent-based modeling and simulation software.
+// XX add more here
 
 This overview section will provide some conceptual background for a Repast-style simulation
 as well as describing how such a simulation is distributed across multiple processes.
 
-=== Contexts and Projections
-Like the other members of the Repast ABM family, Repast4Py organizes a model in terms of *_contexts_* and *_projections_*. 
-A context is a simple container based on set semantics. Any type of object can be put into a context, with the simple caveat that only one instance of any given object
-can be contained by the context. From a modeling perspective, the context represents a population of agents. The agents in a context are the population of a model. 
-However, the context does not inherently provide any relationship or structure for that population. Projections take the population as defined in a context 
-and impose a structure on it. The structure defines and imposes relationships on the population using the semantics of the projection. Actual projections are 
-such things as a network structure that allows agents to form links (network type relations) with each other, a grid where each agent is located in a 
-matrix-type space, or a continuous space where an agent's location is expressible as a non-discrete coordinate. Projections have a many-to-one relationship with 
-contexts. Each context can have an arbitrary number of projections associated with it. When writing a model, you will create a context, populate it with agents,
-and attach projections to that context.
+=== Why Repast4py?
+While modern computing capabilities has allowed large-scale XX to occur, one of the most difficulties is converting computational models to run in multiple processors, rather than an individual one. TODO
 
-=== Scheduling Events
+Modern CPUs typically contain multiple cores, each of which is capable of running concurrently.
+Repast4Py attempts to leverage this hardware by distributing a simulation over multiple processes
+running in parallel on these cores.
+A typical agent-based simulation consists of a population of agents each of which performs some behavior each timestep or at some frequency.
+In practice, this is often implemented as a loop over the agent population in which each agent executes its behavior. 
+The time it takes to complete the loop depends on the number of agents and the complexity of the behavior.
+
+By distributing the agent population across multiple processes running in parallel, each process 
+executes its own loop over only a subset of the population, allowing for larger agent populations and more complex behavior without increasing the runtime. 
+Repast4Py is also a natural fit for implementing agent-based simulations on high performance computers and clusters, such as those hosted by universities, national laboratories, and cloud computing providers. 
+Such machines can have thousands or 10s of thousands of processor cores available, allowing for very large and complex simulations.
+
+
+=== Components of a Repast agent-based model
+Like the other members of the Repast ABM family, Repast4Py organizes a model in terms of *_contexts_*, *_agents_*, and *_projections_*. Additionally, Repast4py uses *_discrete events_* implemented as schedules to drive the model through time. To log simulation data, a logger object is XX. 
+//TODO 
+
+==== Agents
+// TODO
+Objects with attributes and behavior. These attributes are implemented as XX, and the behavior is implemented using methods. 
+Agents populate a model via its context.
+
+==== Contexts 
+A context is a simple container based on set semantics. 
+Any type of object can be put into a context, with the simple caveat that only one instance of any given object can be contained by the context. 
+From an agent-based modeling perspective, the context represents a population of agents. 
+The agents in a context are the population of a model. 
+However, the context does not inherently provide any relationship or structure for that population. 
+
+==== Projections
+Projections take the population as defined in a context and impose a structure on it. 
+The structure defines and imposes relationships on the population using the semantics of the projection. 
+Actual projections are such things as a network structure that allows agents to form links (network type relations) with each other, a grid where each agent is located in a matrix-type space, or a continuous space where an agent's location is expressible as a non-discrete coordinate. 
+Projections have a many-to-one relationship with contexts. 
+Each context can have an arbitrary number of projections associated with it. 
+When writing a model, you will create a context, populate it with agents, and attach projections to that context.
+
+==== Discrete Event Scheduling
 A Repast simulation moves forward by repeatedly determining the next event to execute and then executing that event.
-Events in Repast simulations are driven by a discrete-event scheduler. These events themselves are scheduled to occur at a 
-particular *_tick_*. Ticks do not necessarily represent clock-time but rather the priority of an associated event. 
-Ticks determine the order in which events occur with respect to each other. For example, if event A is scheduled at tick 3 and 
-event B at tick 6, event A will occur before event B.  Assuming nothing is scheduled at the intervening ticks, A will be 
-immediately followed by B. There is no inherent notion of B occurring after a duration of 3 ticks.  Of course, ticks can and 
-are often given some temporal significance through the model implementation. A traffic simulation, for example, may move the 
-traffic forward the equivalent of 30 seconds for each tick. Events can also be scheduled dynamically 
-such that the execution of an event may schedule further events at that same or at some future tick. When writing a model, you will
-create a Schedule object, and schedule events, that is, Python methods or functions for execution at some particular tick, or tick frequency.
+Events in Repast simulations are driven by a discrete-event scheduler. 
+These events themselves are scheduled to occur at a particular *_tick_*. 
+Ticks do not necessarily represent clock-time, but rather the priority of an associated event. 
+Ticks determine the order in which events occur with respect to each other. 
+For example, if Event A is scheduled at tick 3 and Event B at tick 6, then Event A will occur before Event B.  
+Assuming nothing is scheduled at the intervening ticks, Event A will be immediately followed by Event B. 
+There is no inherent notion of Event B occurring after a duration of 3 ticks.  
+Of course, ticks can and are often given some temporal significance through the model implementation. A traffic simulation, for example, may move the traffic forward the equivalent of 30 seconds for each tick. 
+Events can also be scheduled dynamically such that the execution of an event may schedule further events at that same or at some future tick. 
+When writing a model, you will create a *_Schedule object_*, and schedule events as Python methods or functions for execution at some particular tick, or tick frequency.
+
+==== Logging
+//TODO 
+
 
 === Distributed Simulation
-Repast4Py was designed from the ground up as a distributed simulation framework. In practice, this means
-that the simulation is spread over multiple computer processes none of which have access to each other's memory, and
-communicate via message passing using the Message Passing Interface (MPI) and its Python implementation mpi4Py.
+Repast4Py was designed from the ground up as a distributed simulation framework. 
+In practice, this means that the simulation is spread over multiple computer processes none of which have access to each other's memory, and communicate via message passing using the Message Passing Interface (MPI) and its Python implementation mpi4Py.
 
-NOTE: Repast4Py can also be used to implement a non-distributed simulation by restricting the simulation
-to a single process.
+NOTE: Repast4Py can also be used to implement a non-distributed simulation by restricting the simulation to a single process.
 
-Repast4Py distributes a simulation by providing _shared_ implementations of the components described above.
-By shared, we want to emphasize the partitioned and distributed nature of the simulation. The global simulation 
-is shared among a pool of processes, each of which is responsible for some portion or partition of it, and stiched into a global whole through the use of non-local or _ghost_ agents, and buffered projections. 
+While Repast4py was developed to ease a user's need for prior knowledge of parallel computing technicalities, before we discuss how repast4py has parallelized XX... we direct those new to parallel computing and distributed simulation methods to a quick introduction to MPI, the communication standard that occurs between processes. 
 
-An MPI application identifies its processes by a rank id. For example, if the application is run with 4 processes, there
-will be 4 ranks: 0 - 3. The code in an MPI appliction is run concurrently on each rank. Anything
-instantiated in that code resides in that processes' memory and is *_local_* to that process. Other processes do not
-have access to the variables, objects, etc. created on another process. For example, assuming 4 ranks, the following code
-creates 10 agents on each rank. 
+Repast4Py distributes a simulation by providing _shared_ implementations of its components described earlier.
+By shared, we want to emphasize the partitioned and distributed nature of the simulation. The global simulation is shared among a pool of processes, each of which is responsible for some portion or partition of it, and stiched into a global whole through the use of non-local or _ghost_ agents, and buffered projections. 
+
+An MPI application identifies its processes by a rank id. For example, if the application is run with 4 processes, there will be 4 ranks: 0 - 3. 
+The code in an MPI appliction is run concurrently on each rank. 
+Anything instantiated in that code resides in that processes' memory and is *_local_* to that process. 
+Other processes do not have access to the variables, objects, etc. created on another process. 
+For example, assuming 4 ranks, the following code creates 10 agents on each rank. 
 
 [source,python,numbered]
 ----
@@ -64,23 +87,22 @@ for i in range(10):
     ...
 ----
 
-These agents are said to be local to the ranks on which they are created. In order to stitch these individual ranks
-into a global whole, repast4py uses the concept of a non-local or _ghost_ agent: a copy of an agent from another rank
-that local agents can interact with. Repast4Py provides the functionality to create these ghosts and keep their
-state synchronized from the ghosts' local ranks to the ranks on which they are ghosted. Ghosts are used to create
-projections, such as a network or grid that span across process ranks.
+These agents are said to be local to the ranks on which they are created. 
+In order to stitch these individual ranks into a global whole, repast4py uses the concept of a non-local or _ghost_ agent: a copy of an agent from another rank that local agents can interact with. Repast4Py provides the functionality to create these ghosts and keep their
+state synchronized from the ghosts' local ranks to the ranks on which they are ghosted. 
+Ghosts are used to create projections, such as a network or grid that span across process ranks.
 
-<<img-network-ghost>> illustrates how ghosts are used in a network projection. The top part of the figure shows that agent `A1` is local to process 1 and has
-a directed netework link to agent `B2` which is local to process 2. Presumably, some aspect of the agent's behavior is conditional
-on the network link, chekcking some attribute of its network neighbors and responding
-accordingly, for example. Given that `B2` is on a different process there is no way for `A1` to
-query `B2`. However, the bottom part of the figure shows how ghost agents are used to tie the network together. `B2` is
-copied to process 1 where a local link is created between it and `A1`. `A1` can now query the state of `B2`.
+<<img-network-ghost>> illustrates how ghosts are used in a network projection. 
+The top part of the figure shows that agent `A1` is local to process 1 and has a directed netework link to agent `B2` which is local to process 2. Presumably, some aspect of the agent's behavior is conditional on the network link, chekcking some attribute of its network neighbors and responding
+accordingly, for example. 
+Given that `B2` is on a different process there is no way for `A1` to query `B2`. 
+However, the bottom part of the figure shows how ghost agents are used to tie the network together. 
+`B2` is copied to process 1 where a local link is created between it and `A1`. `A1` can now query the state of `B2`.
 Similarly, a ghost of `A1` is copied to process 2 where `B2` can now interact with it.
 
-NOTE: The copying and synchronization of ghosts agent and ghost agent state is performed by repast4py. The
-user only needs to provide a minimal amount of code to handle the saving and restoring of agent state. This
-is described in more detail in subsequent sections. 
+NOTE: The copying and synchronization of ghosts agent and ghost agent state is performed by repast4py. 
+The user only needs to provide a minimal amount of code to handle the saving and restoring of agent state. 
+This is described in more detail in subsequent sections. 
 
 [#img-network-ghost,reftext='{figure-caption} {counter:refnum}']
 .Ghost Agents in a Shared Network
@@ -98,13 +120,12 @@ Spatial projections such as a grid or continuous space are stitched together thr
 .Ghost Agents in a Buffered Area
 image::shared_grid_agents_800.png[]
 
-Here in <<img-grid-buffer>>, the full 6x8 grid is distributed across 4 process ranks. Each rank is responsible for
-its own 3x4 quarter of the global grid. This is illustrated on the left hand side of <<img-grid-buffer>>. 
-On the right hand side, we see how the quarters are stitched together. Each subsection
-of the grid contains a buffer that is a copy of the contents of the adjacent subsections. 
-The blue part of the image is the area for process 1's grid subsection. There, we can
-see the ghost agents `C3` and `B2` copied from processes 3 and 2 respectively. In this way,
-agent `A1` can _see_ and interact with agent's `C3` and `B2`. 
+Here in <<img-grid-buffer>>, the full 6x8 grid is distributed across 4 process ranks. Each rank is responsible for its own 3x4 quarter of the global grid. This is illustrated on the left hand side of <<img-grid-buffer>>. 
+On the right hand side, we see how the quarters are stitched together. 
+Each subsection of the grid contains a buffer that is a copy of the contents of the adjacent subsections. 
+The blue part of the image is the area for process 1's grid subsection. 
+There, we can see the ghost agents `C3` and `B2` copied from processes 3 and 2 respectively. 
+In this way, agent `A1` can _see_ and interact with agent's `C3` and `B2`. 
 
 TIP: Be sure to specify a buffer size appropriate for agent behavior. For example, if an agent can see 3 units away and take some action based on what it perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of its own local area.
 
@@ -112,12 +133,10 @@ Agents can, of course, move around grids and continuous spaces. When an agent mo
 to that process. Cross-process movement and synchronization will be discussed more in the next sections.
 
 
+==== A quick introduction to MPI
+////
+TODO
+- Link to the MPI4py
+- 
 
-
-
-
-
-
-
-
-
+////

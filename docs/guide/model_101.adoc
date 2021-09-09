@@ -1,9 +1,11 @@
-== How to Write a Repast4Py Simulation
+== Repast4py Examples
+We provide a tutorial that will guide users through coding a simple model, focusing on components and concepts common to every model.
+Additionally, we provide users an example model implemented using Repast4py and based on previous implementations from XX and XX.
 
-This tutorial will guide you through coding a simple model, focusing on components
-and concepts common to every model. The simulation itself consists of some number
-of agents moving at random around a two-dimensional grid, and logging the aggregate and agent-level
-colocation counts. Each timestep, the following occurs:
+=== A Repast4Py Step-by-Step Tutorial
+We implement here a simple agent-based model of randomly-walking agents.
+The simulation itself consists of some number of agents moving at random around a two-dimensional grid, and logging the aggregate and agent-level colocation counts. 
+Each timestep, the following occurs:
 
 1. All the agents (_walkers_) choose a random direction and move one unit in that direction.
 2. All the agents count the number of other agents they _meet_ at their current location by
@@ -30,7 +32,7 @@ a _model_-type class to initialize and manage the simulation, a function to hand
 as they move between processes and some additional code to run the simulation from the command line. Of course in a more complex simulation, the responsibilities and behavior of the agent and model classes can be factored out into additional classes, functions, and modules as necessary, but the overall
 organization remains the same.
 
-=== The Walker Agent
+==== The Walker Agent
 
 The Walker class implements our Walker agent, encapsulating its:
 
@@ -72,7 +74,7 @@ In the `walk` function, the agent randomly chooses an offset from its current lo
 adds those offsets to its current location to create a new location, and then moves to that new
 location on the grid. The moved-to-location becomes the agent's new current location.
 
-==== Walking the Walker
+===== Walking the Walker
 
 [source,python,numbered]
 ----
@@ -108,7 +110,7 @@ The `count_location` method gets the number of other agents at the current locat
 updates the agent's running total of other agents met as well as a `MeetLog` dataclass
 that is used to log the total number of meets and the minimum and maximum.
 
-==== Logging the Walker
+===== Logging the Walker
 
 [source,python,numbered]
 ----
@@ -137,7 +139,7 @@ TIP: To learn more about built-in agent and grid functionality, see the API docu
 
 As we will see below, the Model class will schedule the execution of these two functions on every agent on every timestep. In this way, each agent executes its behavior each timestep.
 
-==== Serializing the Walker
+===== Serializing the Walker
 
 When a `Walker` walks beyond the bounds of the local grid managed by its current
 process rank, or when populating the buffer area of the local grid sections, 
@@ -166,7 +168,7 @@ state of the agent as a tuple. The first element of this
 tuple *MUST* be the agent's unique id (`self.uid`). The remaining elements
 should encapsulate any dynamic agent state.
 
-=== The Model Class
+==== The Model Class
 
 The Model class encapsulates the simulation, and is responsible for initialization: scheduling events, creating agents, and the grid the agents inhabit, and logging. In addition, the scheduled events
 that drive the simulation forward are methods of the model class. 
@@ -176,7 +178,7 @@ our agents, the grid on which they move, the agents themselves, and the _loggers
 we use to log various simulation statistics to files. We begin with the constructor
 signature, and the schedule runner creation. 
 
-==== Scheduling Events
+===== Scheduling Events
 
 The SharedScheduledRunner class encapsulates a dynamic schedule of executable events shared and
 synchronized across processes. Events are added to the scheduled for execution at a particular "tick".
@@ -221,7 +223,7 @@ continuing to execute any scheduled events without stopping. The stopping time d
 need to be set during initialization, but can be set during a simulation run when
 stopping condition is reached, for example.
 
-==== Creating the Context and Grid
+===== Creating the Context and Grid
 
 Once the schedule has been initialized and events have been added, the context (an object
 that holds the population of agents) and the grid around which the agents move are 
@@ -257,7 +259,7 @@ xref:overview.adoc#_distributed_simulation[Distributed Simulation] section.
 it must be added to the context so that it can be properly synchronized across
 processes.
 
-==== Creating the Agents
+===== Creating the Agents
 
 When creating the agents, we create the number of Walker agents as specified in the `walker.count`
 input parameter, assigning each a random location. 
@@ -285,7 +287,7 @@ NOTE: Agents added to a context are also added to any projections in that contex
 projections have `add` methods for adding agents, these are typically _NOT_ used in an
 simulation.
 
-==== Initializing Logging
+===== Initializing Logging
 
 Logging refers to gathering simulation output data writing it to a file. There are
 two types of logging supported by repast4py.
@@ -396,7 +398,7 @@ a row in the tabular output.
 to call `write` everytime rows are logged as the rows will accumulate until `write`
 is eventually called.
 
-==== Scheduled Methods
+===== Scheduled Methods
 
 In <<_scheduling_events>> we saw how to schedule events that repeat and that execute
 when the simulation ends. In practice, the events to be scheduled are methods in the
@@ -460,7 +462,7 @@ def at_end(self):
 IMPORTANT: Do not forget to call `close` on your logging class instances when the simulation ends.
 
 
-=== Restoring Walkers
+==== Restoring Walkers
 
 The `restore_walker` function is used to create an individual `Walker` when that
 `Walker` has moved (i.e., walked) to another process. This function is passed
@@ -507,7 +509,7 @@ the retrieve it.
 <7> Update the `Walker` state with the `meet_count` and point
 data. 
 
-=== Running the Simulation
+==== Running the Simulation
 
 The simulation is run from the command line:
 
@@ -590,3 +592,4 @@ NOTE: The code in the `run` function could be moved to the `if __name__ == '__ma
 but it is often useful to have an entry type function that initializes and starts a simulation.
 
 
+=== Additional Repast4py Examples

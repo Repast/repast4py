@@ -1,10 +1,8 @@
-== Cross-Processes Code Requirements
+== Code Requirements for Parallelizing Repast4py 
+
 We've seen in the <<_distributed_simulation, Distributed Simulation>> section how ghost agents
-(non-local copies) are used 
-to stitch a simulation together across processes and that when agents move out of their local
-grid or continuous space subsection they are moved to the process responsible for the destination
-subsection. While much of this is handled internally by repast4py, this section describes in more detail the 
-code the user needs to provide in order for moving and copying to work correctly.
+(non-local copies) are used to stitch a simulation together across processes and that when agents move out of their local grid or continuous space subsection they are moved to the process responsible for the destination subsection. 
+While much of this is handled internally by repast4py, this section describes in more detail the code the user needs to provide in order for moving and copying to work correctly.
 
 === Agent ID
 For moving and copying agents across processes to work each agent must have a unique id. 
