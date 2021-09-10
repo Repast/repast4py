@@ -1,10 +1,82 @@
-== Code Requirements for Parallelizing Repast4py 
+== Repast4py as a Distributed Simulation
+Repast4Py was designed from the ground up as a distributed simulation framework. 
+In practice, this means that the simulation is spread over multiple computer processes none of which have access to each other's memory, and communicate via message passing using the Message Passing Interface (MPI) and its Python implementation mpi4Py.
 
-We've seen in the <<_distributed_simulation, Distributed Simulation>> section how ghost agents
+NOTE: Repast4Py can also be used to implement a non-distributed simulation by restricting the simulation to a single process.
+
+While Repast4py was developed to ease a user's need for prior knowledge of parallel computing technicalities, before we discuss how repast4py has parallelized XX... we direct those new to parallel computing and distributed simulation methods to a quick introduction to MPI, the communication standard that occurs between processes. 
+
+=== Parallelizing Repast4py
+Repast4Py distributes a simulation by providing _shared_ implementations of its components described in XX.
+By shared, we want to emphasize the partitioned and distributed nature of the simulation. 
+The global simulation is shared among a pool of processes, each of which is responsible for some portion or partition of it, and stiched into a global whole through the use of non-local _ghost_ agents and _buffered_ projections. 
+
+An MPI application identifies its processes by a rank id. For example, if the application is run with 4 processes, there will be 4 ranks: 0 - 3. 
+The code in an MPI appliction is run concurrently on each rank. 
+Anything instantiated in that code resides in that processes' memory and is *_local_* to that process. 
+Other processes do not have access to the variables, objects, etc. created on another process. 
+For example, assuming 4 ranks, the following code creates 10 agents on each rank. 
+
+[source,python,numbered]
+----
+for i in range(10):
+    agent = MyAgent()
+    ...
+----
+
+These agents are said to be local to the ranks on which they are created. 
+In order to stitch these individual ranks into a global whole, repast4py uses the concept of a non-local *_ghost_* agent: a copy of an agent from another rank that local agents can interact with. 
+Repast4Py provides the functionality to create these ghosts and keep their state synchronized from the ghosts' local ranks to the ranks on which they are ghosted. 
+Ghosts are used to create projections, such as a network or grid that span across process ranks.
+
+<<img-network-ghost>> illustrates how ghosts are used in a network projection. 
+The top part of the figure shows that agent `A1` is local to process 1 and has a directed netework link to agent `B2` which is local to process 2. Presumably, some aspect of the agent's behavior is conditional on the network link, chekcking some attribute of its network neighbors and responding
+accordingly, for example. 
+Given that `B2` is on a different process there is no way for `A1` to query `B2`. 
+However, the bottom part of the figure shows how ghost agents are used to tie the network together. 
+`B2` is copied to process 1 where a local link is created between it and `A1`. `A1` can now query the state of `B2`.
+Similarly, a ghost of `A1` is copied to process 2 where `B2` can now interact with it.
+
+NOTE: The copying and synchronization of ghosts agent and ghost agent state is performed by repast4py. 
+The user only needs to provide a minimal amount of code to handle the saving and restoring of agent state. 
+This is described in more detail in subsequent sections. 
+
+[#img-network-ghost,reftext='{figure-caption} {counter:refnum}']
+.Ghost Agents in a Shared Network
+image::shared_net_2.png[]
+
+IMPORTANT: Do not update the state of non-local ghost agents. They only exist to be _seen_ by
+local agents and objects. Any state changes to any agent must be performed on the agent's
+local process. The SharedContext component makes a clear distinction between the two types
+of agents, allowing you to work with only the local agents.
+
+Spatial projections, such as a grid or continuous space, are stitched together through the use of 
+*_buffers_* in addition to ghosts agents. This is illustrated in <<img-grid-buffer>>.
+
+[#img-grid-buffer,reftext='{figure-caption} {counter:refnum}']
+.Ghost Agents in a Buffered Area
+image::shared_grid_agents_800.png[]
+
+Here in <<img-grid-buffer>>, the full 6x8 grid is distributed across 4 process ranks. Each rank is responsible for its own 3x4 quarter of the global grid. This is illustrated on the left hand side of <<img-grid-buffer>>. 
+On the right hand side, we see how the quarters are stitched together. 
+Each subsection of the grid contains a buffer that is a copy of the contents of the adjacent subsections. 
+The blue part of the image is the area for process 1's grid subsection. 
+There, we can see the ghost agents `C3` and `B2` copied from processes 3 and 2 respectively. 
+In this way, agent `A1` can _see_ and interact with agent's `C3` and `B2`. 
+
+TIP: Be sure to specify a buffer size appropriate for agent behavior. For example, if an agent can see 3 units away and take some action based on what it perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of its own local area.
+
+Agents can, of course, move around grids and continuous spaces. When an agent moves beyond the borders of its local subsection then it is moved from that rank to the rank of the subsection that it has moved to. For example, if in <<img-grid-buffer>>, agent `D4` moves from grid coordinate 4,4 to 4,2 then it will be moved during repast4py's synchronization phase to process 2 where it becomes local
+to that process. Cross-process movement and synchronization will be discussed more in the next sections.
+
+
+=== Code Requirements for Cross-Processes 
+
+We've seen in the XX <<_distributed_simulation, Distributed Simulation>> section how ghost agents
 (non-local copies) are used to stitch a simulation together across processes and that when agents move out of their local grid or continuous space subsection they are moved to the process responsible for the destination subsection. 
 While much of this is handled internally by repast4py, this section describes in more detail the code the user needs to provide in order for moving and copying to work correctly.
 
-=== Agent ID
+==== Agent ID
 For moving and copying agents across processes to work each agent must have a unique id. 
 This id has three components:
 
@@ -12,13 +84,11 @@ This id has three components:
 . An integer that identifies its type.
 . The integer rank on which the agent was created.
 
-Combining the first component with the last allows us to uniquely identify an agent across the multi-process
-simulation while the second allows us to create agents of the appropriate type when they are copied
-between ranks. 
+Combining the first component with the last allows us to uniquely identify an agent across the multi-process simulation while the second allows us to create agents of the appropriate type when they are copied between ranks. 
 
 In order to insure that all agents in repast4py have an agent id, all agents must inherit from the
-`repast4py.core.Agent` class which requires these components in its constructor. For example in the
-Zombies demonstration model, the `Human` agents are subclasses of the `repast4py.core.Agent`
+`repast4py.core.Agent` class which requires these components in its constructor. 
+For example in the Zombies demonstration model, the `Human` agents are subclasses of the `repast4py.core.Agent`
 
 [source,python,numbered]
 ----
@@ -49,16 +119,15 @@ The components as well as the full unique id are attributes of the `repast4py.co
 
 IMPORTANT: All agents must subclass `repast4py.core.Agent`
 
-=== Saving and Restoring Agents
-Moving or copying an agent between processes consists of saving the agent state, moving / copying that state
-to another process and then restoring the agent state as an agent on the destination process. Each
-agent must implement a `save` method that returns a Tuple containing the agent state, the first element of which is the agent's unique id as a Tuple (accessed via the `uid` attribute). For example, in the Zombie demonstration model, that state each Human is
-represented by two variables:
+==== Saving and Restoring Agents
+Moving or copying an agent between processes consists of saving the agent state, moving/copying that state to another process and then restoring the agent state as an agent on the destination process. 
+Each agent must implement a `save` method that returns a Tuple containing the agent state. The  first element of this tuple is the agent's unique id accessed via the `uid` attribute). 
+For example, in the Zombie demonstration model in XX, the state of each Human is represented by two variables:
 
 1. infected: a boolean that indicates whether or not the Human is infected
 2. infected_duration: an integer tracking how long the agent has been infected for
 
-The `save` method creates a tuple consisting of these two variables and the unique id tuple..
+The `save` method creates a tuple consisting of these two variables and the unique id tuple.
 
 [source,python,numbered]
 ----
@@ -139,7 +208,7 @@ infected_duration). For Zombies, this is just (uid).
 <5> Update the cached / created Human with the passed in agent state
 <6> `agent_data` is for a Zombie so search cache and if necessary create a new one.
 
-=== Synchronization
+==== Synchronization
 As mentioned in the <<_distributed_simulation, Distributed Simulation>> section, each process in a
 repast4py application runs in a separate memory space from all the other processes. Consequently,
 we need to synchronize the model state across processes by moving agents, filling

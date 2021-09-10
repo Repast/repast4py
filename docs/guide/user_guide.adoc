@@ -1,7 +1,7 @@
 = Repast for Python (Repast4Py) User Guide
 Version 1.0 September 2021
 :toc2:
-:toclevels: 3 
+:toclevels: 2 
 :icons: font
 :numbered:
 :website: http://repast.github.io
@@ -13,6 +13,8 @@ Version 1.0 September 2021
 
 include::overview.adoc[]
 
+include::repast_components.adoc[]
+
 include::distributing_agents.adoc[]
 
 include::model_101.adoc[]
@@ -23,22 +25,21 @@ include::ascii_doc_ex.adoc[]
 
 ////
 - Significant changes
-    - Tried moving the order of the documents around. Not sure how successful that was. 
     - For the components of a Repast model, I also included: agent and logging object... so that way, all objects of a Repast model would include Agents, Context, Projection, Discrete Event Schedule, State Logger
-        - All of these components are implemented via class constructors, usually with a higher level Model Class. See our tutorial to see how the model is implemented via a Model class and an Agent class
-    - Still am putting together MPI tutorial
+    - Also tried to structure the tutorial in this way as well... so it is organized as:
+        - Repast components
+        - The cross-processes requirements
+        - How we usually implement this as a model (i.e. with the model class)
 
 - Other
+    - Still am putting together MPI tutorial
+    - Still am cleaning up the motivation section behind Repast4py
     - repast4py should be sentence case? Like, it should be implemented with capital letter only as a sentence structure?
     - for the Random Walker example, do we want to separate out the components that are a part of our parallelizing of it?
         - for example, separate out the parts that we actually specify the buffer
 
-    - when we discuss the components of a Repast model, we can specify the code requirements for it
-        - maybe just turn section 2 into "code requirements" and have two subsections: 1. for code requirements for the Repast components and 2. for the distributed simulation
-
-Still to do
-- Was getting stuck as to whether or not these are the types of edits that are helpful
-- Was going to restructure the random walker example so it follows how we introduced the Repast components
-    - So bring out this piece of information a little earlier: This is the canonical way to organize a repast4py simulation: agents implemented as classes, a model-type class to initialize and manage the simulation, a function to handle restoring agents as they move between processes and some additional code to run the simulation from the command line. Of course in a more complex simulation, the responsibilities and behavior of the agent and model classes can be factored out into additional classes, functions, and modules as necessary, but the overall organization remains the same.
-
+Other
+- why is comm=comm when creating a grid projection?
+- Check on the agent id  and the "tuple" created
+- Check on the code snippets for the example
 ////

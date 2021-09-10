@@ -1,5 +1,5 @@
-== ASCIIDoc Examples
-
+//== ASCIIDoc Examples
+== Extras
 
 TIP: In many cases, the default user_path.xml file does not need to be changed at all.
 
@@ -18,3 +18,23 @@ for i in range(pp_human_count):  #<1>
     self.move(h, x, y)
 ----
 <1> A For loop
+
+
+
+=== A quick introduction to MPI
+////
+TODO
+- Link to the MPI4py
+- 
+
+////
+
+
+
+=== A Repast4py Zombie model
+// TODO
+
+
+
+=== Links to other Repast software
+// TODO
