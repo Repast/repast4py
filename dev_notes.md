@@ -1,5 +1,48 @@
 # Development Notes #
 
+### Compiling and Testing ###
+Compile with: 
+
+`CC=mpicxx CXX=mpicxx python setup.py build_ext --inplace`
+
+or for debugging:
+
+`CC=mpicxx CXX=mpicxx CFLAGS="-O0 -g" CXXFLAGS="-O0 -g" python setup.py build_ext --inplace`
+
+
+There are 3 types of python unit tests:
+
+1. Ordinary single process tests. Run with:
+
+`python -m unittest discover tests` 
+
+2. Multiprocess (9 procs) mpi tests for 2D spaces. Run with:
+
+```
+mpirun -n 9 python -m unittest tests.shared_obj_tests
+mpirun -n 9 python -m unittest tests.shared_vl_tests
+mpirun -n 9 python -m unittest tests.ctopo_tests
+```
+
+3. Multiprocess (18 procs) mpi tests for 3D spaces. Run with:
+
+```
+mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
+mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
+```
+
+4. Multiprocess (4 procs) mpi tests for logging and network support. Run with:
+
+```
+mpirun -n 4 python -m unittest tests.logging_tests
+mpirun -n 4 python -m unittest tests.shared_network_tests
+```
+
+
+There are also some C++ unitests. C++ tests can be compiled with makefile target 'tests' and run with:
+
+`mpirun -n 9 ./unit_tests`
+
 ## Requirements
 
 * Python 3.7+
@@ -10,7 +53,6 @@
 * numba
 * typing-extensions if < 3.8
 * pyyaml
-
 
 ## Linting ##
 
@@ -64,6 +106,22 @@ asciidoctor user_guilde.adoc
 ```
 
 This generates a user_guide.html that can be viewed in a browser.
+
+### Creating a Distribution ###
+
+`CC=mpicxx CXX=mpicxx python -m build`
+
+creates a source tar.gz and a wheel in `dist/`
+
+https://packaging.python.org/guides/distributing-packages-using-setuptools/#packaging-your-project
+https://setuptools.readthedocs.io/en/latest/userguide/index.html
+https://packaging.python.org/tutorials/packaging-projects/#packaging-python-projects
+
+Note that a whl created on linux cannot be uploaded. See the many linux project:
+https://github.com/pypa/manylinux
+
+
+
 
 ## Multi Process Seg Fault Debugging
 
