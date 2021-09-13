@@ -1092,7 +1092,7 @@ class EAgent(core.Agent):
     def save(self):
         return (self.uid, self.energy)
 
-    def load(self, data):
+    def update(self, data):
         # update
         self.energy = data
 

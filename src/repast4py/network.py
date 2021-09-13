@@ -985,6 +985,7 @@ def read_network(fpath: str, ctx, create_agent: Callable, restore_agent: Callabl
     _request_remote_agents(graph_data, ctx, restore_agent)
     ctx.comm.Barrier()
     _create_edges(g, graph_data)
+    ctx.synchronize(restore_agent)
 
 
 def _write_node(f_out, node_data: Tuple, rank: int):
