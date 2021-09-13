@@ -3,9 +3,9 @@ from mpi4py import MPI
 import numpy as np
 from dataclasses import dataclass
 
-from repast4py import core, space, schedule, logging, parameters
+from repast4py import core, random, space, schedule, logging, parameters
 from repast4py import context as ctx
-from repast4py.random import default_rng as rng
+import repast4py
 from repast4py.space import DiscretePoint as dpt
 
 
@@ -38,7 +38,7 @@ class Walker(core.Agent):
         # choose two elements from the OFFSET array
         # to select the direction to walk in the
         # x and y dimensions
-        xy_dirs = rng.choice(Walker.OFFSETS, size=2)
+        xy_dirs = random.default_rng.choice(Walker.OFFSETS, size=2)
         self.pt = grid.move(self, dpt(self.pt.x + xy_dirs[0], self.pt.y + xy_dirs[1], 0))
 
     def count_colocations(self, grid, meet_log: MeetLog):
@@ -109,6 +109,7 @@ class Model:
         self.context.add_projection(self.grid)
 
         rank = comm.Get_rank()
+        rng = repast4py.random.default_rng
         for i in range(params['walker.count']):
             # get a random x,y location in the grid
             pt = self.grid.get_random_local_pt(rng)
