@@ -3,7 +3,7 @@ import collections
 
 from repast4py.value_layer import SharedValueLayer
 from ._core import Agent
-from .random import default_rng as rng
+from repast4py import random
 from typing import Callable, List
 
 from .core import AgentManager, SharedProjection, BoundedProjection
@@ -240,7 +240,7 @@ class SharedContext:
         for proj in self.projections.values():
             proj._pre_synch_ghosts(self._agent_manager)
 
-    def _synch_ghosts(self, create_agent: Callable):
+    def _synch_ghosts(self, restore_agent: Callable):
         """Synchronizes ghosts on all "ghostable" projections
         and value layers associated with this SharedContext.
 
@@ -250,7 +250,7 @@ class SharedContext:
         """
         self._update_ghosts()
         for proj in self.projections.values():
-            proj._synch_ghosts(self._agent_manager, create_agent)
+            proj._synch_ghosts(self._agent_manager, restore_agent)
 
         for vl in self.value_layers:
             vl._synch_ghosts()
@@ -300,11 +300,13 @@ class SharedContext:
                     if pid not in self.bounded_projs:
                         proj._synch_ghosts(self._agent_manager, restore_agent)
 
-    def agents(self, agent_type: int=None, shuffle: bool=False):
-        """Gets the agents in this SharedContext, optionally of the specified type or shuffled.
+    def agents(self, agent_type: int=None, count: int=None, shuffle: bool=False):
+        """Gets the agents in this SharedContext, optionally of the specified type, count or shuffled.
 
         Args:
             agent_type (int): the type id of the agent, defaults to None.
+            count: the number of agents to return, defaults to None, meaning return all
+            the agents.
             shuffle (bool): whether or not the iteration order is shuffled. If true,
                 the order is shuffled. If false, the iteration order is the order of
                 insertion.
@@ -318,15 +320,18 @@ class SharedContext:
             >>> for agent in ctx.agents(PERSON_AGENT_TYPE, shuffle=True):
                    ...
         """
-        if shuffle:
+        if shuffle or count is not None:
             if agent_type is None:
                 lst = list(self._agent_manager._local_agents.values())
-                rng.shuffle(lst)
-                return lst
             else:
                 lst = list(self._agents_by_type[agent_type].values())
-                rng.shuffle(lst)
-                return lst
+
+            if shuffle:
+                random.default_rng.shuffle(lst)
+            if count is not None:
+                lst = lst[:count]
+            return lst
+
         else:
             if agent_type is None:
                 return self._agent_manager._local_agents.values().__iter__()

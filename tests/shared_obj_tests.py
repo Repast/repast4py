@@ -9,7 +9,7 @@ import unittest
 
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
-from repast4py import core, space, geometry
+from repast4py import core, space, geometry, random
 from repast4py import context as ctx
 
 from repast4py.space import ContinuousPoint as CPt
@@ -1187,6 +1187,77 @@ class SharedContextTests1(unittest.TestCase):
             self.assertEqual(2, len(counts))
             self.assertEqual(1, counts[1])
             self.assertEqual(1, counts[0])
+
+    # tests context.agents()
+    def test_get_agents(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            context = ctx.SharedContext(comm)
+            for i in range(10):
+                t = 0 if i % 2 == 0 else 1
+                a = core.Agent(i, t, 0)
+                context.add(a)
+
+            exp = []
+            for i in range(10):
+                t = 0 if i % 2 == 0 else 1
+                exp.append((i, t, 0))
+
+            actual = []
+            for a in context.agents():
+                actual.append(a.uid)
+            self.assertEqual(exp, actual)
+
+            exp.clear()
+            actual.clear()
+            for i in range(10):
+                if i % 2 == 0:
+                    exp.append((i, 0, 0))
+
+            for a in context.agents(agent_type=0):
+                actual.append(a.uid)
+            self.assertEqual(exp, actual)
+
+            exp.clear()
+            actual.clear()
+            for i in range(10):
+                if i % 2 != 0:
+                    exp.append((i, 1, 0))
+
+            for a in context.agents(agent_type=1):
+                actual.append(a.uid)
+            self.assertEqual(exp, actual)
+
+            exp = [(0, 0, 0), (2, 0, 0), (4, 0, 0), (6, 0, 0)]
+            actual.clear()
+            for a in context.agents(agent_type=0, count=4):
+                actual.append(a.uid)
+            self.assertEqual(4, len(actual))
+            self.assertEqual(exp, actual)
+
+            exp = [(0, 0, 0), (1, 1, 0), (2, 0, 0)]
+            actual.clear()
+            for a in context.agents(count=3):
+                actual.append(a.uid)
+            self.assertEqual(3, len(actual))
+            self.assertEqual(exp, actual)
+
+            random.init(42)
+            exp = [(5, 1, 0), (6, 0, 0), (0, 0, 0), (7, 1, 0), (3, 1, 0), (2, 0, 0),
+                   (4, 0, 0), (9, 1, 0), (1, 1, 0), (8, 0, 0)]
+            actual.clear()
+            for a in context.agents(shuffle=True):
+                actual.append(a.uid)
+            self.assertEqual(exp, actual)
+
+            random.init(42)
+            exp = [(5, 1, 0), (6, 0, 0)]
+            actual.clear()
+            for a in context.agents(shuffle=True, count=2):
+                actual.append(a.uid)
+            self.assertEqual(exp, actual)
 
     # tests adding / removing from context, adds / removes from projection
     def test_add_remove2(self):
