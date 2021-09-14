@@ -5,11 +5,11 @@ import numpy as np
 import time
 import torch
 
-default_rng = None
-"""np.random.Generator: default random generator created using init
+default_rng: np.random.Generator = None
+"""numpy.random.Generator: default random generator created using init
 """
 
-seed = None
+seed: int = None
 """Current random seed"""
 
 
