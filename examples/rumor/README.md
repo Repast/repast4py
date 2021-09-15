@@ -1,1 +1,0 @@
-# Rumor Model #

@@ -287,7 +287,7 @@ simulation.
 
 ==== Initializing Logging
 
-Logging refers to gathering simulation output data writing it to a file. There are
+Logging refers to gathering simulation output data and writing it to a file. There are
 two types of logging supported by repast4py.
 
 1. Tabular logging in which the user supplies a row values to be logged, and repast4py 
@@ -461,7 +461,6 @@ IMPORTANT: Do not forget to call `close` on your logging class instances when th
 
 
 === Restoring Walkers
-
 The `restore_walker` function is used to create an individual `Walker` when that
 `Walker` has moved (i.e., walked) to another process. This function is passed
 to the `synchronize` method (i.e., `self.context.synchronize(restore_walker)`)
