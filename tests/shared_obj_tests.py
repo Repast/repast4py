@@ -1938,8 +1938,8 @@ class SharedContextTests2(unittest.TestCase):
 
 
 def get_random_pts(box):
-    x = random.uniform(box.xmin, box.xmin + box.xextent)
-    y = random.uniform(box.ymin, box.ymin + box.yextent)
+    x = random.default_rng.uniform(box.xmin, box.xmin + box.xextent)
+    y = random.default_rng.uniform(box.ymin, box.ymin + box.yextent)
     return(CPt(x, y), DPt(math.floor(x), math.floor(y)))
 
 
