@@ -1,5 +1,5 @@
-src = geometry.cpp SpatialTree.cpp distributed_space.cpp space_tests.cpp test_main.cpp
-test_src = 
+src = geometry.cpp SpatialTree.cpp distributed_space.cpp
+test_src = space_tests.cpp test_main.cpp
 
 CXX = mpicxx
 CXXLD = mpicxx

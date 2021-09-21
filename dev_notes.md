@@ -39,7 +39,9 @@ mpirun -n 4 python -m unittest tests.shared_network_tests
 ```
 
 
-There are also some C++ unitests. C++ tests can be compiled with makefile target 'tests' and run with:
+There are also some C++ unitests. C++ tests can be compiled with the Makefile in the tests directory. 
+Copy the Makefile to a `Release` or `Debug` directory at the top level, and edit it as necessary.
+The  makefile target 'tests' will compile a `unit_tests` executable. Run the tests with:
 
 `mpirun -n 9 ./unit_tests`
 
