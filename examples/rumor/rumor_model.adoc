@@ -63,7 +63,7 @@ def generate_network_file(fname: str, n_ranks: int, n_agents: int):
         write_network(g, 'rumor_network', fname, n_ranks)    <3>
 ----
 <1> Create a connected Watts and Strogatz graph using networkx. See the networkx https://networkx.org/documentation/stable/reference/generated/networkx.generators.random_graphs.connected_watts_strogatz_graph.html[API Docs] for more details.
-<2> If the nxmetix package is available, distribute the graph using the metis partition method,
+<2> If the nxmetis package is available, distribute the graph using the metis partition method,
 and write it out to `fname`
 <3> If nxmetis is not avaiable, distribute the graph using the default random parition method,
 and write it out to `fname`

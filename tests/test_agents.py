@@ -2,8 +2,11 @@ import sys
 import unittest
 import os
 
-sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
-from repast4py import core
+try:
+    from repast4py import core
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py import core
 
 
 class EAgent(core.Agent):

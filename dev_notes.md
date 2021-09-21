@@ -122,8 +122,25 @@ https://packaging.python.org/tutorials/packaging-projects/#packaging-python-proj
 Note that a whl created on linux cannot be uploaded. See the many linux project:
 https://github.com/pypa/manylinux
 
+Testing the sdist (source dist) in a virtual env with tox:
 
+`CC=mpicxx CXX=mpicxx tox`
 
+and 
+
+`CC=mpicxx CXX=mpicxx tox -r`
+
+if the virtual env needs to be recreated.
+
+If using conda for Python, switch to the appropriate
+environment, and then use tox's -e argument to select
+the py environment that matches the activated conda
+environment:
+
+```
+CC=mpicxx CXX=mpicxx tox -e py37
+CC=mpicxx CXX=mpicxx tox -e py38
+```
 
 ## Multi Process Seg Fault Debugging
 

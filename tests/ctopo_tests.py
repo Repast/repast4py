@@ -4,9 +4,12 @@ import os
 
 from mpi4py import MPI
 
-sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+try:
+    from repast4py.space import DiscretePoint as dpt
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py.space import DiscretePoint as dpt
 
-from repast4py.space import DiscretePoint as dpt
 from repast4py.space import BorderType, BoundingBox, CartesianTopology
 
 

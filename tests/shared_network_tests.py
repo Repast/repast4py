@@ -6,11 +6,12 @@ from collections import OrderedDict
 import networkx as nx
 import re
 
-import nxmetis
+try:
+    from repast4py.network import UndirectedSharedNetwork, DirectedSharedNetwork, read_network, write_network
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py.network import UndirectedSharedNetwork, DirectedSharedNetwork, read_network, write_network
 
-sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
-
-from repast4py.network import UndirectedSharedNetwork, DirectedSharedNetwork, read_network, write_network
 from repast4py import core, space, random
 from repast4py import context as ctx
 
@@ -1560,31 +1561,35 @@ class InitNetworkTests(unittest.TestCase):
         if comm != MPI.COMM_NULL:
             g = nx.complete_graph(60)
             fname = './test_data/gen_net_test.txt'
-            options = nxmetis.types.MetisOptions(seed=1)
-            write_network(g, "metis_test", fname, 3, partition_method='metis', options=options)
+            try:
+                import nxmetis
+                options = nxmetis.types.MetisOptions(seed=1)
+                write_network(g, "metis_test", fname, 3, partition_method='metis', options=options)
 
-            p = re.compile('\{[^}]+\}|\S+')
-            ranks = {}
+                p = re.compile('\{[^}]+\}|\S+')
+                ranks = {}
 
-            with open(fname, 'r') as f_in:
-                line = f_in.readline().strip()
-                vals = line.split(' ')
-                self.assertEqual('metis_test', vals[0])
-                self.assertEqual('0', vals[1])
-
-                line = f_in.readline().strip()
-                while line != 'EDGES':
-                    nid, n_type, rank = p.findall(line.strip())
-                    nid = int(nid)
-                    n_type = int(n_type)
-                    rank = int(rank)
-                    self.assertTrue(nid in g)
-                    self.assertEqual(0, n_type)
-                    ranks[nid] = rank
+                with open(fname, 'r') as f_in:
                     line = f_in.readline().strip()
+                    vals = line.split(' ')
+                    self.assertEqual('metis_test', vals[0])
+                    self.assertEqual('0', vals[1])
 
-            self.assertEqual(60, len(ranks))
-            _, partitions = nxmetis.partition(g, 3, options=options)
-            for i, partition in enumerate(partitions):
-                for nid in partition:
-                    self.assertEqual(i, ranks[nid])
+                    line = f_in.readline().strip()
+                    while line != 'EDGES':
+                        nid, n_type, rank = p.findall(line.strip())
+                        nid = int(nid)
+                        n_type = int(n_type)
+                        rank = int(rank)
+                        self.assertTrue(nid in g)
+                        self.assertEqual(0, n_type)
+                        ranks[nid] = rank
+                        line = f_in.readline().strip()
+
+                self.assertEqual(60, len(ranks))
+                _, partitions = nxmetis.partition(g, 3, options=options)
+                for i, partition in enumerate(partitions):
+                    for nid in partition:
+                        self.assertEqual(i, ranks[nid])
+            except ModuleNotFoundError:
+                print("Ignoring nxmetis test")

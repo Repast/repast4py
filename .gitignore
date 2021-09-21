@@ -59,6 +59,9 @@ turbine-directory.txt
 # IDE
 .vscode
 
+# tox
+.tox
+
 # Andrew
 *.DS_Store
 *._*

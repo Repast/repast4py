@@ -4,9 +4,12 @@ import numpy as np
 import random
 import unittest
 
-sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+try:
+    from repast4py import core, space
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py import core, space
 
-from repast4py import core, space
 from repast4py.space import BorderType, OccupancyType, GridStickyBorders, GridPeriodicBorders
 from repast4py.space import DiscretePoint as DPt
 
@@ -69,7 +72,7 @@ class PointTests(unittest.TestCase):
         self.assertEqual(10, pt.x)
         self.assertEqual(-1, pt.y)
 
-        pt._reset3D(0, -11, 11111) 
+        pt._reset3D(0, -11, 11111)
         self.assertEqual(0, pt.x)
         self.assertEqual(-11, pt.y)
         self.assertEqual(11111, pt.z)

@@ -6,6 +6,7 @@
 
 from mpi4py import MPI
 from dataclasses import dataclass
+import numpy as np
 import networkx as nx
 from itertools import chain
 import re
@@ -481,7 +482,8 @@ class SharedNetwork:
                 ghost = agent_manager.get_ghost(uid)
                 if ghost is not None:
                     agent = agent_manager.get_local(uid)
-                    for u, v, attr in self._edges(ghost, data=True):
+                    edge_list = [e for e in self._edges(ghost, data=True)]
+                    for u, v, attr in edge_list:
                         self.graph.remove_edge(u, v)
                         if u.uid == agent.uid:
                             self.graph.add_edge(agent, v, **attr)
@@ -518,7 +520,7 @@ class UndirectedSharedNetwork(SharedNetwork):
     methods for manipulating the network structure.
 
     Attributes:
-        graph (networkx.OrderedGraph): a network graph object responsible for
+        graph (networkx.Graph): a network graph object responsible for
             network operations.
         comm (MPI.Comm): the communicator over which the network is shared.
         name (str): the name of this network.
@@ -530,7 +532,7 @@ class UndirectedSharedNetwork(SharedNetwork):
     """
 
     def __init__(self, name: str, comm: MPI.Comm):
-        super().__init__(name, comm, nx.OrderedGraph())
+        super().__init__(name, comm, nx.Graph())
         self.canonical_edge_keys = {}
 
     @property
@@ -659,7 +661,7 @@ class DirectedSharedNetwork(SharedNetwork):
     methods for manipulating the network structure.
 
     Attributes:
-        graph (networkx.OrderedDiGraph): a network graph object responsible for
+        graph (networkx.DiGraph): a network graph object responsible for
         network operations.
         comm (MPI.Comm): the communicator over which the network is shared.
         names (str): the name of this network.
@@ -670,7 +672,7 @@ class DirectedSharedNetwork(SharedNetwork):
     """
 
     def __init__(self, name: str, comm: MPI.Comm):
-        super().__init__(name, comm, nx.OrderedDiGraph())
+        super().__init__(name, comm, nx.DiGraph())
 
     @property
     def is_directed(self) -> bool:
@@ -1030,7 +1032,9 @@ def _write_edges(f_out, graph: nx.Graph):
 def _random_partition(graph: nx.Graph, network_name: str, fpath: str, n_ranks: int, **partitioning_args):
     num_nodes = graph.number_of_nodes()
     nodes_per_rank = num_nodes / n_ranks
-    assigned_ranks = array.array('i', (i for i in range(n_ranks))) * math.ceil(nodes_per_rank)
+    a = np.arange(n_ranks)
+    assigned_ranks = np.tile(a, math.ceil(nodes_per_rank))
+    # assigned_ranks = array.array('i', (i for i in range(n_ranks))) * math.ceil(nodes_per_rank)
     if 'rng' in partitioning_args:
         rng_val = partitioning_args['rng']
         if rng_val == 'default':
@@ -1054,7 +1058,7 @@ def _random_partition(graph: nx.Graph, network_name: str, fpath: str, n_ranks: i
 
 
 def _metis_partition(graph: nx.Graph, network_name: str, fpath: str, n_ranks: int, **partitioning_args):
-    # import here so that users without nxmetis can 
+    # import here so that users without nxmetis can
     # use the other network code.
     import nxmetis
 

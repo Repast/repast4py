@@ -6,7 +6,12 @@ import json
 
 sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
-from repast4py.util import find_free_filename
+try:
+    from repast4py.util import find_free_filename
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py.util import find_free_filename
+
 from repast4py.parameters import init_params
 from repast4py import parameters
 from repast4py import random

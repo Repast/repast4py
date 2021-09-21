@@ -2,8 +2,11 @@ import unittest
 import sys
 import os
 
-sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
-from repast4py import schedule
+try:
+    from repast4py import schedule
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py import schedule
 
 
 class Agent:

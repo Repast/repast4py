@@ -7,11 +7,13 @@ import math
 import traceback
 import unittest
 
-sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+try:
+    from repast4py import core, space, geometry, random
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py import core, space, geometry, random
 
-from repast4py import core, space, geometry, random
 from repast4py import context as ctx
-
 from repast4py.space import ContinuousPoint as CPt
 from repast4py.space import DiscretePoint as DPt
 from repast4py.space import BorderType, OccupancyType, CartesianTopology
