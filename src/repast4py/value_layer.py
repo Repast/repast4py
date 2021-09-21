@@ -1,4 +1,9 @@
-from numpy.testing._private.utils import clear_and_catch_warnings
+# Copyright 2021, UChicago Argonne, LLC
+# All Rights Reserved
+# Software Name: repast4py
+# By: Argonne National Laboratory
+# License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+
 import torch
 import numpy as np
 
@@ -11,7 +16,6 @@ from .space import DiscretePoint as dpt
 from .space import DiscretePoint
 
 from .core import AgentManager
-import repast4py
 
 
 class _Impl1D:
