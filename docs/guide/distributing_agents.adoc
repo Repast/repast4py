@@ -141,6 +141,32 @@ infected_duration). For Zombies, this is just (uid).
 <5> Update the cached / created Human with the passed in agent state
 <6> `agent_data` is for a Zombie so search cache and if necessary create a new one.
 
+Lastly, in a distributed network, agents are not typically moved between processes
+but rather the ghost agents remain on a process once the network is created. repast4py tracks 
+these ghost agents and does not recreate the agents every synchronization step via a `restore`
+method, instead a state update is sent to a each ghost agent. In that case, the agent's `update` 
+method is called to handle the state update. The Rumor demonstration model has an example of this.
+
+[source,python,numbered]
+----
+class RumorAgent(core.Agent):
+
+    ...
+
+    def update(self, data: bool):    <1>
+        """Updates the state of this agent when it is a ghost
+        agent on some rank other than its local one.
+
+        Args:
+            data: the new agent state (received_rumor)
+        """
+        ...
+        self.received_rumor = data
+----
+<1> Updates ghost agent state from saved agent state. Here the `data` argument
+is the state element of the tuple returned from the agent's `save` method, namely,
+the `self.received_rumor` bool in `(self.uid, self.received_rumor)`.
+
 === Synchronization
 As mentioned in the <<_distributed_simulation, Distributed Simulation>> section, each process in a
 repast4py application runs in a separate memory space from all the other processes. Consequently,
