@@ -43,7 +43,7 @@ or
 
 If need to install from source,
 
-install mpi -- apt get install mpich-dev etc.
+install mpi -- `apt get install libmpich-dev`
 
 CC=mpicxx CXX=mpicxx pip install repast4py
 
