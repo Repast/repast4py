@@ -1,6 +1,5 @@
 import sys
 import os
-from numpy.lib.twodim_base import triu_indices
 import torch
 import unittest
 
@@ -12,7 +11,7 @@ except ModuleNotFoundError:
     sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
     from repast4py.space import DiscretePoint as dpt
 
-from repast4py.space import BorderType, BoundingBox, CartesianTopology
+from repast4py.space import BorderType, BoundingBox
 from repast4py.value_layer import SharedValueLayer
 
 # TODO: TEST:

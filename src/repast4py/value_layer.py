@@ -73,30 +73,30 @@ class _Impl1D:
         grid_idxs = nghs + self.ngh_translation
         return (self.grid[grid_idxs], nghs)
 
-    def _compute_slice(self, key):
-        if isinstance(key, tuple):
-            slc = key[0]
-            print(slc)
-            step = 1 if slc.step is None else slc.step
-            start = 0 if slc.start is None else (slc.start + self.translation[0])
-            stop = self.grid.shape[0] if slc.stop is None else (slc.stop + self.translation[0])
-            return (slice(start, stop, step),)
+    # def _compute_slice(self, key):
+    #     if isinstance(key, tuple):
+    #         slc = key[0]
+    #         print(slc)
+    #         step = 1 if slc.step is None else slc.step
+    #         start = 0 if slc.start is None else (slc.start + self.translation[0])
+    #         stop = self.grid.shape[0] if slc.stop is None else (slc.stop + self.translation[0])
+    #         return (slice(start, stop, step),)
 
-        elif isinstance(key, slice):
-            print(key)
-            step = 1 if key.step is None else key.step
-            start = 0 if key.start is None else (key.start + self.translation[0])
-            stop = self.grid.shape[0] if key.stop is None else (key.stop + self.translation[0])
-            return (slice(start, stop, step),)
+    #     elif isinstance(key, slice):
+    #         print(key)
+    #         step = 1 if key.step is None else key.step
+    #         start = 0 if key.start is None else (key.start + self.translation[0])
+    #         stop = self.grid.shape[0] if key.stop is None else (key.stop + self.translation[0])
+    #         return (slice(start, stop, step),)
 
-        else:
-            return (slice(key + self.translation[0]),)
+    #     else:
+    #         return (slice(key + self.translation[0]),)
 
-    def __getitem__(self, key):
-        return self.grid[self._compute_slice(key)]
+    # def __getitem__(self, key):
+    #     return self.grid[self._compute_slice(key)]
 
-    def __setitem__(self, key, val):
-        self.grid[self._compute_slice(key)] = val
+    # def __setitem__(self, key, val):
+    #     self.grid[self._compute_slice(key)] = val
 
 
 class _Impl2D:
@@ -167,42 +167,42 @@ class _Impl2D:
         nghs[[0, 1]] = nghs[[1, 0]]
         return (self.grid[grid_idxs], nghs)
 
-    def _compute_slice(self, key):
-        if isinstance(key, tuple):
-            if len(key) == 1:
-                slc = key[0]
-                step = 1 if slc.step is None else slc.step
-                start = 0 if slc.start is None else (slc.start + self.pt_translation[0])
-                stop = self.grid.shape[1] if slc.stop is None else (slc.stop + self.pt_translation[0])
-                return (slice(None, None), slice(start, stop, step))
+    # def _compute_slice(self, key):
+    #     if isinstance(key, tuple):
+    #         if len(key) == 1:
+    #             slc = key[0]
+    #             step = 1 if slc.step is None else slc.step
+    #             start = 0 if slc.start is None else (slc.start + self.pt_translation[0])
+    #             stop = self.grid.shape[1] if slc.stop is None else (slc.stop + self.pt_translation[0])
+    #             return (slice(None, None), slice(start, stop, step))
 
-            else:
-                cslice = key[0]
-                cstep = 1 if cslice.step is None else cslice.step
-                cstart = 0 if cslice.start is None else (cslice.start + self.pt_translation[0])
-                cstop = self.grid.shape[1] if cslice.stop is None else (cslice.stop + self.pt_translation[0])
+    #         else:
+    #             cslice = key[0]
+    #             cstep = 1 if cslice.step is None else cslice.step
+    #             cstart = 0 if cslice.start is None else (cslice.start + self.pt_translation[0])
+    #             cstop = self.grid.shape[1] if cslice.stop is None else (cslice.stop + self.pt_translation[0])
 
-                rslice = key[1]
-                rstep = 1 if rslice.step is None else rslice.step
-                rstart = 0 if rslice.start is None else (rslice.start + self.pt_translation[1])
-                rstop = self.grid.shape[0] if rslice.stop is None else (rslice.stop + self.pt_translation[1])
+    #             rslice = key[1]
+    #             rstep = 1 if rslice.step is None else rslice.step
+    #             rstart = 0 if rslice.start is None else (rslice.start + self.pt_translation[1])
+    #             rstop = self.grid.shape[0] if rslice.stop is None else (rslice.stop + self.pt_translation[1])
 
-                return (slice(rstart, rstop, rstep), slice(cstart, cstop, cstep))
+    #             return (slice(rstart, rstop, rstep), slice(cstart, cstop, cstep))
 
-        elif isinstance(key, slice):
-            step = 1 if key.step is None else key.step
-            start = 0 if key.start is None else (key.start + self.pt_translation[0])
-            stop = self.grid.shape[1] if key.stop is None else (key.stop + self.pt_translation[0])
-            return (slice(None, None), slice(start, stop, step))
+    #     elif isinstance(key, slice):
+    #         step = 1 if key.step is None else key.step
+    #         start = 0 if key.start is None else (key.start + self.pt_translation[0])
+    #         stop = self.grid.shape[1] if key.stop is None else (key.stop + self.pt_translation[0])
+    #         return (slice(None, None), slice(start, stop, step))
 
-        else:
-            return (slice(None, None), slice(key + self.pt_translation[0], None))
+    #     else:
+    #         return (slice(None, None), slice(key + self.pt_translation[0], None))
 
-    def __getitem__(self, key):
-        return self.grid[self._compute_slice(key)]
+    # def __getitem__(self, key):
+    #     return self.grid[self._compute_slice(key)]
 
-    def __setitem__(self, key, val):
-        self.grid[self._compute_slice(key)] = val
+    # def __setitem__(self, key, val):
+    #     self.grid[self._compute_slice(key)] = val
 
 
 class _Impl3D:
@@ -284,60 +284,60 @@ class _Impl3D:
         nghs[[0, 1, 2]] = nghs[[2, 1, 0]]
         return (self.grid[grid_idxs], nghs)
 
-    def _compute_slice(self, key):
-        if isinstance(key, tuple):
-            if len(key) == 1:
-                slc = key[0]
-                step = 1 if slc.step is None else slc.step
-                start = 0 if slc.start is None else (slc.start + self.pt_translation[0])
-                stop = self.grid.shape[1] if slc.stop is None else (slc.stop + self.pt_translation[0])
-                return (slice(None, None), slice(None, None), slice(start, stop, step))
+    # def _compute_slice(self, key):
+    #     if isinstance(key, tuple):
+    #         if len(key) == 1:
+    #             slc = key[0]
+    #             step = 1 if slc.step is None else slc.step
+    #             start = 0 if slc.start is None else (slc.start + self.pt_translation[0])
+    #             stop = self.grid.shape[1] if slc.stop is None else (slc.stop + self.pt_translation[0])
+    #             return (slice(None, None), slice(None, None), slice(start, stop, step))
 
-            elif (len(key) == 2):
-                cslice = key[0]
-                cstep = 1 if cslice.step is None else cslice.step
-                cstart = 0 if cslice.start is None else (cslice.start + self.pt_translation[0])
-                cstop = self.grid.shape[1] if cslice.stop is None else (cslice.stop + self.pt_translation[0])
+    #         elif (len(key) == 2):
+    #             cslice = key[0]
+    #             cstep = 1 if cslice.step is None else cslice.step
+    #             cstart = 0 if cslice.start is None else (cslice.start + self.pt_translation[0])
+    #             cstop = self.grid.shape[1] if cslice.stop is None else (cslice.stop + self.pt_translation[0])
 
-                rslice = key[1]
-                rstep = 1 if rslice.step is None else rslice.step
-                rstart = 0 if rslice.start is None else (rslice.start + self.pt_translation[1])
-                rstop = self.grid.shape[0] if rslice.stop is None else (rslice.stop + self.pt_translation[1])
+    #             rslice = key[1]
+    #             rstep = 1 if rslice.step is None else rslice.step
+    #             rstart = 0 if rslice.start is None else (rslice.start + self.pt_translation[1])
+    #             rstop = self.grid.shape[0] if rslice.stop is None else (rslice.stop + self.pt_translation[1])
 
-                return (slice(None, None), slice(rstart, rstop, rstep), slice(cstart, cstop, cstep))
+    #             return (slice(None, None), slice(rstart, rstop, rstep), slice(cstart, cstop, cstep))
 
-            else:
-                cslice = key[0]
-                cstep = 1 if cslice.step is None else cslice.step
-                cstart = 0 if cslice.start is None else (cslice.start + self.pt_translation[0])
-                cstop = self.grid.shape[1] if cslice.stop is None else (cslice.stop + self.pt_translation[0])
+    #         else:
+    #             cslice = key[0]
+    #             cstep = 1 if cslice.step is None else cslice.step
+    #             cstart = 0 if cslice.start is None else (cslice.start + self.pt_translation[0])
+    #             cstop = self.grid.shape[1] if cslice.stop is None else (cslice.stop + self.pt_translation[0])
 
-                rslice = key[1]
-                rstep = 1 if rslice.step is None else rslice.step
-                rstart = 0 if rslice.start is None else (rslice.start + self.pt_translation[1])
-                rstop = self.grid.shape[0] if rslice.stop is None else (rslice.stop + self.pt_translation[1])
+    #             rslice = key[1]
+    #             rstep = 1 if rslice.step is None else rslice.step
+    #             rstart = 0 if rslice.start is None else (rslice.start + self.pt_translation[1])
+    #             rstop = self.grid.shape[0] if rslice.stop is None else (rslice.stop + self.pt_translation[1])
 
-                zslice = key[2]
-                zstep = 1 if zslice.step is None else zslice.step
-                zstart = 0 if zslice.start is None else (zslice.start + self.pt_translation[2])
-                zstop = self.grid.shape[2] if zslice.stop is None else (zslice.stop + self.pt_translation[2])
+    #             zslice = key[2]
+    #             zstep = 1 if zslice.step is None else zslice.step
+    #             zstart = 0 if zslice.start is None else (zslice.start + self.pt_translation[2])
+    #             zstop = self.grid.shape[2] if zslice.stop is None else (zslice.stop + self.pt_translation[2])
 
-                return (slice(zstart, zstop, zstep), slice(rstart, rstop, rstep), slice(cstart, cstop, cstep))
+    #             return (slice(zstart, zstop, zstep), slice(rstart, rstop, rstep), slice(cstart, cstop, cstep))
 
-        elif isinstance(key, slice):
-            step = 1 if key.step is None else key.step
-            start = 0 if key.start is None else (key.start + self.pt_translation[0])
-            stop = self.grid.shape[1] if key.stop is None else (key.stop + self.pt_translation[0])
-            return (slice(None, None), slice(None, None), slice(start, stop, step))
+    #     elif isinstance(key, slice):
+    #         step = 1 if key.step is None else key.step
+    #         start = 0 if key.start is None else (key.start + self.pt_translation[0])
+    #         stop = self.grid.shape[1] if key.stop is None else (key.stop + self.pt_translation[0])
+    #         return (slice(None, None), slice(None, None), slice(start, stop, step))
 
-        else:
-            return (slice(None, None), slice(None, None), slice(key + self.pt_translation[0], None))
+    #     else:
+    #         return (slice(None, None), slice(None, None), slice(key + self.pt_translation[0], None))
 
-    def __getitem__(self, key):
-        return self.grid[self._compute_slice(key)]
+    # def __getitem__(self, key):
+    #     return self.grid[self._compute_slice(key)]
 
-    def __setitem__(self, key, val):
-        self.grid[self._compute_slice(key)] = val
+    # def __setitem__(self, key, val):
+    #     self.grid[self._compute_slice(key)] = val
 
 
 class ValueLayer:
@@ -473,6 +473,8 @@ class SharedValueLayer(ValueLayer):
     provides access to this tensor. The ValueLayer can be initialized with a specified value or
     with 'random' to initialize the matrix with a random value.
 
+    **Note: 3D SharedValueLayers are not yet supported and will raise an Exception.**
+
     Args:
         comm (mpi4py.MPI.Intracomm): the communicator containing all the ranks over which this SharedValueLayer is shared.
         bounds: the dimensions of the ValueLayer
@@ -481,7 +483,6 @@ class SharedValueLayer(ValueLayer):
         init_value: the initial value of each cell in this ValueLayer: either a numeric value or
             'random' to specify a random initialization.
         dtype (torch.dtype): the numeric type of this ValueLayer. Defaults to torch.float64.
-
     """
 
     def __init__(self, comm, bounds: BoundingBox, borders: BorderType, buffer_size: int, init_value, dtype=torch.float64):
@@ -505,6 +506,9 @@ class SharedValueLayer(ValueLayer):
         super().__init__(self.buffered_bounds, borders, 'random', dtype)
 
         nd = 1 if bounds.yextent == 0 else (3 if bounds.zextent > 0 else 2)
+        if nd == 3:
+            raise ValueError("3D SharedValueLayer is not yet supported")
+
         mins = [bounds.xmin, bounds.ymin, bounds.zmin]
         self.buffer_self = []
         if self.periodic:
