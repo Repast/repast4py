@@ -1,0 +1,43 @@
+== Why Repast4py?
+Repast for Python (Repast4Py) is a distributed agent-based simulation toolkit developed to streamline the process of adapting agent-based models to perform on distributed computing systems. 
+Written in Python and fully opensource, Repast4py explicates the computational backend of distributed programming so that researchers can directly build their agent-based models to run concurrently on multiple processors.   
+// TODO -- what other points do i want to make here? 
+
+=== Meeting the era of "Big computing"
+Modern computing capabilities have allowed for large-scale computational modeling and experimentation. 
+High performance computers and clusters--such as those hosted by universities, national laboratories, and cloud computing providers--can have thousands or 10's of thousands of processor cores available, allowing for very large and complex simulations.
+Even individual CPUs now typically contain multiple cores, which are capable of running concurrently.
+
+However, in order to take advantage of these computing advances, a computational model must first be refashioned to run on multiple processors, rather than just an individual one. 
+But adapting a computational model that was built for a single processor to now run on multiple processors is a nontrivial endeavor, both conceptually and practically.
+// TODO - Do I want to expand on the difficulties of parallelizing code? 
+//  Difficulties such as: 
+//  - include deciding on the components of a model that can run concurrently, 
+//  - anticipating where bottlenecks and/or failures might occur, and 
+//  - coordinating the message passing between such components.
+Repast4py was developed so that researchers who use agent-based modeling can now take advantage of distributed computing platforms without needing to fully parallelize their models on their own.
+
+
+=== Distributed computing a natural fit for agent-based modeling
+Repast4Py is a natural fit for implementing agent-based simulations on distributed computing platforms.
+A typical agent-based simulation consists of a population of agents each of which performs some behavior each timestep or at some frequency.
+In practice, this is often implemented as a loop over the agent population in which each agent executes its behavior. 
+The time it takes to complete the loop depends on the number of agents and the complexity of the behavior.
+Repast4Py attempts to leverage distributed computing systems by distributing a simulation over multiple processes
+running in parallel on these cores.
+By distributing the agent population across multiple processes running in parallel, each process executes its own loop over only a subset of the population, allowing for larger agent populations and more complex behavior without increasing the runtime. 
+
+=== Repast4py and the broader Repast family
+Repast4py is a part of the broader https://repast.github.io[Repast Suite] of free and open source agent-based modeling and simulation software. 
+Repast4py is specifically the Python implementation of Repast for distributed computing, and builds on the foundation of https://repast.github.io/repast_hpc.html[Repast HPC] originally implemented in C++. 
+// TODO add in a reason for utilizing Python 
+
+NOTE: For users new to the Repast Suite, we encourage you to look through the different versions of https://repast.github.io/docs.html[Repast] to determine which instance is most appropriate for your needs.
+Of note, we recommend users new to agent-based modeling to first check out https://repast.github.io/repast_simphony.html[Repast Simphony] to develop a better understanding of the concepts behind agent-based modeling and learn how to computationally implement such models.
+
+The following sections will provide some conceptual background for a Repast-style simulation, describe how such a simulation is distributed across multiple processes with Repast4py, and end with providing a few basic tutorials.
+
+
+
+
+
