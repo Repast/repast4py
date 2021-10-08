@@ -1,7 +1,6 @@
 = Repast for Python (Repast4Py) User Guide
 Version 1.0 September 2021
 :toc2:
-:toclevels: 2 
 :icons: font
 :numbered:
 :website: http://repast.github.io
@@ -13,8 +12,6 @@ Version 1.0 September 2021
 
 include::overview.adoc[]
 
-include::repast_components.adoc[]
-
 include::distributing_agents.adoc[]
 
 include::model_101.adoc[]
@@ -22,24 +19,3 @@ include::model_101.adoc[]
 include::ascii_doc_ex.adoc[]
 
 
-
-////
-- Significant changes
-    - For the components of a Repast model, I also included: agent and logging object... so that way, all objects of a Repast model would include Agents, Context, Projection, Discrete Event Schedule, State Logger
-    - Also tried to structure the tutorial in this way as well... so it is organized as:
-        - Repast components
-        - The cross-processes requirements
-        - How we usually implement this as a model (i.e. with the model class)
-
-- Other
-    - Still am putting together MPI tutorial
-    - Still am cleaning up the motivation section behind Repast4py
-    - repast4py should be sentence case? Like, it should be implemented with capital letter only as a sentence structure?
-    - for the Random Walker example, do we want to separate out the components that are a part of our parallelizing of it?
-        - for example, separate out the parts that we actually specify the buffer
-
-Other
-- why is comm=comm when creating a grid projection?
-- Check on the agent id  and the "tuple" created
-- Check on the code snippets for the example
-////
