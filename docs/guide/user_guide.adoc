@@ -10,6 +10,8 @@ Version 1.0 September 2021
 
 // Sections need line break between includes
 
+include::motivation.adoc[]
+
 include::overview.adoc[]
 
 include::distributing_agents.adoc[]
