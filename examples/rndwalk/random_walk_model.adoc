@@ -1,0 +1,13 @@
+= Random Walk Example Model
+Version 1.0 September 2021
+:toc2:
+:icons: font
+:numbered:
+:website: http://repast.github.io
+:xrefstyle: full
+:imagesdir: images
+:source-highlighter: pygments
+
+== Overview
+
+TODO: Put the User Guide model_101.adoc text here

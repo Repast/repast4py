@@ -1,9 +1,15 @@
+# Copyright 2021, UChicago Argonne, LLC
+# All Rights Reserved
+# Software Name: repast4py
+# By: Argonne National Laboratory
+# License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+
 import itertools
 import collections
 
 from repast4py.value_layer import SharedValueLayer
 from ._core import Agent
-from .random import default_rng as rng
+from repast4py import random
 from typing import Callable, List
 
 from .core import AgentManager, SharedProjection, BoundedProjection
@@ -87,6 +93,25 @@ class SharedContext:
             self.non_bounded_projs.append(projection)
 
         self.projection_id += 1
+
+    def get_projection(self, projection_name: str) -> SharedProjection:
+        """Gets the named projection.
+
+        Args:
+            projection_name: the name of the projection to get
+
+        Return:
+            The named projection.
+
+        Raises:
+            KeyError: If the collection of projections in this SharedContext does not
+                include the named projection.
+        """
+        for prj in self.projections.values():
+            if prj.name == projection_name:
+                return prj
+
+        raise KeyError(f'No projection with the name "{projection_name}" can be found.')
 
     def remove(self, agent: Agent):
         """Removes the specified agent from this SharedContext
@@ -212,7 +237,7 @@ class SharedContext:
         for updates in recv_data:
             for update in updates:
                 ghost = self._agent_manager._ghost_agents[update[0]]
-                ghost.agent.load(update[1])
+                ghost.agent.update(update[1])
 
     def _pre_synch_ghosts(self):
         """Calls _pre_synch_ghosts on all "ghostable" projections
@@ -221,7 +246,7 @@ class SharedContext:
         for proj in self.projections.values():
             proj._pre_synch_ghosts(self._agent_manager)
 
-    def _synch_ghosts(self, create_agent: Callable):
+    def _synch_ghosts(self, restore_agent: Callable):
         """Synchronizes ghosts on all "ghostable" projections
         and value layers associated with this SharedContext.
 
@@ -231,7 +256,7 @@ class SharedContext:
         """
         self._update_ghosts()
         for proj in self.projections.values():
-            proj._synch_ghosts(self._agent_manager, create_agent)
+            proj._synch_ghosts(self._agent_manager, restore_agent)
 
         for vl in self.value_layers:
             vl._synch_ghosts()
@@ -281,11 +306,13 @@ class SharedContext:
                     if pid not in self.bounded_projs:
                         proj._synch_ghosts(self._agent_manager, restore_agent)
 
-    def agents(self, agent_type: int=None, shuffle: bool=False):
-        """Gets the agents in this SharedContext, optionally of the specified type or shuffled.
+    def agents(self, agent_type: int=None, count: int=None, shuffle: bool=False):
+        """Gets the agents in this SharedContext, optionally of the specified type, count or shuffled.
 
         Args:
             agent_type (int): the type id of the agent, defaults to None.
+            count: the number of agents to return, defaults to None, meaning return all
+            the agents.
             shuffle (bool): whether or not the iteration order is shuffled. If true,
                 the order is shuffled. If false, the iteration order is the order of
                 insertion.
@@ -299,15 +326,18 @@ class SharedContext:
             >>> for agent in ctx.agents(PERSON_AGENT_TYPE, shuffle=True):
                    ...
         """
-        if shuffle:
+        if shuffle or count is not None:
             if agent_type is None:
                 lst = list(self._agent_manager._local_agents.values())
-                rng.shuffle(lst)
-                return lst
             else:
                 lst = list(self._agents_by_type[agent_type].values())
-                rng.shuffle(lst)
-                return lst
+
+            if shuffle:
+                random.default_rng.shuffle(lst)
+            if count is not None:
+                lst = lst[:count]
+            return lst
+
         else:
             if agent_type is None:
                 return self._agent_manager._local_agents.values().__iter__()
@@ -349,10 +379,10 @@ class SharedContext:
 
         Args:
             agent_type_ids: a list of the agent type ids identifying the agent types to count.
-                If this is None then the total size is returned with an id of -1.
+                If this is None then the total size is returned with an agent type id of -1.
 
         Returns:
-            A dictionary containing the counts (the dict values) by type (the dict keys).
+            A dictionary containing the counts (the dict values) by agent type (the dict keys).
         """
         counts = {}
         if agent_type_ids:
@@ -368,7 +398,7 @@ class SharedContext:
 
         Args:
             requested_agents: a list of tuples where each tuple is
-                (id of requested agent, rank to request from)
+                (uid of requested agent, rank to request from)
         """
         requests = [None for i in range(self.comm.size)]
         existing_ghosts = []

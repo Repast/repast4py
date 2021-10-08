@@ -1,4 +1,4 @@
-# repast4py
+# Repast for Python (Repast4Py)
 
 [![codecov](https://codecov.io/gh/Repast/repast4py/branch/develop/graph/badge.svg?token=JCDU2LT8G2)](https://codecov.io/gh/Repast/repast4py/branch/develop)
 
@@ -15,46 +15,38 @@
   </tr>
 </table>
 
-Compile with: 
+Repast for Python (Repast4Py) is a distributed agent-based simulation toolkit written in Python.
+Modern CPUs typically contain multiple cores, each of which is capable of running concurrently.
+Repast4Py attempts to leverage this hardware by distributing a simulation over multiple processes
+running in parallel on these cores. A typical agent-based simulation consists of a population of agents 
+each of which performs some behavior each timestep or at some frequency. In practice, this
+is often implemented as a loop over the agent population in which each agent executes its behavior. 
+The time it takes to complete the loop depends on the number of agents and the complexity of the behavior.
+By distributing the agent population across multiple processes running in parallel, each process 
+executes its own loop over only a subset of the population, allowing for larger agent populations and more 
+complex behavior without increasing the runtime. Repast4Py is also a natural fit for implementing
+agent-based simulations on high performance computers and clusters, such as those hosted by
+universities, national laboratories, and cloud computing providers. Such machines can have
+thousands or 10s of thousands of processor cores available, allowing for very large and
+complex simulations.
 
-`CC=mpicxx CXX=mpicxx python setup.py build_ext --inplace`
+Repast4Py is part of the [Repast](https://repast.github.io) family of agent-based modeling toolkits
+which have been successfully used in many application domains including social science, consumer products, 
+supply chains, hydrogen infrastructures, manufacturing, epidemiology, biomedical systems modeling, and ancient 
+pedestrian traffic to name a few.
 
-or for debugging:
+### Installation ###
 
-`CC=mpicxx CXX=mpicxx CFLAGS="-O0 -g" CXXFLAGS="-O0 -g" python setup.py build_ext --inplace`
+pip install repast4py
 
-## Tests ##
+or 
 
-There are 3 types of python unit tests:
+If need to install from source,
 
-1. Ordinary single process tests. Run with:
+install mpi -- `apt get install libmpich-dev`
 
-`python -m unittest discover tests` 
+CC=mpicxx CXX=mpicxx pip install repast4py
 
-2. Multiprocess (9 procs) mpi tests for 2D spaces. Run with:
+### Documentation ###
 
-```
-mpirun -n 9 python -m unittest tests.shared_obj_tests
-mpirun -n 9 python -m unittest tests.shared_vl_tests
-mpirun -n 9 python -m unittest tests.ctopo_tests
-```
-
-3. Multiprocess (18 procs) mpi tests for 3D spaces. Run with:
-
-```
-mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
-mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
-```
-
-4. Multiprocess (4 procs) mpi tests for logging and network support. Run with:
-
-```
-mpirun -n 4 python -m unittest tests.logging_tests
-mpirun -n 4 python -m unittest tests.shared_network_tests
-```
-
-
-There are also some C++ unitests. C++ tests can be compiled with makefile target 'tests' and run with:
-
-`mpirun -n 9 ./unit_tests`
-
+Links to docs

@@ -1,3 +1,9 @@
+# Copyright 2021, UChicago Argonne, LLC
+# All Rights Reserved
+# Software Name: repast4py
+# By: Argonne National Laboratory
+# License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+
 """Random numbers for repast4py
 """
 
@@ -5,11 +11,11 @@ import numpy as np
 import time
 import torch
 
-default_rng = None
-"""np.random.Generator: default random generator created using init
+default_rng: np.random.Generator = None
+"""numpy.random.Generator: default random generator created using init
 """
 
-seed = None
+seed: int = None
 """Current random seed"""
 
 

@@ -6,6 +6,7 @@
 *.x
 *.so
 *.pyc
+__pycache__
 
 *.egg-info
 
@@ -13,6 +14,8 @@ scratch/
 
 # python build directory
 build
+# python distribution directory
+dist
 
 # SWIG-generated interfaces
 *_wrap.cxx
@@ -56,6 +59,9 @@ turbine-directory.txt
 # IDE
 .vscode
 
+# tox
+.tox
+
 # Andrew
 *.DS_Store
 *._*
@@ -67,6 +73,7 @@ templates/scripts/archive/
 
 old_repast_py_src/
 Debug/
+Release/
 notes_nc.txt
 
 # Include R4Py paper experiment data

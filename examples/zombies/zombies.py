@@ -11,7 +11,7 @@ from numba.experimental import jitclass
 
 from repast4py import core, space, schedule, logging, random
 from repast4py import context as ctx
-from repast4py.util import create_args_parser, parse_params
+from repast4py.parameters import create_args_parser, init_params
 
 from repast4py.space import ContinuousPoint as cpt
 from repast4py.space import DiscretePoint as dpt
@@ -390,5 +390,5 @@ def run(params: Dict):
 if __name__ == "__main__":
     parser = create_args_parser()
     args = parser.parse_args()
-    params = parse_params(args.parameters_file, args.parameters)
+    params = init_params(args.parameters_file, args.parameters)
     run(params)

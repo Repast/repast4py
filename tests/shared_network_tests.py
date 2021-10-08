@@ -3,10 +3,15 @@ import os
 from mpi4py import MPI
 import unittest
 from collections import OrderedDict
+import networkx as nx
+import re
 
-sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+try:
+    from repast4py.network import UndirectedSharedNetwork, DirectedSharedNetwork, read_network, write_network
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py.network import UndirectedSharedNetwork, DirectedSharedNetwork, read_network, write_network
 
-from repast4py.network import UndirectedSharedNetwork, DirectedSharedNetwork
 from repast4py import core, space, random
 from repast4py import context as ctx
 
@@ -25,12 +30,12 @@ class EAgent(core.Agent):
     def save(self):
         return (self.uid, self.energy)
 
-    def load(self, data):
+    def update(self, data):
         self.restored = True
         self.energy = data
 
 
-def create_agent(agent_data):
+def restore_agent(agent_data):
     # agent_data: [aid_tuple, energy]
     uid = agent_data[0]
     return EAgent(uid[0], uid[1], uid[2], agent_data[1])
@@ -117,7 +122,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             requests.append(((4, 0, 2), 2))
             requests.append(((2, 0, 1), 1))
 
-        context.request_agents(requests, create_agent)
+        context.request_agents(requests, restore_agent)
 
         if rank == 0 or rank == 3:
             self.assertEqual(13, g.node_count)
@@ -156,7 +161,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             edges = [x for x in g.graph.in_edges(agents[1], data=True)]
             self.assertEqual(edges[0], (other, agents[1], OrderedDict({'rate': 2.1})))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # TEST vertices and edges created on ghost ranks
         if rank == 0:
@@ -210,7 +215,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             other = context.ghost_agent((2, 0, 1))
             g.update_edge(agents[0], other, weight=14.2)
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             self.assertEqual(134324, context.ghost_agent((2, 0, 1)).energy)
@@ -231,7 +236,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             other = context.ghost_agent((2, 0, 1))
             g.remove_edge(agents[0], other)
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # TEST: 3 removed (0, 0, 3) -> (2, 0, 1), so
         # that edge should be removed, and (0, 0, 3) no
@@ -267,7 +272,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             requests.append(((4, 0, 2), 2))
             requests.append(((2, 0, 1), 1))
 
-        context.request_agents(requests, create_agent)
+        context.request_agents(requests, restore_agent)
 
         if rank == 0 or rank == 3:
             self.assertEqual(13, g.node_count)
@@ -307,7 +312,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             edges = [x for x in g.graph.in_edges(agents[1], data=True)]
             self.assertEqual(edges[0], (other, agents[1], {'rate': 2.1}))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # TEST: remove (1, 0, 1) from 1
         # edges should be removed across processes
@@ -318,7 +323,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             self.assertTrue((context.ghost_agent((0, 0, 3)), agents[2]) in g.graph.edges())
             self.assertTrue((1, 0, 1) not in context._agent_manager._ghosted_agents)
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # (0, 0, 0) -> (1, 0, 1) removed
         if rank == 0:
@@ -344,7 +349,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             # move 2,0,1 to o
             moved.append(((2, 0, 1), 0))
 
-        context.move_agents(moved, create_agent)
+        context.move_agents(moved, restore_agent)
 
         # 2,0,1 is on 0 with local_rank of 0
         if rank == 0:
@@ -390,7 +395,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             self.assertEqual(12, g.graph.edges[context.agent((0, 0, 3)),
                                                context.ghost_agent((2, 0, 1))]['weight'])
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             self.assertEqual(12, g.graph.edges[context.ghost_agent((0, 0, 3)),
@@ -444,7 +449,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             requests.append(((4, 0, 2), 2))
             requests.append(((2, 0, 1), 1))
 
-        context.request_agents(requests, create_agent)
+        context.request_agents(requests, restore_agent)
 
         if rank == 0:
             net.add_edge(agents[1], context.ghost_agent((2, 0, 1)), color='red')
@@ -456,7 +461,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             net.add_edge(agents[1], context.ghost_agent((1, 0, 0)))
             net.add_edge(agents[5], context.ghost_agent((2, 0, 1)))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # TESTS edges
         if rank == 0:
@@ -491,7 +496,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             grid.move(agents[2], dpt(46, 35))
             cspace.move(agents[2], cpt(46.2, 35.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             self.assertEqual(3, net.edge_count)
@@ -523,7 +528,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             grid.move(agent_201, dpt(46, 80))
             cspace.move(agent_201, cpt(46.2, 80.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # print(f'{rank}: {net.graph.edges()}', flush=True)
 
@@ -596,7 +601,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             grid.move(agent_201, dpt(10, 60))
             cspace.move(agent_201, cpt(10.2, 60.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             agent_201 = context.ghost_agent((2, 0, 1))
@@ -606,7 +611,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
         if rank == 0:
             requests.append(((2, 0, 1), 1))
 
-        context.request_agents(requests, create_agent)
+        context.request_agents(requests, restore_agent)
 
         if rank == 0:
             agent_201 = context.ghost_agent((2, 0, 1))
@@ -618,7 +623,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
             grid.move(agent_201, dpt(10, 66))
             cspace.move(agent_201, cpt(10.2, 66.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             self.assertIsNotNone(context.ghost_agent((2, 0, 1)))
@@ -707,7 +712,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             requests.append(((4, 0, 2), 2))
             requests.append(((2, 0, 1), 1))
 
-        context.request_agents(requests, create_agent)
+        context.request_agents(requests, restore_agent)
 
         if rank == 0 or rank == 3:
             self.assertEqual(13, g.node_count)
@@ -746,7 +751,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             edges = [x for x in g.graph.edges(agents[1], data=True)]
             self.assertEqual(edges[0], (agents[1], other, {'rate': 2.1}))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # TEST vertices and edges created on ghost ranks
         if rank == 0:
@@ -798,7 +803,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             other = context.ghost_agent((2, 0, 1))
             g.update_edge(agents[0], other, weight=14.2)
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             self.assertEqual(134324, context.ghost_agent((2, 0, 1)).energy)
@@ -819,7 +824,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             other = context.ghost_agent((2, 0, 1))
             g.remove_edge(other, agents[0])
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # TEST: 3 removed (0, 0, 3) -> (2, 0, 1), so
         # that edge should be removed, and (0, 0, 3) no
@@ -855,7 +860,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             requests.append(((4, 0, 2), 2))
             requests.append(((2, 0, 1), 1))
 
-        context.request_agents(requests, create_agent)
+        context.request_agents(requests, restore_agent)
 
         if rank == 0 or rank == 3:
             self.assertEqual(13, g.node_count)
@@ -895,7 +900,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             edges = [x for x in g.graph.edges(agents[1], data=True)]
             self.assertEqual(edges[0], (agents[1], other, {'rate': 2.1}))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # TEST: remove (1, 0, 1) from 1
         # edges should be removed across processes
@@ -906,7 +911,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             self.assertTrue((agents[2], context.ghost_agent((0, 0, 3))) in g.graph.edges())
             self.assertTrue((1, 0, 1) not in context._agent_manager._ghosted_agents)
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # (0, 0, 0) -> (1, 0, 1) removed
         if rank == 0:
@@ -932,7 +937,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             # move 2,0,1 to o
             moved.append(((2, 0, 1), 0))
 
-        context.move_agents(moved, create_agent)
+        context.move_agents(moved, restore_agent)
 
         # TODO: 2,0,1 is on 0 with local_rank of 0
         if rank == 0:
@@ -979,7 +984,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             self.assertEqual(12, g.graph.edges[context.agent((0, 0, 3)),
                                                context.ghost_agent((2, 0, 1))]['weight'])
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             self.assertEqual(12, g.graph.edges[context.ghost_agent((0, 0, 3)),
@@ -1033,7 +1038,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             requests.append(((4, 0, 2), 2))
             requests.append(((2, 0, 1), 1))
 
-        context.request_agents(requests, create_agent)
+        context.request_agents(requests, restore_agent)
 
         if rank == 0:
             net.add_edge(agents[1], context.ghost_agent((2, 0, 1)), color='red')
@@ -1045,7 +1050,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             net.add_edge(agents[1], context.ghost_agent((1, 0, 0)))
             net.add_edge(agents[5], context.ghost_agent((2, 0, 1)))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # TESTS edges
         if rank == 0:
@@ -1080,7 +1085,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             grid.move(agents[2], dpt(46, 35))
             cspace.move(agents[2], cpt(46.2, 35.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             self.assertEqual(3, net.edge_count)
@@ -1112,7 +1117,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             grid.move(agent_201, dpt(46, 80))
             cspace.move(agent_201, cpt(46.2, 80.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         # print(f'{rank}: {net.graph.edges()}', flush=True)
 
@@ -1185,7 +1190,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             grid.move(agent_201, dpt(10, 60))
             cspace.move(agent_201, cpt(10.2, 60.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             agent_201 = context.ghost_agent((2, 0, 1))
@@ -1195,7 +1200,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
         if rank == 0:
             requests.append(((2, 0, 1), 1))
 
-        context.request_agents(requests, create_agent)
+        context.request_agents(requests, restore_agent)
 
         if rank == 0:
             agent_201 = context.ghost_agent((2, 0, 1))
@@ -1207,7 +1212,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             grid.move(agent_201, dpt(10, 66))
             cspace.move(agent_201, cpt(10.2, 66.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             self.assertIsNotNone(context.ghost_agent((2, 0, 1)))
@@ -1258,7 +1263,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             grid.move(agent_201, dpt(10, 60))
             cspace.move(agent_201, cpt(10.2, 60.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             agent_201 = context.ghost_agent((2, 0, 1))
@@ -1271,7 +1276,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             grid.move(agent_201, dpt(10, 66))
             cspace.move(agent_201, cpt(10.2, 66.1))
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             agent_201 = context.ghost_agent((2, 0, 1))
@@ -1285,10 +1290,306 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
             self.assertTrue(net.contains_edge(agent_201, context.ghost_agent((0, 0, 0))))
             agent_201.energy = 20
 
-        context.synchronize(create_agent)
+        context.synchronize(restore_agent)
 
         if rank == 0:
             agent_201 = context.ghost_agent((2, 0, 1))
             self.assertEqual(agent_201.energy, 20)
             self.assertIsNotNone(agent_201)
             self.assertTrue(net.contains_edge(agent_201, agents[0]))
+
+
+def construct_agent(nid, agent_type, rank, **kwargs):
+    energy = kwargs['energy'] if 'energy' in kwargs else -1
+    return EAgent(nid, agent_type, rank, energy)
+
+
+class InitNetworkTests(unittest.TestCase):
+
+    long_message = True
+
+    def testInitWithAttributes(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        context = ctx.SharedContext(comm)
+
+        fpath = './test_data/net_with_attribs.txt'
+        read_network(fpath, context, construct_agent, restore_agent)
+        g = context.get_projection("friend_network")
+        self.assertFalse(g.is_directed)
+        if rank == 0:
+            self.assertEqual(1, context.size()[-1])
+            a1 = context.agent((3, 0, 0))
+            self.assertEqual(30, a1.energy)
+            self.assertEqual(1, len(context._agent_manager._ghost_agents))
+            self.assertIsNotNone(context.ghost_agent((1, 0, 1)))
+            g1 = context.ghost_agent((1, 0, 1))
+            self.assertEqual(23, g1.energy)
+            edges = [x for x in g.graph.edges(a1, data=True)]
+            self.assertEqual(edges, [(a1, g1, {'weight': 0.75})])
+            # self.assertTrue((a1, g1) in g.graph.edges())
+            # self.assertTrue((context.ghost_agent((0, 0, 0)), agents[1]) in g.graph.edges())
+
+        elif rank == 1:
+            self.assertEqual(2, context.size()[-1])
+            a1 = context.agent((1, 0, 1))
+            self.assertIsNotNone(a1)
+            a2 = context.agent((2, 0, 1))
+            self.assertIsNotNone(a2)
+            self.assertEqual(3, len(context._agent_manager._ghost_agents))
+            g3 = context.ghost_agent((3, 0, 0))
+            self.assertIsNotNone(g3)
+            g5 = context.ghost_agent((5, 0, 3))
+            self.assertIsNotNone(g5)
+            self.assertEqual(32, g5.energy)
+            g4 = context.ghost_agent((4, 0, 2))
+            self.assertIsNotNone(g4)
+            self.assertEqual(5, g.edge_count)
+            self.assertTrue(g.contains_edge(a1, a2))
+            self.assertTrue(g.contains_edge(a1, g3))
+            self.assertTrue(g.contains_edge(a1, g5))
+            self.assertTrue(g.contains_edge(a2, g5))
+            self.assertTrue(g.contains_edge(g4, a2))
+
+        elif rank == 2:
+            self.assertEqual(2, context.size()[-1])
+            a4 = context.agent((4, 0, 2))
+            self.assertIsNotNone(a4)
+            a6 = context.agent((6, 0, 2))
+            self.assertIsNotNone(a6)
+            self.assertEqual(2, len(context._agent_manager._ghost_agents))
+            g2 = context.ghost_agent((2, 0, 1))
+            self.assertIsNotNone(g2)
+            g5 = context.ghost_agent((5, 0, 3))
+            self.assertIsNotNone(g5)
+            self.assertEqual(2, g.edge_count)
+            self.assertTrue(g.contains_edge(a6, g5))
+            self.assertTrue(g.contains_edge(a4, g2))
+
+        elif rank == 3:
+            self.assertEqual(1, context.size()[-1])
+            a5 = context.agent((5, 0, 3))
+            self.assertIsNotNone(a5)
+            self.assertEqual(3, len(context._agent_manager._ghost_agents))
+            g6 = context.ghost_agent((6, 0, 2))
+            self.assertIsNotNone(g6)
+            g1 = context.ghost_agent((1, 0, 1))
+            self.assertIsNotNone(g1)
+            g2 = context.ghost_agent((2, 0, 1))
+            self.assertIsNotNone(g2)
+            self.assertEqual(3, g.edge_count)
+            self.assertTrue(g.contains_edge(a5, g6))
+            self.assertTrue(g.contains_edge(a5, g1))
+            self.assertTrue(g.contains_edge(g2, a5))
+
+    def testInitWithDiNoAttrib(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        context = ctx.SharedContext(comm)
+
+        fpath = './test_data/net_with_no_attribs.txt'
+        read_network(fpath, context, construct_agent, restore_agent)
+        g = context.get_projection("friend_network")
+        self.assertTrue(g.is_directed)
+        if rank == 0:
+            self.assertEqual(1, context.size()[-1])
+            a1 = context.agent((3, 0, 0))
+            self.assertEqual(-1, a1.energy)
+            self.assertEqual(1, len(context._agent_manager._ghost_agents))
+            self.assertIsNotNone(context.ghost_agent((1, 0, 1)))
+            g1 = context.ghost_agent((1, 0, 1))
+            self.assertEqual(-1, g1.energy)
+            edges = [x for x in g.graph.edges(a1, data=True)]
+            self.assertEqual(edges, [(a1, g1, {})])
+            # self.assertTrue((a1, g1) in g.graph.edges())
+            # self.assertTrue((context.ghost_agent((0, 0, 0)), agents[1]) in g.graph.edges())
+
+        elif rank == 1:
+            self.assertEqual(2, context.size()[-1])
+            a1 = context.agent((1, 0, 1))
+            self.assertIsNotNone(a1)
+            a2 = context.agent((2, 0, 1))
+            self.assertIsNotNone(a2)
+            self.assertEqual(3, len(context._agent_manager._ghost_agents))
+            g3 = context.ghost_agent((3, 0, 0))
+            self.assertIsNotNone(g3)
+            g5 = context.ghost_agent((5, 0, 3))
+            self.assertIsNotNone(g5)
+            self.assertEqual(-1, g5.energy)
+            g4 = context.ghost_agent((4, 0, 2))
+            self.assertIsNotNone(g4)
+            self.assertEqual(5, g.edge_count)
+            self.assertTrue(g.contains_edge(a1, a2))
+            self.assertTrue(g.contains_edge(g3, a1))
+            self.assertTrue(g.contains_edge(a1, g5))
+            self.assertTrue(g.contains_edge(a2, g5))
+            self.assertTrue(g.contains_edge(g4, a2))
+
+        elif rank == 2:
+            self.assertEqual(2, context.size()[-1])
+            a4 = context.agent((4, 0, 2))
+            self.assertIsNotNone(a4)
+            a6 = context.agent((6, 0, 2))
+            self.assertIsNotNone(a6)
+            self.assertEqual(2, len(context._agent_manager._ghost_agents))
+            g2 = context.ghost_agent((2, 0, 1))
+            self.assertIsNotNone(g2)
+            g5 = context.ghost_agent((5, 0, 3))
+            self.assertIsNotNone(g5)
+            self.assertEqual(2, g.edge_count)
+            self.assertTrue(g.contains_edge(a6, g5))
+            self.assertTrue(g.contains_edge(a4, g2))
+
+        elif rank == 3:
+            self.assertEqual(1, context.size()[-1])
+            a5 = context.agent((5, 0, 3))
+            self.assertIsNotNone(a5)
+            self.assertEqual(3, len(context._agent_manager._ghost_agents))
+            g6 = context.ghost_agent((6, 0, 2))
+            self.assertIsNotNone(g6)
+            g1 = context.ghost_agent((1, 0, 1))
+            self.assertIsNotNone(g1)
+            g2 = context.ghost_agent((2, 0, 1))
+            self.assertIsNotNone(g2)
+            self.assertEqual(3, g.edge_count)
+            self.assertTrue(g.contains_edge(g6, a5))
+            self.assertTrue(g.contains_edge(g1, a5))
+            self.assertTrue(g.contains_edge(g2, a5))
+
+    def test_generation1(self):
+        # make 1 rank comm for basic add remove tests
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            g = nx.generators.watts_strogatz_graph(30, 2, 0.25)
+            fname = './test_data/gen_net_test.txt'
+            write_network(g, "test", fname, 3)
+
+            with open(fname, 'r') as f_in:
+                line = f_in.readline().strip()
+                vals = line.split(' ')
+                self.assertEqual('test', vals[0])
+                self.assertEqual('0', vals[1])
+
+                nid_count = 0
+                r_counts = [0, 0, 0]
+                line = f_in.readline().strip()
+                while line != 'EDGES':
+                    nid, n_type, rank = [int(x) for x in line.split(' ')]
+                    self.assertTrue(nid in g)
+                    self.assertEqual(0, n_type)
+                    r_counts[rank] += 1
+                    nid_count += 1
+                    line = f_in.readline().strip()
+
+                self.assertEqual(30, nid_count)
+                self.assertEqual(g.number_of_nodes(), nid_count)
+                self.assertEqual(r_counts, [10, 10, 10])
+
+                edge_count = 0
+                for line in f_in:
+                    line = line.strip()
+                    u, v = [int(x) for x in line.split(' ')]
+                    edge_count += 1
+                    self.assertTrue(g.has_edge(u, v))
+
+                self.assertEqual(g.number_of_edges(), edge_count)
+
+    def test_generation2(self):
+        # make 1 rank comm for basic add remove tests
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            g = nx.generators.dual_barabasi_albert_graph(60, 2, 1, 0.25)
+            attr = {}
+            for i in range(30):
+                attr[i] = {'agent_type': 0, 'a': 3}
+            for i in range(30, 60):
+                attr[i] = {'agent_type': 1, 'a': 4}
+            nx.set_node_attributes(g, attr)
+
+            fname = './test_data/gen_net_test.txt'
+            write_network(g, "test", fname, 3, partition_method='random')
+
+            p = re.compile('\{[^}]+\}|\S+')
+
+            with open(fname, 'r') as f_in:
+                line = f_in.readline().strip()
+                vals = line.split(' ')
+                self.assertEqual('test', vals[0])
+                self.assertEqual('0', vals[1])
+
+                nid_count = 0
+                r_counts = [0, 0, 0]
+                line = f_in.readline().strip()
+                while line != 'EDGES':
+                    nid, n_type, rank, attr = p.findall(line.strip())
+                    nid = int(nid)
+                    n_type = int(n_type)
+                    rank = int(rank)
+                    self.assertTrue(nid in g)
+                    if nid < 30:
+                        self.assertEqual(0, n_type)
+                        self.assertEqual('{"a": 3}', attr)
+                    else:
+                        self.assertEqual(1, n_type)
+                        self.assertEqual('{"a": 4}', attr)
+                    r_counts[rank] += 1
+                    nid_count += 1
+                    line = f_in.readline().strip()
+
+                self.assertEqual(60, nid_count)
+                self.assertEqual(g.number_of_nodes(), nid_count)
+                self.assertEqual(r_counts, [20, 20, 20])
+
+                edge_count = 0
+                for line in f_in:
+                    line = line.strip()
+                    u, v = [int(x) for x in line.split(' ')]
+                    edge_count += 1
+                    self.assertTrue(g.has_edge(u, v))
+
+                self.assertEqual(g.number_of_edges(), edge_count)
+
+    def test_generation3(self):
+        # make 1 rank comm for basic add remove tests
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            g = nx.complete_graph(60)
+            fname = './test_data/gen_net_test.txt'
+            try:
+                import nxmetis
+                options = nxmetis.types.MetisOptions(seed=1)
+                write_network(g, "metis_test", fname, 3, partition_method='metis', options=options)
+
+                p = re.compile('\{[^}]+\}|\S+')
+                ranks = {}
+
+                with open(fname, 'r') as f_in:
+                    line = f_in.readline().strip()
+                    vals = line.split(' ')
+                    self.assertEqual('metis_test', vals[0])
+                    self.assertEqual('0', vals[1])
+
+                    line = f_in.readline().strip()
+                    while line != 'EDGES':
+                        nid, n_type, rank = p.findall(line.strip())
+                        nid = int(nid)
+                        n_type = int(n_type)
+                        rank = int(rank)
+                        self.assertTrue(nid in g)
+                        self.assertEqual(0, n_type)
+                        ranks[nid] = rank
+                        line = f_in.readline().strip()
+
+                self.assertEqual(60, len(ranks))
+                _, partitions = nxmetis.partition(g, 3, options=options)
+                for i, partition in enumerate(partitions):
+                    for nid in partition:
+                        self.assertEqual(i, ranks[nid])
+            except ModuleNotFoundError:
+                print("Ignoring nxmetis test")

@@ -4,9 +4,13 @@ import os
 import numpy as np
 import torch
 
-sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
 
-from repast4py import geometry
+try:
+    from repast4py import geometry
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py import geometry
+
 from repast4py.space import DiscretePoint as dpt
 from repast4py.space import BorderType
 from repast4py.geometry import BoundingBox
@@ -185,7 +189,7 @@ class ValueLayerTests(unittest.TestCase):
         pt._reset2D(18, 24)
         vl.set(pt, 0.2)
         self.assertEqual(0.2, vl.get(pt))
-        s = torch.where(vl.grid == 0.2, torch.tensor(1),torch.tensor(0)).sum()
+        s = torch.where(vl.grid == 0.2, torch.tensor(1), torch.tensor(0)).sum()
         self.assertEqual(1, s)
 
         bounds = BoundingBox(xmin=15, xextent=20, ymin=0,

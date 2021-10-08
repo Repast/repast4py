@@ -6,9 +6,11 @@ import csv
 from dataclasses import dataclass
 from mpi4py import MPI
 
-sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
-
-from repast4py import logging
+try:
+    from repast4py import logging
+except ModuleNotFoundError:
+    sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
+    from repast4py import logging
 
 
 @dataclass
