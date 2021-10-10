@@ -18,6 +18,5 @@ include::distributing_agents.adoc[]
 
 include::model_101.adoc[]
 
-include::ascii_doc_ex.adoc[]
 
 
