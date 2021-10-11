@@ -1,7 +1,7 @@
 == Why Repast4py?
 Repast for Python (Repast4Py) is the newest member of the https://repast.github.io[Repast Suite] of free and open source agent-based modeling and simulation software.
 It builds on https://repast.github.io/repast_hpc.html[Repast HPC], and provides the ability to build large, distributed agent-based models (ABMs) that span multiple processing cores. 
-Distributed ABMs enable the development of complex systems models that capture the scale and relevant details of many problems of societal importance #CAN WE INCLUDE REFERENCES HERE?#
+Distributed ABMs enable the development of complex systems models that capture the scale and relevant details of many problems of societal importance #QUESTION: CAN WE INCLUDE REFERENCES HERE?#
 Where Repast HPC is implemented in C++ and is more HPC expert focused, Repast4Py uses Python and is designed to provide an easier on-ramp for researchers from diverse scientific communities to apply large-scale distributed ABM methods. 
 
 
