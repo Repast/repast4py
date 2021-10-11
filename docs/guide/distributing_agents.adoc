@@ -3,23 +3,23 @@ We've seen in the <<_distributed_simulation, Distributed Simulation>> section ho
 (non-local copies) are used 
 to stitch a simulation together across processes and that when agents move out of their local
 grid or continuous space subsection they are moved to the process responsible for the destination
-subsection. While much of this is handled internally by repast4py, this section describes in more detail the 
-code the user needs to provide in order for moving and copying to work correctly.
+subsection. While much of this is handled internally by Repast4Py, this section describes in more detail the 
+code the user needs to provide in order for moving and copying to work correctly. We will use examples from the Zombies and Rumor demonstration models (#QUESTION: Can we add a link or some indication for where these are?#) to illustrate the core concepts.
 
 === Agent ID
 For moving and copying agents across processes to work each agent must have a unique id. 
 This id has three components:
 
-. An integer that uniquely identifies the agent on the rank on which it was created.
-. An integer that identifies its type.
-. The integer rank on which the agent was created.
+. An integer that uniquely identifies the agent on the rank on which it was created
+. An integer that identifies its type
+. The integer rank on which the agent was created
 
 Combining the first component with the last allows us to uniquely identify an agent across the multi-process
 simulation while the second allows us to create agents of the appropriate type when they are copied
 between ranks. 
 
-In order to insure that all agents in repast4py have an agent id, all agents must inherit from the
-`repast4py.core.Agent` class which requires these components in its constructor. For example in the
+In order to ensure that all agents in Repast4Py have an agent id, all agents must inherit from the
+`repast4py.core.Agent` class which requires these components in its constructor. For example, in the
 Zombies demonstration model, the `Human` agents are subclasses of the `repast4py.core.Agent`
 
 [source,python,numbered]
@@ -49,23 +49,23 @@ The components as well as the full unique id are attributes of the `repast4py.co
 * rank: the rank component from the agent's unique id
 * uid: the unique id tuple (id, type, rank)
 
-IMPORTANT: All agents must subclass `repast4py.core.Agent`
+IMPORTANT: All agents must subclass `repast4py.core.Agent`.
 
 === Saving and Restoring Agents
 Moving or copying an agent between processes consists of saving the agent state, moving / copying that state
-to another process and then restoring the agent state as an agent on the destination process. Each
-agent must implement a `save` method that returns a Tuple containing the agent state, the first element of which is the agent's unique id as a Tuple (accessed via the `uid` attribute). For example, in the Zombie demonstration model, that state each Human is
+to another process, and then restoring the agent state as an agent on the destination process. Each
+agent must implement a `save` method that returns a tuple containing the full agent state. The first element of this full state tuple is the agent's unique id, itself a tuple (accessed via the `uid` attribute). For example, in the Zombie demonstration model the dynamic, i.e., non-agent unique id, components of the state in each Human are
 represented by two variables:
 
 1. infected: a boolean that indicates whether or not the Human is infected
-2. infected_duration: an integer tracking how long the agent has been infected for
+2. infected_duration: an integer tracking how long the agent has been infected
 
-The `save` method creates a tuple consisting of these two variables and the unique id tuple..
+The `save` method creates a tuple consisting of these two variables and the unique id tuple.
 
 [source,python,numbered]
 ----
 def save(self) -> Tuple:
-        """Saves the state of this Human as a Tuple.
+        """Saves the state of this Human as a tuple.
 
         Used to move this Human from one MPI rank to another.
 
@@ -78,13 +78,13 @@ def save(self) -> Tuple:
 NOTE: The agent state added to the tuple returned from `save` can also consist of other tuples, lists 
 and so on, in addition to primitive values, as long as the unique id tuple is the first element.
 
-IMPORTANT: All agents must implement a `save` method
+IMPORTANT: All agents must implement a `save` method.
 
 You must also provide a _restore_ function that takes the tuple produced by the `save` method and 
 returns an agent either created or updated with that state. The function is used during synchronization
 to create the agents on the destination ranks. In the Zombies demonstration model, the `restore_agent`
-function when given agent state, returns Human and Zombie agents. It uses a caching scheme
-to avoid re-instantiating agents that have previously been created on a rank, updating the
+function, when given agent state, returns Human and Zombie agents. It uses a caching scheme
+to avoid re-instantiating agents that have previously been created on a rank, and updates the
 state of those previously created agents. This can be a useful performance improvement at the
 expense of using more memory.
 
@@ -97,24 +97,24 @@ def restore_agent(agent_data: Tuple): #<2>
 
     This is used to re-create agents when they have moved from one MPI rank 
     to another. The tuple returned by the agent's save() method is moved 
-    between ranks, and create_agent is called for each tuple in order 
+    between ranks and create_agent is called for each tuple in order 
     to create the agent on that rank. Here we also use
-    a cache to cache any agents already created on this rank, 
-    and only update their state rather than creating from scratch.
+    a cache to store any agents already created on this rank, 
+    and only update their state rather than recreating them from scratch.
 
     Args:
-        agent_data: the data to create the agent from. This is the tuple
+        agent_data: the data from which to create the agent. This is the tuple
                     returned from the agent's save() method where the first
                     element is the agent id tuple, and any remaining 
                     arguments encapsulate agent state.
     """
     uid = agent_data[0]                                         #<3>
-    # 0 is id, 1 is type, 2 is rank
+    # in uid element 0 is id, 1 is type, 2 is rank
     if uid[1] == Human.ID:                                      #<4>
         if uid in agent_cache:
             h = agent_cache[uid] 
         else:
-            h = Human(uid[0], uid[6])
+            h = Human(uid[0], uid[2])
             agent_cache[uid] = h
 
         # restore the agent state from the agent_data tuple
@@ -133,18 +133,18 @@ def restore_agent(agent_data: Tuple): #<2>
             return z
 ----
 <1> Cache for previously instantiated agents. Key is an agent's unique id (uid) tuple and value is the agent.
-<2> `agent_data` is a Tuple of the format produced by the `save` method. For Humans this is (uid, infected,
+<2> `agent_data` is a tuple of the format produced by the `save` method. For Humans this is (uid, infected,
 infected_duration). For Zombies, this is just (uid).
 <3> The first element of the `agent_data` tuple is the uid tuple. The uid tuple is (id, type, starting rank).
 <4> Check if the agent is already cached, if so then get it (line 23), otherwise create a new `Human` agent
 (line 25).
-<5> Update the cached / created Human with the passed in agent state
+<5> Update the cached / created Human with the passed in agent state.
 <6> `agent_data` is for a Zombie so search cache and if necessary create a new one.
 
 Lastly, in a distributed network, agents are not typically moved between processes
-but rather the ghost agents remain on a process once the network is created. repast4py tracks 
+but rather the ghost agents remain on a process once the network is created. Repast4Py tracks 
 these ghost agents and does not recreate the agents every synchronization step via a `restore`
-method, instead a state update is sent to a each ghost agent. In that case, the agent's `update` 
+method, instead a state update is sent to each ghost agent. In that case, the agent's `update` 
 method is called to handle the state update. The Rumor demonstration model has an example of this.
 
 [source,python,numbered]
@@ -164,14 +164,14 @@ class RumorAgent(core.Agent):
         self.received_rumor = data
 ----
 <1> Updates ghost agent state from saved agent state. Here the `data` argument
-is the state element of the tuple returned from the agent's `save` method, namely,
+is the dynamic state element of the tuple returned from the agent's `save` method, namely,
 the `self.received_rumor` bool in `(self.uid, self.received_rumor)`.
 
 === Synchronization
 As mentioned in the <<_distributed_simulation, Distributed Simulation>> section, each process in a
-repast4py application runs in a separate memory space from all the other processes. Consequently,
+Repast4Py application runs in a separate memory space from all the other processes. Consequently,
 we need to synchronize the model state across processes by moving agents, filling
-projection buffers with ghosts, updating ghosted state and so forth as necessary. Synchronization
-is performed by calling the `SharedContext.synchronize` method, passing it your restore function.
-The `synchronization` method will use the agent `save` method(s) and your restore fuction
-to synchronize the state the simulation across its processes. 
+projection buffers with ghosts, updating ghosted states, as necessary. Synchronization
+is performed by calling the `SharedContext.synchronize` method and passing it your restore function.
+The `synchronization` method will use the agent `save` method(s) and your restore function
+to synchronize the state of the simulation across its processes. 
