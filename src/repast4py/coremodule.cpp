@@ -260,10 +260,10 @@ PyDoc_STRVAR(ag_rank,
     "int: Gets the rank component from this agent's unique id");
 
 PyDoc_STRVAR(ag_uid,
-    "Tuple(int, int, int): Gets this agent's unique id tuple (id, type, rank");
+    "Tuple(int, int, int): Gets this agent's unique id tuple (id, type, rank)");
 
 PyDoc_STRVAR(ag_lr,
-    "int: Gets and sets the current local rank of this agent. Users should not need to **set** this value.");
+    "int: Gets and sets the current local rank of this agent. Users should **NOT** need to access this value.");
 
 
 static PyGetSetDef Agent_get_setters[] = {
@@ -288,7 +288,7 @@ PyDoc_STRVAR(ag_ag,
     "Args:\n"
     "    id (int): an integer that uniquely identifies this agent from among those of the same type and "
     "created on the same rank. Consequently, agents created on different ranks, or of different types but created on the same rank "
-    "can have the same id.\n"
+    "may have the same id.\n"
     "    type (int): an integer that specifies the type of this agent.\n"
     "    rank (int): the rank on which this agent is created."
 );

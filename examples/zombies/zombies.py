@@ -270,10 +270,10 @@ class Model:
 
         box = space.BoundingBox(0, params['world.width'], 0, params['world.height'], 0, 0)
         self.grid = space.SharedGrid('grid', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
-                                     buffersize=2, comm=comm)
+                                     buffer_size=2, comm=comm)
         self.context.add_projection(self.grid)
         self.space = space.SharedCSpace('space', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
-                                        buffersize=2, comm=comm, tree_threshold=100)
+                                        buffer_size=2, comm=comm, tree_threshold=100)
         self.context.add_projection(self.space)
         self.ngh_finder = GridNghFinder(0, 0, box.xextent, box.yextent)
 

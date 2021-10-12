@@ -105,7 +105,7 @@ class Model:
         # create a SharedGrid of 'box' size with sticky borders that allows multiple agents
         # in each grid location.
         self.grid = space.SharedGrid(name='grid', bounds=box, borders=space.BorderType.Sticky,
-                                     occupancy=space.OccupancyType.Multiple, buffersize=2, comm=comm)
+                                     occupancy=space.OccupancyType.Multiple, buffer_size=2, comm=comm)
         self.context.add_projection(self.grid)
 
         rank = comm.Get_rank()

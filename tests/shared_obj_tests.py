@@ -60,7 +60,7 @@ class SharedCSTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
 
             cspace.add(a1)
@@ -89,7 +89,7 @@ class SharedCSTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
             self.assertEqual('shared_space', cspace.name)
 
@@ -143,7 +143,7 @@ class SharedCSTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
 
             cspace.add(a1)
@@ -194,7 +194,7 @@ class SharedCSTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Periodic,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
 
             cspace.add(a1)
@@ -243,7 +243,7 @@ class SharedCSTests(unittest.TestCase):
             buffer_size = 2
             box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Periodic,
-                                        occupancy=OccupancyType.Multiple, buffersize=buffer_size, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=buffer_size, comm=comm,
                                         tree_threshold=100)
 
             topo = CartesianTopology(comm, box, True)
@@ -287,7 +287,7 @@ class SharedCSTests(unittest.TestCase):
             buffer_size = 2
             box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Periodic,
-                                        occupancy=OccupancyType.Multiple, buffersize=buffer_size, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=buffer_size, comm=comm,
                                         tree_threshold=100)
 
             topo = CartesianTopology(comm, box, True)
@@ -337,7 +337,7 @@ class SharedCSTests(unittest.TestCase):
             buffer_size = 2
             box = geometry.BoundingBox(xmin=0, xextent=80, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Periodic,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
             topo = CartesianTopology(comm, box, True)
             lb = topo.local_bounds
@@ -400,7 +400,7 @@ class SharedGridTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
             self.assertEqual('shared_grid', grid.name)
 
             grid.add(a1)
@@ -428,7 +428,7 @@ class SharedGridTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
             self.assertEqual('shared_grid', grid.name)
 
             grid.add(a1)
@@ -481,7 +481,7 @@ class SharedGridTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
             grid.add(a1)
             grid.add(a2)
@@ -531,7 +531,7 @@ class SharedGridTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
             grid.add(a1)
             grid.add(a2)
@@ -579,7 +579,7 @@ class SharedGridTests(unittest.TestCase):
 
         box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
         # print('{}: bounds: {}'.format(rank, grid.get_local_bounds()))
         for a in agents:
@@ -661,7 +661,7 @@ class SharedGridTests(unittest.TestCase):
             buffer_size = 2
             box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic,
-                                    occupancy=OccupancyType.Multiple, buffersize=buffer_size, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=buffer_size, comm=comm)
 
             topo = CartesianTopology(comm, box, True)
             lb = topo.local_bounds
@@ -704,7 +704,7 @@ class SharedGridTests(unittest.TestCase):
             buffer_size = 2
             box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic,
-                                    occupancy=OccupancyType.Multiple, buffersize=buffer_size, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=buffer_size, comm=comm)
             topo = CartesianTopology(comm, box, True)
             lb = topo.local_bounds
             bottom = lb.ymin + lb.yextent
@@ -749,7 +749,7 @@ class SharedGridTests(unittest.TestCase):
             buffer_size = 2
             box = geometry.BoundingBox(xmin=0, xextent=80, ymin=0, yextent=120, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic,
-                                    occupancy=OccupancyType.Multiple, buffersize=buffer_size, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=buffer_size, comm=comm)
             topo = CartesianTopology(comm, box, True)
             lb = topo.local_bounds
             bottom = lb.ymin + lb.yextent
@@ -799,7 +799,7 @@ class SharedGridTests(unittest.TestCase):
 
         box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic,
-                                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
         if rank == 0:
             expected = {
@@ -955,7 +955,7 @@ class SharedGridTests(unittest.TestCase):
 
         box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=60)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
         # print('{}: bounds: {}'.format(rank, grid.get_local_bounds()))
         if rank == 0:
@@ -1031,7 +1031,7 @@ class SharedGridTests(unittest.TestCase):
 
         # box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=60)
         # grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic,
-        #                         occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+        #                         occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
         # if rank == 0:
         #     expected = {
@@ -1117,7 +1117,7 @@ class SharedContextTests1(unittest.TestCase):
         if comm != MPI.COMM_NULL:
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
             context = ctx.SharedContext(comm)
             context.add_projection(grid)
@@ -1271,7 +1271,7 @@ class SharedContextTests1(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
             context = ctx.SharedContext(comm)
             context.add_projection(grid)
@@ -1314,7 +1314,7 @@ class SharedContextTests1(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
             context = ctx.SharedContext(comm)
             context.add_projection(grid)
@@ -1414,7 +1414,7 @@ class SharedContextTests1(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
 
             context = ctx.SharedContext(comm)
             context.add_projection(grid)
@@ -1523,7 +1523,7 @@ class SharedContextTests1(unittest.TestCase):
 
         box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                occupancy=OccupancyType.Multiple, buffersize=1, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=1, comm=comm)
         context.add_projection(grid)
 
         data = {"0S": ((1, 0, 0), mp(15, 39)),
@@ -1615,7 +1615,7 @@ class SharedContextTests2(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm, tree_threshold=100)
 
             context = ctx.SharedContext(comm)
             context.add_projection(cspace)
@@ -1655,7 +1655,7 @@ class SharedContextTests2(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedCSpace("shared_cspace", bounds=box, borders=BorderType.Sticky,
-                                      occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                      occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                       tree_threshold=100)
 
             context = ctx.SharedContext(comm)
@@ -1755,7 +1755,7 @@ class SharedContextTests2(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
             grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                      occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                      occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                       tree_threshold=100)
 
             context = ctx.SharedContext(comm)
@@ -1860,7 +1860,7 @@ class SharedContextTests2(unittest.TestCase):
 
         box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                  occupancy=OccupancyType.Multiple, buffersize=1, comm=comm,
+                                  occupancy=OccupancyType.Multiple, buffer_size=1, comm=comm,
                                   tree_threshold=100)
         context.add_projection(grid)
 
@@ -1975,10 +1975,10 @@ class SharedContextTests3(unittest.TestCase):
 
         box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                     tree_threshold=100)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
         context.add_projection(cspace)
         context.add_projection(grid)
 
@@ -2274,10 +2274,10 @@ class SharedContextTests3(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
             context.add_projection(cspace)
             context.add_projection(grid)
 
@@ -2398,10 +2398,10 @@ class SharedContextTests3(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
             context.add_projection(cspace)
             context.add_projection(grid)
 
@@ -2438,10 +2438,10 @@ class PeriodicSyncTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=80, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Periodic,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
             context.add_projection(cspace)
             context.add_projection(grid)
 
@@ -2530,10 +2530,10 @@ class PeriodicSyncTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=80, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Periodic,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
             context.add_projection(cspace)
             context.add_projection(grid)
 
@@ -2613,10 +2613,10 @@ class PeriodicSyncTests(unittest.TestCase):
 
             box = geometry.BoundingBox(xmin=0, xextent=80, ymin=0, yextent=120, zmin=0, zextent=0)
             cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Periodic,
-                                        occupancy=OccupancyType.Multiple, buffersize=2, comm=comm,
+                                        occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
                                         tree_threshold=100)
             grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Periodic,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
             context.add_projection(cspace)
             context.add_projection(grid)
 

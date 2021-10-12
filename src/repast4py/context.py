@@ -8,11 +8,10 @@ import itertools
 import collections
 
 from repast4py.value_layer import SharedValueLayer
-from ._core import Agent
 from repast4py import random
 from typing import Callable, List
 
-from .core import AgentManager, SharedProjection, BoundedProjection
+from .core import AgentManager, SharedProjection, BoundedProjection, Agent
 from .util import is_empty
 
 
@@ -22,11 +21,11 @@ class SharedContext:
     A SharedContext may have one or more projections associated with it to
     impose a relational structure on the agents in the context. It also
     provides functionality for synchronizing agents across processes, moving
-    agents from one processe to another and managing any ghosting strategy.
+    agents from one process to another and managing any ghosting strategy.
 
     Args:
             comm (mpi4py.MPI.Intracomm): the communicator used to communicate
-            among SharedContexts in the distributed model
+                among SharedContexts in the distributed model
 
     """
     def __init__(self, comm):
@@ -267,7 +266,9 @@ class SharedContext:
 
         Args:
             restore_agent: a callable that takes agent state data and returns an agent instance from
-                that data. The data is a tuple consisting of the agent id tuple, and the serialized agent state
+                that data. The data is a tuple whose first element is the agent's unique id tuple,
+                and the second element is the agent's state, as returned by that agent's type's :samp:`save()`
+                method.
             sync_ghosts: if True, the ghosts in any SharedProjections and value layers associated
                 with this SharedContext are also synchronized. Defaults to True.
         """
@@ -312,7 +313,7 @@ class SharedContext:
         Args:
             agent_type (int): the type id of the agent, defaults to None.
             count: the number of agents to return, defaults to None, meaning return all
-            the agents.
+                the agents.
             shuffle (bool): whether or not the iteration order is shuffled. If true,
                 the order is shuffled. If false, the iteration order is the order of
                 insertion.
@@ -349,7 +350,7 @@ class SharedContext:
         agents in this context.
 
         Args:
-            agent_id: the uid tuple of the agent to return
+            agent_id: the unique id tuple of the agent to return
 
         Returns:
             The agent with the specified id or None if no such agent is found.
@@ -366,7 +367,7 @@ class SharedContext:
         agents in this context.
 
         Args:
-            agent_id: the uid tuple of the agent to return
+            agent_id: the unique id tuple of the agent to return
 
         Returns:
             The ghost agent with the specified id or None if no such agent is found.
@@ -431,9 +432,9 @@ class SharedContext:
 
         Args:
             requested_agents: A list of tuples specifying requested agents and the rank
-                to request from. Each tuple must contain the agents id tuple and the rank, for
-                example ((id, type, rank), requested_rank).
-            create_agent: a Callable that can take the result of an agent save() and
+                to request from. Each tuple must contain the agents unique id tuple and the rank, for
+                example :samp:`((id, type, rank), requested_rank)`.
+            create_agent: a Callable that can take the result of an agent :samp:`save()` and
                 return an agent.
         Returns:
             The list of requested agents.
@@ -482,9 +483,9 @@ class SharedContext:
 
         Args:
             agents_to_move: A list of tuples specifying agents to move and the rank
-                to request from. Each tuple must contain the agents id tuple and the rank, for
-                example ((id, type, rank), rank_to_move_to).
-            create_agent: a Callable that can take the result of an agent save() and
+                to move the agent to. Each tuple must contain the agents unique id tuple
+                and the rank, for example :samp:`((id, type, rank), rank_to_move_to)`.
+            create_agent: a Callable that can take the result of an agent :samp: `save()` and
                 return an agent.
         """
         sent_agents = [[] for i in range(self.comm.size)]

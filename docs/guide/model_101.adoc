@@ -241,7 +241,7 @@ box = space.BoundingBox(0, params['world.width'], 0, params['world.height'], 0, 
 # in each grid location.
 self.grid = space.SharedGrid(name='grid', bounds=box, borders=space.BorderType.Sticky,
                                 occupancy=space.OccupancyType.Multiple, 
-                                buffersize=2, comm=comm)    #<2>
+                                buffer_size=2, comm=comm)    #<2>
 self.context.add_projection(self.grid)    #<3>
 ----
 <1> A BoundingBox is used to initialize the size of repast4py's cartesian spaces. It's

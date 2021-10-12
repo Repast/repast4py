@@ -24,13 +24,14 @@ class GhostAgent:
     """A non-local agent copied from another rank.
 
     GhostAgent is used by the AgentManager to track and manage ghosts agents on 
-    a rank. This is class is internal to the repast4py implementation and not
-    for users.
+    a rank. 
+
+    **This is class is internal to the repast4py implementation and is NOT for users.**
 
     Attributes:
         agent (Agent): the ghost agent
         ref_count (int): a reference count tracking the number of projections
-        on this rank that refer to the agent
+            on this rank that refer to the agent
 
     """
 
@@ -45,8 +46,9 @@ class GhostedAgent:
     another rank.
 
     GhostedAgent is used by the AgentManager to track and manage agents that
-    have been ghosted from this rank to other ranks. This is class is internal to 
-    the repast4py implementation and not for users.
+    have been ghosted from this rank to other ranks.
+
+    **This is class is internal to the repast4py implementation and is NOT for users.**
 
     Attributes:
         agent (Agent): the ghosted agent
@@ -64,7 +66,7 @@ class AgentManager:
     """Manages local and non-local (ghost) agents as they move
     between processes.
 
-    This is class is internal to the repast4py implementation and not for users.
+    **This is class is internal to the repast4py implementation and is NOT for users.**
 
     Args:
         rank: the local process rank
@@ -111,7 +113,7 @@ class AgentManager:
         Args:
             agent_id: the id of the agent to remove
             ghosted_deleted: appended with a GhostedAgent if the agent to be removed is
-            ghosted on another rank.
+                ghosted on another rank.
 
         Returns:
             The deleted agent or None if the agent does not exist
@@ -207,7 +209,7 @@ class AgentManager:
         another rank.
 
         Args:
-            agent_id: the id of the agent to remove from the ghosted collection
+            agent_id: the unique id tuple of the agent to remove from the ghosted collection
         Returns:
             A dictionary where the key is the rank the agent is ghosted to, and
             the value is the projection reference count for the agent on that rank.
@@ -251,6 +253,9 @@ class AgentManager:
         """Deletes the specified ghost agent. This is used
         to clear the ghost when the non ghost has been removed from
         the simulation
+
+        Args:
+            agent_id: the unique id tuple of the ghost.
         """
         del self._ghost_agents[agent_id]
 
@@ -303,7 +308,6 @@ class AgentManager:
 class SharedProjection(Protocol):
     """Protocol class that defines the API for projections that
     are shared across multiple processes
-
     """
 
     def _pre_synch_ghosts(self, agent_manager: AgentManager):
@@ -378,7 +382,7 @@ class SharedProjection(Protocol):
 @runtime_checkable
 class BoundedProjection(Protocol):
     """Protocol class for projections that are bounded such that an agent
-    can move beyond the bonds of one and into another on another rank.
+    can move beyond the bounds of one instance and into another on another rank.
 
     """
 

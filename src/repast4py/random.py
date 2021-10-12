@@ -4,7 +4,9 @@
 # By: Argonne National Laboratory
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
 
-"""Random numbers for repast4py
+"""Random numbers for repast4py. When this module is imported, :data:`repast4py.random.default_rng` is
+created using the current epoch time as the random seed, and :data:`repast4py.random.seed` is
+set to that value.
 """
 
 import numpy as np
@@ -12,23 +14,27 @@ import time
 import torch
 
 default_rng: np.random.Generator = None
-"""numpy.random.Generator: default random generator created using init
+"""numpy.random.Generator: repast4py's default random generator created using init
 """
 
 seed: int = None
-"""Current random seed"""
+"""The current random seed used by :data:`repast4py.random.default_rng`"""
 
 
 def init(rng_seed: int=None):
-    """Initializes the default random number generator using the specified seed
+    """Initializes the default random number generator using the specified seed.
 
     Args:
-        seed: the random number seed
+        rng_seed: the random number seed. Defaults to None in which case, the current
+            time as returned by :samp:`time.time()` is used as the seed.
     """
     global default_rng, seed
-    seed = rng_seed
-    torch.manual_seed(rng_seed)
-    default_rng = np.random.default_rng(rng_seed)
+    if rng_seed is None:
+        seed = int(time.time())
+    else:
+        seed = rng_seed
+    torch.manual_seed(seed)
+    default_rng = np.random.default_rng(seed)
 
 
-init(int(time.time()))
+init()

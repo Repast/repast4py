@@ -415,9 +415,9 @@ class SharedDirectedNetworkTests(unittest.TestCase):
 
         box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm, tree_threshold=100)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
         net = DirectedSharedNetwork('network', comm)
         context.add_projection(cspace)
         context.add_projection(grid)
@@ -569,9 +569,9 @@ class SharedDirectedNetworkTests(unittest.TestCase):
 
         box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm, tree_threshold=100)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
         net = DirectedSharedNetwork('network', comm)
         context.add_projection(net)
         context.add_projection(cspace)
@@ -1004,9 +1004,9 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
 
         box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm, tree_threshold=100)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
         net = UndirectedSharedNetwork('network', comm)
         context.add_projection(cspace)
         context.add_projection(grid)
@@ -1158,9 +1158,9 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
 
         box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm, tree_threshold=100)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
         net = UndirectedSharedNetwork('network', comm)
         context.add_projection(net)
         context.add_projection(cspace)
@@ -1231,9 +1231,9 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
 
         box = space.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
         cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
-                                    occupancy=OccupancyType.Multiple, buffersize=2, comm=comm, tree_threshold=100)
+                                    occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm, tree_threshold=100)
         grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                occupancy=OccupancyType.Multiple, buffersize=2, comm=comm)
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm)
         net = UndirectedSharedNetwork('network', comm)
         context.add_projection(net)
         context.add_projection(cspace)

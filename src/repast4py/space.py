@@ -26,33 +26,36 @@ from collections import namedtuple
 class BorderType:
     """An enum defining the border types that can be used with a space or grid.
 
-    The border type determines an agents location when the location is beyond the grid's or space's
-    bounds. For example, during agent movement, and that movement carries the agent beyond the
-    borders of a grid or space. Valid values are "Sticky" and "Periodic":
-
-    * Sticky: clips any point coordinates to the maximum or minimum value when the coordinates are less than or
-      greater than the grid or spaces maximum or minimum value. For example, if the minimum grid x location is 0, and
-      an agent moves to an x of -1, then movment in the x dimension is stopped at 0.
-    * Periodic: wraps any point coordinates when they coordinates coordinates are less than or
-      greater than the grid or spaces maximum or minimum value. For example, if the minimum grid x location is 0,
-      the maximum is 20, and an agent moves to an x of -2, then the new x coordinate is 19.
-
+    The border type determines an agent's new location when the assigned location is beyond
+    a grid or space's bounds. For example, during agent movement, when that movement carries the agent beyond the
+    borders of a grid or space. Valid values are :attr:`Sticky`, and :attr:`Periodic`.
     """
     # NOTE: IF THESE CHANGE THE C++ GRID INIT AND SPACE INIT CODE NEEDS TO CHANGE TOO
     Sticky = 0
+    """
+    Clips any point coordinate to the maximum or minimum value when the coordinate is less than or
+    greater than the grid or spaces maximum or minimum value. For example, if the minimum grid x location is 0, and
+    an agent moves to an x of -1, then the new coordinate is 0.
+    """
     Periodic = 1
+    """
+    Wraps point coordinates when the point coordinate is less than or
+    greater than the grid or spaces maximum or minimum value. For example, if the minimum grid x location is 0,
+    the maximum is 20, and an agent moves to an x of -2, then the new x coordinate is 19.
+    """
 
 
 class OccupancyType:
-    """An enum defining the occupancy types of a location in a space or grid.
+    """An enum defining the occupancy type of a location in a space or grid. The
+    occupancy type determines how many agents are allowed at a single location.
 
-    Valid values are: Single and Multiple.
-    * Multiple: allows any number of agents to inhabit the same location.
-    * Single: only a single agent can inhabit a location.
+    Valid values are: :attr:`Multiple`, :attr:`Single`.
     """
     # NOTE: IF THESE CHANGE THE C++ GRID INIT AND SPACE INIT CODE NEEDS TO CHANGE TOO
     Multiple = 0
+    """Any number of agents can inhabit inhabit a location."""
     Single = 1
+    """Only a single agent can inhabit a location."""
 
 
 class SharedGrid(_SharedGrid):
@@ -76,13 +79,13 @@ class SharedGrid(_SharedGrid):
         bounds: the global dimensions of the grid.
         borders: the border semantics: BorderType.Sticky or BorderType.Periodic
         occupancy: the type of occupancy in each cell: OccupancyType.Multiple.
-        buffersize: the size of this SharedGrid buffered area. This single value is used for all dimensions.
+        buffer_size: the size of this SharedGrid buffered area. This single value is used for all dimensions.
         comm: the communicator containing all the ranks over which this SharedGrid is shared.
     """
 
-    def __init__(self, name: str, bounds: BoundingBox, borders: BorderType, occupancy: OccupancyType, buffersize: int,
+    def __init__(self, name: str, bounds: BoundingBox, borders: BorderType, occupancy: OccupancyType, buffer_size: int,
                  comm: mpi4py.MPI.Intracomm):
-        super().__init__(name, bounds, borders, occupancy, buffersize, comm)
+        super().__init__(name, bounds, borders, occupancy, buffer_size, comm)
         self.buffered_agents = []
         self.rank = comm.Get_rank()
 
@@ -120,14 +123,13 @@ class SharedGrid(_SharedGrid):
         return self.contains(agent)
 
     def get_random_local_pt(self, rng: np.random.Generator) -> DiscretePoint:
-        """Gets a random location within the local bounds of the
-        section of the global space that the current rank is responsible for.
+        """Gets a random location within the local bounds of this SharedGrid.
 
         Args:
-            rng: the random number generator used to select the point.
+            rng: the random number generator to use to select the point.
 
         Returns:
-            DiscretePoint: the random point location
+            DiscretePoint: the random point
         """
         return self.random_pt(rng)
 
@@ -267,35 +269,37 @@ class SharedGrid(_SharedGrid):
 class SharedCSpace(_SharedContinuousSpace):
     """An N-dimensional cartesian space where agents can occupy locations defined by
     a continuous floating point coordinate.
+
     The space is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
-    some number of smaller spaces, one for each rank. For example, given a global spaces size of (100 x 25) and
+    some number of smaller spaces, one for each rank. For example, given a global 2D space size of 100 x 25 and
     2 ranks, the global space will be split along the x dimension such that the SharedCSpace in the first
-    MPI rank covers (0-50 x 0-25) and the second rank (50-100 x 0-25).
-    Each rank's SharedCSpace contains a buffer of the specified size that duplicates or "ghosts" an adjacent
+    MPI rank covers 0-50 x 0-25 and the second rank 50-100 x 0-25.
+
+    Each rank's SharedCSpace contains a buffer of a specified size that duplicates or "ghosts" an adjacent
     area of the neighboring rank's SharedCSpace. In the above example, the rank 1 space buffers the area from
-    (50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate
-    to any agent behavior. For example, if an agent can "see" 3 units away and take some action based on what it
+    50-52 x 0-25 in rank 2, and rank 2 buffers 48-50 x 0-25 in rank 1. **Be sure to specify a buffer size appropriate
+    to any agent behavior**. For example, if an agent can "see" 3 units away and take some action based on what it
     perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of
     its own local SharedCSpace. When an agent moves beyond the borders of its current SharedCSpace,
     it will be transferred
     from its current rank, and into that containing the section of the global space that it has moved into.
     The SharedCSpace uses a `tree <https://en.wikipedia.org/wiki/Quadtree>`_ (quad or oct depending on the number of
-    dimensions) to speed up spatial queries. The tree can be tuned using the tree threshold parameter.
+    dimensions) to optimize spatial queries. The tree can be tuned using the tree threshold parameter.
 
     Args:
        name: the name of the space.
        bounds: the global dimensions of the space.
-       borders: the border semantics: BorderType.Sticky or BorderType.Periodic
-       occupancy: the type of occupancy in each cell: OccupancyType.Multiple.
-       buffersize: the size of this SharedCSpace's buffered area. This single value is used for all dimensions.
+       borders: the border semantics - :attr:`BorderType.Sticky` or :attr:`BorderType.Periodic`.
+       occupancy: the type of occupancy in each cell - :attr:`OccupancyType.Single` or :attr:`OccupancyType.Multiple`.
+       buffer_size: the size of this SharedCSpace's buffered area. This single value is used for all dimensions.
        comm: the communicator containing all the ranks over which this SharedCSpace is shared.
        tree_threshold: the space's tree cell maximum capacity. When this capacity is reached, the cell splits.
 
     """
 
     def __init__(self, name: str, bounds: BoundingBox, borders: BorderType, occupancy: OccupancyType,
-                 buffersize: int, comm: mpi4py.MPI.Intracomm, tree_threshold: int):
-        super().__init__(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)
+                 buffer_size: int, comm: mpi4py.MPI.Intracomm, tree_threshold: int):
+        super().__init__(name, bounds, borders, occupancy, buffer_size, comm, tree_threshold)
         self.buffered_agents = []
 
         local_bounds = self.get_local_bounds()
@@ -326,14 +330,13 @@ class SharedCSpace(_SharedContinuousSpace):
         return self.contains(agent)
 
     def get_random_local_pt(self, rng: np.random.Generator) -> ContinuousPoint:
-        """Gets a random location within the local bounds of the
-        section of the global space that the current rank is responsible for.
+        """Gets a random location within the local bounds of this SharedCSpace.
 
         Args:
-            rng: the random number generator used to select the point.
+            rng: the random number generator to use to select the point.
 
         Returns:
-            ContinuousPoint: the random point location
+            ContinuousPoint: the random point
         """
         return self.random_pt(rng)
 
