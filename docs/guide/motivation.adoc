@@ -1,19 +1,12 @@
+:fn-workflow-covid: footnote:[Ozik, J., Wozniak, J. M., Collier, N., Macal, C. M., & Binois, M. (2021). A population data-driven workflow for COVID-19 modeling and learning. The International Journal of High Performance Computing Applications, 35(5), 483–499. https://doi.org/10.1177/10943420211035164]
+:fn-extreme-scale: footnote:[Ozik, J., Collier, N. T., Wozniak, J. M., Macal, C. M., & An, G. (2018). Extreme-Scale Dynamic Exploration of a Distributed Agent-Based Model With the EMEWS Framework. IEEE Transactions on Computational Social Systems, 5(3), 884–895. https://doi.org/10.1109/TCSS.2018.2859189]
+:fn-r4py: footnote:[Collier, N. T., Ozik, J., & Tatara, E. R. (2020). Experiences in Developing a Distributed Agent-based Modeling Toolkit with Python. 2020 IEEE/ACM 9th Workshop on Python for High-Performance and Scientific Computing (PyHPC), 1–12. https://doi.org/10.1109/PyHPC51966.2020.00006]
+
 == Why Repast4py?
 Repast for Python (Repast4Py) is the newest member of the https://repast.github.io[Repast Suite] of free and open source agent-based modeling and simulation software.
 It builds on https://repast.github.io/repast_hpc.html[Repast HPC], and provides the ability to build large, distributed agent-based models (ABMs) that span multiple processing cores. 
-Distributed ABMs enable the development of complex systems models that capture the scale and relevant details of many problems of societal importance #QUESTION: CAN WE INCLUDE REFERENCES HERE? Footnotes, possibly at the end of the section, but if not possible at the end of the document. 
-
-Ozik, J., Wozniak, J. M., Collier, N., Macal, C. M., & Binois, M. (2021). A population data-driven workflow for COVID-19 modeling and learning. The International Journal of High Performance Computing Applications, 35(5), 483–499. https://doi.org/10.1177/10943420211035164
-
-Ozik, J., Collier, N. T., Wozniak, J. M., Macal, C. M., & An, G. (2018). Extreme-Scale Dynamic Exploration of a Distributed Agent-Based Model With the EMEWS Framework. IEEE Transactions on Computational Social Systems, 5(3), 884–895. https://doi.org/10.1109/TCSS.2018.2859189
-
-#
-Where Repast HPC is implemented in C++ and is more HPC expert focused, Repast4Py uses Python and is designed to provide an easier on-ramp for researchers from diverse scientific communities to apply large-scale distributed ABM methods. See our paper on Repast4Py for additional information about the design and implementation #QUESTION: add this ref
-
-Collier, N. T., Ozik, J., & Tatara, E. R. (2020). Experiences in Developing a Distributed Agent-based Modeling Toolkit with Python. 2020 IEEE/ACM 9th Workshop on Python for High-Performance and Scientific Computing (PyHPC), 1–12. https://doi.org/10.1109/PyHPC51966.2020.00006
-
-#. 
-
+Distributed ABMs enable the development of complex systems models that capture the scale and relevant details of many problems of societal importance.{wj}{fn-workflow-covid}{wj}{fn-extreme-scale}
+Where Repast HPC is implemented in C++ and is more HPC expert focused, Repast4Py is a Python package and is designed to provide an easier on-ramp for researchers from diverse scientific communities to apply large-scale distributed ABM methods. See our paper on Repast4Py for additional information about the design and implementation.{wj}{fn-r4py}
 
 === Meeting the era of "Big computing"
 Modern high-performance computing (HPC) capabilities have allowed for large-scale computational modeling and experimentation. 
@@ -22,12 +15,7 @@ Even individual CPUs now typically contain multiple cores, which are capable of 
 Distributed ABMs attempt to leverage this hardware by distributing an individual simulation over multiple processes running in parallel. 
 
 However, in order to take advantage of these increasingly ubiquitous parallel computing resources, a computational model must first be refashioned to run on multiple processors. 
-Adapting a computational model that was built for a single processor to run on multiple processors is a nontrivial endeavor, both conceptually and practically.
-// TODO - Do I want to expand on the difficulties of parallelizing code? 
-//  Difficulties such as: 
-//  - include deciding on the components of a model that can run concurrently, 
-//  - anticipating where bottlenecks and/or failures might occur, and 
-//  - coordinating the message passing between such components.
+Adapting a computational model that was built for a single processor to run on multiple processors can be a nontrivial endeavor, both conceptually and practically.
 Repast4py aims to ease the transition to distributed ABMs by hiding much of the complexity.
 
 
@@ -35,11 +23,10 @@ Repast4py aims to ease the transition to distributed ABMs by hiding much of the 
 A typical agent-based simulation consists of a population of agents each of which performs some behavior each timestep or at some frequency.
 In practice, this is often implemented as a loop over the agent population in which each agent executes its behavior. 
 The time it takes to complete the loop depends on the number of agents and the complexity of the behavior.
-By distributing the agent population across multiple processes running in parallel, each process executes its own loop over only a subset of the population, allowing for larger agent populations and more complex behavior, ideally without increasing the runtime too much. 
+By distributing the agent population across multiple processes running in parallel, each process executes its own loop over only a subset of the population, allowing for larger agent populations and more complex behavior.
 
 === Repast4py and the broader Repast family
-While Repas4Py is meant to make the development of distributed ABMs easier, we encourage  users new to the Repast Suite to look through the different versions of https://repast.github.io/docs.html[Repast] to determine which toolkit is most appropriate for their needs.
-Of note, we recommend users new to agent-based modeling to first check out https://repast.github.io/repast_simphony.html[Repast Simphony] to develop a better understanding of the concepts behind agent-based modeling and learn how to quickly build such models.
+While Repas4Py is meant to make the development of distributed ABMs easier, we encourage users new to the Repast Suite to look through the different versions of https://repast.github.io/docs.html[Repast] to determine which toolkit is most appropriate for their needs. Of note, we recommend users new to agent-based modeling to first check out https://repast.github.io/repast_simphony.html[Repast Simphony] to develop a better understanding of the concepts behind agent-based modeling and learn how to quickly build such models.
 
 The following sections will provide some conceptual background for a Repast-style simulation, describe how such a simulation is distributed across multiple processes with Repast4py, and end with providing a few basic tutorials.
 

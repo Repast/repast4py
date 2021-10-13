@@ -29,7 +29,9 @@ from the command line.
 
 NOTE: This is the canonical way to organize a Repast4Py simulation: agents implemented as classes,
 a _model_-type class to initialize and manage the simulation, a function to handle restoring agents
-as they move between processes, and some additional code to run the simulation from the command line. Of course, in a more complex simulation the responsibilities and behavior of the agent and model classes can be factored out into additional classes, functions, and modules as necessary, but the overall
+as they move between processes, and some additional code to run the simulation from the command line. O
+f course, in a more complex simulation the responsibilities and behavior of the agent and model classes can be 
+factored out into additional classes, functions, and modules as necessary, but the overall
 organization remains the same.
 
 === The Walker Agent
@@ -69,8 +71,8 @@ agent on the process where it was created, a non-negative integer identifying th
 the rank on which the agent is created. Taken together, these three uniquely identify the agent
 across all ranks in the simulation.
 
-The agent's behavior is implemented in the `walk` and the `count_colocations` functions.
-In the `walk` function, the agent randomly chooses an offset from its current location (`self.pt`),
+The agent's behavior is implemented in the `walk` and the `count_colocations` methods.
+In the `walk` method, the agent randomly chooses an offset from its current location (`self.pt`),
 adds those offsets to its current location to create a new location, and then moves to that new
 location on the grid. The moved-to-location becomes the agent's new current location.
 
@@ -78,7 +80,7 @@ location on the grid. The moved-to-location becomes the agent's new current loca
 
 [source,python,numbered]
 ----
-from repast4py.random import default_rng as rng    #<1>
+from repast4py import random    #<1>
 from repast4py.space import DiscretePoint
 ...
 OFFSETS = np.array([-1, 1])
@@ -87,30 +89,30 @@ def walk(self, grid: SharedGrid):    #<2>
     # choose two elements from the OFFSET array
     # to select the direction to walk in the
     # x and y dimensions
-    xy_dirs = rng.choice(Walker.OFFSETS, size=2)    #<3>
+    xy_dirs = random.default_rng.choice(Walker.OFFSETS, size=2)    #<3>
     self.pt = grid.move(self, DiscretePoint(self.pt.x + xy_dirs[0], 
                         self.pt.y + xy_dirs[1], 0)) #<4>
 ----
-<1> `repast4py.random.default_rng` is an instance of `numpy.random.Generator`. See the numpy
-api reference: https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.choice.html#numpy.random.Generator.choice for more details.
+<1> `repast4py.random` contains an instance of a `numpy.random.Generator` as the module level variable
+`default_rng`, as well as a function for intializing this variable. See the numpy https://numpy.org/doc/stable/reference/random/generator.html[random.Generator] api reference for more details.
 <2> All the walker agents move on the same grid. An instance of this grid, a `repast4py.space.SharedGrid` object is passed in.
-<3> The `numpy.random.Generator.choice` randomly chooses `size` number of elements
+<3> The https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.choice.html#numpy.random.Generator.choice[`numpy.random.Generator.choice`] randomly chooses `size` number of elements
 from a numpy array. In this case randomly selecting either -1 or 1 from `OFFSETS`. The
 two chosen values correspond to the direction to move along the x and y dimensions, respectively.
 <4> `SharedGrid.move` moves an agent to a location in the grid and returns the destination location. Grid locations are represented by a `repast4py.space.DiscretePoint` and an instance of
-that is passed to the `move` method.
+that with updated new x and y coordinates is passed to the `move` method.
 
 
 NOTE: Repast4Py provides a default random number generator in `repast4py.random.default_rng`. This
-random number generator is initialized when the module is imported with the current time as the seed.
-The seed can also be set by specifying a `random.seed` model input parameter and using Repast4Py's model input parameters utility code <TODO: add link to that section here>. `random.default_rng` is an instance of `numpy.random.Generator`. See the numpy Generator API docs for
-more information on the available distributions and sampling functions.
-
-The `count_location` method gets the number of other agents at the current location, and
-updates the agent's running total of other agents met as well as a `MeetLog` dataclass
-that is used to log the total number of meets and the minimum and maximum.
+random number generator is initialized when the module is imported, with the current time as the seed.
+The seed can also be set by specifying a `random.seed` model input parameter and using Repast4Py's model input parameters utility code. (See <<_running_the_simulation, Running the Simulation>> for more details.) `random.default_rng` is an instance of `numpy.random.Generator`. See the numpy https://numpy.org/doc/stable/reference/random/generator.html[random.Generator] api reference for more information on the available distributions and sampling functions.
 
 ==== Logging the Walker
+
+The `count_colocations` method gets the number of other agents at the current location, and
+updates both the agent's individual running total of other agents met, as well as a `MeetLog` dataclass
+instance that is used to log the total number of meets and the minimum and maximum.
+
 
 [source,python,numbered]
 ----
@@ -170,24 +172,25 @@ should encapsulate any dynamic agent state.
 
 === The Model Class
 
-The Model class encapsulates the simulation and is responsible for initialization. It  schedules events, creates agents and the grid the agents inhabit, and logging. In addition, the scheduled events
-that drive the simulation forward are methods of the Model class. 
+The Model class encapsulates the simulation and is responsible for initialization. It schedules events, 
+creates agents and the grid the agents inhabit, and manages logging. In addition, the scheduled events
+that drive the simulation forward are methods of the `Model` class. 
 
 In the `Model` constructor, we create the simulation schedule, the context that holds
-our agents, the grid on which they move, the agents themselves, and the _loggers_ that
+our agents, the grid on which they move, the agents themselves, and the loggers that
 we use to log various simulation statistics to files. We begin with the constructor
 signature, and the schedule runner creation. 
 
 ==== Scheduling Events
 
 The SharedScheduledRunner class encapsulates a dynamic schedule of executable events shared and
-synchronized across processes. Events are added to the schedule for execution at a particular "tick".
-The first valid tick is 0. Events will be executed in "tick" order, earliest before latest. Events
+synchronized across processes. Events are added to the schedule for execution at a particular _tick_.
+The first valid tick is 0. Events will be executed in tick order, earliest before latest. Events
 scheduled for the same tick will be executed in the order in which they
 were added. If during the execution of a tick, an event is scheduled
 before the executing tick (i.e., scheduled to occur in the past) then
 that event is ignored. The schedule is synchronized across process ranks
-by determining the global cross-process minimum next scheduled even time and executing events
+by determining the global cross-process minimum next scheduled event time and executing events
 for that time. In this way, no schedule runs ahead of any other. In practice an
 event is a no-argument function or method.
 
@@ -205,14 +208,14 @@ def __init__(self, comm: MPI.Intracomm, params: Dict):    #<1>
 <1> The Model constructor takes an MPI communicator and a dictionary of model
 input parameters as arguments.
 <2> Before any events can be scheduled, the schedule runner must be initialized.
-<3> Repeating events are scheduled with `schedule.repeating_event`. The first argument
-is the start tick, and the second is the frequency for repeating. This schedules `Model.step`
-on this instance of the model to execute starting at tick 1 and then every tick thereafter. 
+<3> Schedules `Model.step` on this instance of the model to execute starting at tick 1 and then every 
+tick thereafter. Repeating events are scheduled with `schedule.repeating_event`. The first argument
+is the start tick, and the second is the frequency for repeating.
 <4> `schedule_stop` schedules the tick at which the simulation should stop. At this tick,
 events will no longer be popped off the schedule and executed.
 <5> `schedule_end_event` can be used to schedule methods that perform some sort of 
 _clean up_ type operation when the simulation ends, closing a log file, for example.
-This is called at the time specified with `schedule_stop`.
+This is called at the time specified in the call to `schedule_stop`.
 
 TIP: Once the default scheduler runner has been initialized with `schedule.init_schedule_runner`, you can get a reference to it with `schedule.runner()`. See the schedule model API documentation for
 more information on different ways to schedule events (methods and functions).
@@ -221,7 +224,7 @@ IMPORTANT: A simulation stopping time must be set with `schedule_stop`. Without 
 the simulation will continue to run, seeming to hang if there are no events to execute, or
 continuing to execute any scheduled events without stopping. The stopping time does not
 need to be set during initialization, but can be set during a simulation run when a
-stopping condition is reached, for example.
+stopping condition is reached.
 
 ==== Creating the Context and Grid
 
@@ -235,32 +238,35 @@ from repast4py import context as ctx
 
 # create the context to hold the agents and manage cross process
 # synchronization
-self.context = ctx.SharedContext(comm)
+self.context = ctx.SharedContext(comm)    <1>
 # create a bounding box equal to the size of the entire global world grid
-box = space.BoundingBox(0, params['world.width'], 0, params['world.height'], 0, 0)    #<1>
+box = space.BoundingBox(0, params['world.width'], 0, params['world.height'], 0, 0)    #<2>
 # create a SharedGrid of 'box' size with sticky borders that allows multiple agents
 # in each grid location.
 self.grid = space.SharedGrid(name='grid', bounds=box, borders=space.BorderType.Sticky,
                                 occupancy=space.OccupancyType.Multiple, 
-                                buffersize=2, comm=comm)    #<2>
-self.context.add_projection(self.grid)    #<3>
+                                buffer_size=2, comm=comm)    #<3>
+self.context.add_projection(self.grid)    #<4>
 ----
-<1> A BoundingBox is used to initialize the size of Repast4Py's cartesian spaces. Its
+<1> Creates the xref:overview.adoc#_contexts_and_projections[`SharedContext`] for this
+simulation. The `SharedContext` contains the population of agents and manages
+synchronization of the projections across ranks.
+<2> A BoundingBox is used to initialize the size of Repast4Py's cartesian spaces. Its
 arguments are the minimum x coordinate, the extent of the x dimension, and then the same for
 the y and z dimensions. Here we create a 2D box (the z extent is 0) starting at (0,0) and
 extending for `params['world.width]` in the x dimension and `params['world.height']` in
 the y dimension.
-<2> `space.SharedGrid` takes a name, its bounds, its border, and occupancy types, as well
+<3> `space.SharedGrid` takes a name, its bounds, its border, and occupancy types, as well
 as a buffer size, and a communicator as arguments. See the `SharedGrid` API documentation
 for a description of these arguments. The concept of a buffer was described in the
 xref:overview.adoc#_distributed_simulation[Distributed Simulation] section.
-<3> Once a xref:overview.adoc#_contexts_and_projections[projection] has been created
+<4> Once a xref:overview.adoc#_contexts_and_projections[projection] has been created
 it must be added to the context so that it can be properly synchronized across
 processes.
 
 ==== Creating the Agents
 
-When creating the agents, we create the number of Walker agents as specified in the `walker.count`
+When creating the agents, we create the number of Walker agents specified in the `walker.count`
 input parameter, assigning each a random location. 
 
 [source,python,numbered]
@@ -274,11 +280,11 @@ for i in range(params['walker.count']):
     self.context.add(walker)    #<3>
     self.grid.move(walker, pt)  #<4>
 ----
-<1> Each rank is responsible for some subsection of the total global grid, `get_random_local`
-gets random location within those local bounds.
-<2> Create the Walker, passing it an id, its starting rank, and its current location. See
+<1> Gets random location within the grid's local bounds. Each rank is responsible for some subsection of the 
+total global grid and `get_random_local_pt` gets a random location within those local bounds.
+<2> Creates the Walker, passing it an id, its starting rank, and its current location. See
 <<_the_walker_agent>> for more.
-<3> Once created, an agent must be added to the context in order to be properly synchronized
+<3> Adds the new Walker to the context. Once created, an agent must be added to the context in order to be properly synchronized
 and iterated through as part of the agent population.
 <4> Move the walker to its starting location.
 
@@ -296,11 +302,10 @@ concatenates these rows across processes and writes them to a file. This is usef
 for logging events and individual agent attributes. See the `repast4py.logging.TabularLogger`
 API for more information.
 
-2. Reducing-type logging where the user supplies the aggregate values to be logged
+2. Reduce-type logging where the user supplies the aggregate values to be logged
 in the form of a Python `dataclasses.dataclass` and Repast4Py performs a cross-process
-reduce-type operation on those values. For example, summing each rank's total number of
-agent colocations (_meets_) to create an aggregate total number of _meets_. Here, the user
-creates a _logger_, which is responsible for logging the dataclass field(s)
+reduce-type (e.g., summation) operation on those values. To use this
+type of logging, you create a _logger_, which is responsible for logging the dataclass field(s)
 and performing the reduction operation on the field(s). These loggers are then added to
 a `logging.ReducingDataSet`. Calling `logging.ReducingDataSet.log(tick)` will log the
 current value of the dataclass field(s) in the loggers and perform the cross-process
@@ -331,7 +336,7 @@ loggers += logging.create_loggers(self.meet_log, op=MPI.MAX,
 self.data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, 
                                         params['meet_log_file'])    #<7>
 ----
-<1> MeetLog is the dataclass used by the aggregate reducing logging. As we saw in
+<1> MeetLog is the dataclass used by the aggregate reduce logging. As we saw in
 <<_logging_the_walker>> each agent updates the a shared MeetLog instance as appropriate in
 its `count_colocations` method. 
 <2> The `TabularLogger` class is used for tabular-style logging. The constructor
@@ -341,7 +346,7 @@ agent meet counts.
 <3> Creates the `MeetLog` object that contains the aggregate colocation statistics
 that we want to log.
 <4> Creates a logger that uses `self.meet_log` as the source of the data to log,
-performing a cross process summation of that data to log, and logs the value 
+performing a cross process summation (`op=MPI.SUM`) of that data to log, and logs the value 
 of the `total` field in `self.meet_log`. The `names` argument specifies 
 the fields to log as a dictionary where the key is the dataclass field to log, and
 the value is the column header text for that value. 
@@ -351,7 +356,7 @@ in 4.
 <6> Creates a logger for the `self.meet_log.max` field, maximizing the value
 across processes. The created logger is added to the list of loggers created
 in 4.
-<7> Creates a `logging.ReducingDataSet` from the list of loggers where `params['meet_log_file]`
+<7> Creates a `logging.ReducingDataSet` from the list of loggers. `params['meet_log_file]`
 is the name of the file to log to.
 
 
@@ -367,12 +372,12 @@ self.data_set.log(0)    #<2>
 self.meet_log.max_meets = self.meet_log.min_meets = self.meet_log.total_meets = 0   #<3>
 self.log_agents()    #<4>
 ----
-<1> Update `self.meet_log` with each agents colocation data by calling `count_colocations`
+<1> Updates `self.meet_log` with each agents colocation data by calling `count_colocations`
 on each agent. See <<_logging_the_walker>> for the details.
-<2> Log the current values of the `self.meet_log` by calling `log` on the `self.data_set` `ReducingDataSet`.
+<2> Logs the current values of the `self.meet_log` by calling `log` on the `self.data_set` `ReducingDataSet`.
 The `log` method takes a floating point argument that specifies the tick at which the data was logged (in this case tick 0). 
-<3> Reset the `self.meet_log` values back to 0 because we want to log the data per tick, rather than in aggregate.
-<4> Log the individual agent meet counts. See the method definition below.
+<3> Resets the `self.meet_log` values back to 0 given that we want to log the data per tick, rather than a running total.
+<4> Logs the individual agent meet counts. See the method definition below.
 
 The `log_agents` method logs each agent's `meet_count` using the
 `self.agent_logger TabularLogger`.
@@ -381,25 +386,27 @@ The `log_agents` method logs each agent's `meet_count` using the
 ----
 def log_agents(self):
     tick = self.runner.schedule.tick    #<1>
-    for walker in self.context.agents():
+    for walker in self.context.agents(): #<2>
         self.agent_logger.log_row(tick, walker.id, walker.uid_rank, 
-                                  walker.meet_count)    #<2>
+                                  walker.meet_count)    #<3>
 
-    self.agent_logger.write()   #<3>
+    self.agent_logger.write()   #<4>
 ----
 <1> Gets the current tick value
-<2> For each Walker, log the current tick, the Walker's id, its unique id rank,
+<2> Iterates over all the local agents in the context. `SharedContext.agents()` returns
+an iterator over the local agent population.
+<3> For each Walker, log the current tick, the Walker's id, its unique id rank,
 and its `meet_count` using the `log_row` method. Each call to `log_row` becomes
 a row in the tabular output.
-<3> Write the currently logged rows to a file. It is not strictly necessary
+<4> Writes the currently logged rows to a file. It is not strictly necessary
 to call `write` every time rows are logged as the rows will accumulate until `write`
 is eventually called.
 
 ==== Scheduled Methods
 
 In <<_scheduling_events>> we saw how to schedule events that repeat and that execute
-when the simulation ends. In practice, the events to be scheduled are methods in the
-model class. The methods are called according to how they are scheduled, driving the
+when the simulation ends. In this model, the events to be scheduled are methods of the
+`Model` class. The methods are called according to how they are scheduled, driving the
 simulation forward. The first of these, the `step` method, is scheduled to execute starting
 at tick 1 and then every tick thereafter.
 
@@ -420,18 +427,19 @@ def step(self):
     # clear the meet log counts for the next tick
     self.meet_log.max_meets = self.meet_log.min_meets = self.meet_log.total_meets = 0    #<5>
 ----
-<1> Call `walk` on each `Walker` agent. `self.context.agents` returns an iterator over all the 
+<1> Calls `walk` on each `Walker` agent. `self.context.agents` returns an iterator over all the 
 agents in the model. See <<_walking_the_walker>> for more information on the `walk` method,
 and the `SharedContext` API documenation for more information on the `agents` method.
-<2> Synchronize the state of the simulation across processes using the `restore_walker`
+<2> Synchronizes the state of the simulation across processes using the `restore_walker`
 function to restore any `Walkers` that have moved processes. See <<_restoring_walkers>>
 for more information.
-<3> Update `self.meet_log` with each agent's colocation data by calling `count_colocations`
+<3> Updates `self.meet_log` with each agent's colocation data by calling `count_colocations`
 on each `Walker`. See <<_logging_the_walker>> for the details.
-<4> Log the current values of the `self.meet_log` by calling `log` on the `self.data_set` `ReducingDataSet`.
+<4> Logs the current values of the `self.meet_log` by calling `log` on the `self.data_set` `ReducingDataSet`.
 As we saw earlier, the `log` method takes a floating point argument that specifies the tick at which the data was logged. 
 In this case, we use the current tick value.
-<5> Reset the `self.meet_log` values back to 0 because we want to log the data per tick, rather than in aggregate.
+<5> Resets the `self.meet_log` values back to 0 because we want to log the data per tick, rather than
+a running total.
 
 IMPORTANT: Call `synchronize` on your `SharedContext` whenever you need to synchronize
 the state of the simulation across processes. For example, when agents moving on a
@@ -445,7 +453,7 @@ of `log_agents` in <<_initializing_logging>> for more information.
 
 The final event (`self.runner.schedule_end_event(self.at_end)`) is scheduled to call
 `Model.at_end` when the simulation ends. This method closes the two logs, 
-ensuring that any remaining unwritten data is written to their respective
+insuring that any remaining unwritten data is written to their respective
 files.
 
 [source,python,numbered]
@@ -498,9 +506,9 @@ method.
 <3> The first element of the tuple is the Walker's unique id. 
 <4> Creates a `DiscretePoint` from point coordinate array. This
 is the current location of the `Walker` being restored.
-<5> Check if the `Walker` unique id is in the cache. If it is, retrieve it.
+<5> Checks if the `Walker` unique id is in the cache. If it is, then retrieve that `Walker`.
 <6> If the unique id is not in the cache, then create a `Walker`.
-<7> Update the `Walker` state with the `meet_count` and point
+<7> Updates the `Walker` state with the `meet_count` and point
 data. 
 
 === Running the Simulation
@@ -511,6 +519,17 @@ The simulation is run from the command line:
 
 Here we are running the simulation with 4 process ranks and the model input parameters are
 in the `examples/rndwalk/random_walk_model.yaml` file.
+
+[source,yaml,numbered]
+----
+random.seed: 42
+stop.at: 50
+walker.count: 1000
+world.width: 2000
+world.height: 2000
+meet_log_file: 'output/meet_log.csv'
+agent_log_file: 'output/agent_log.csv'
+----
 
 An `if __name__ == '__main__'` code block is used to parse the input parameters and
 run the simulation. The `repast4py.parameters` module contains utility functions
@@ -526,8 +545,8 @@ if __name__ == "__main__":
     run(params)
 ----
 <1> Creates the default command line argument parser.
-<2> Parse the command line into its arguments using that default parser
-<3> Create the model input parameters dictionary from those arguments using
+<2> Parses the command line into its arguments using that default parser
+<3> Creates the model input parameters dictionary from those arguments using
 `parameters.init_params`.
 
 The default command line parser created with `parameters.create_args_parser` accepts
@@ -560,9 +579,9 @@ parameters.init_params(args.parameters_file, args.parameters)
 num_agents = parameters.params['num.agents']
 ----
 
-Lastly, if the parameters file or the json input contains a parameter named `random.seed`,
+If the parameters file or the json input contains a parameter named `random.seed`,
 the default random number generator (i.e., `repast4py.random.default_rng`) is initialized
-with that seed. See the `repast4py.parameters` API documenation for more information.
+with that seed. See the `repast4py.parameters` API documentation for more information.
 
 Lastly we have a simple `run` function that creates the `Model` class and calls its
 `start` method, which starts the simulation by starting schedule execution. This `run` function is called
