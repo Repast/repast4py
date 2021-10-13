@@ -1,4 +1,4 @@
-== Cross-Processes Code Requirements
+== Cross-Process Code Requirements
 We've seen in the <<_distributed_simulation, Distributed Simulation>> section how ghost agents
 (non-local copies) are used 
 to stitch a simulation together across processes and that when agents move out of their local
