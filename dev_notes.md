@@ -104,7 +104,7 @@ pages, see `https://github.com/owenh000/asciidoctor-multipage`
 
 ```
 cd docs/guide
-asciidoctor user_guilde.adoc
+asciidoctor user_guide.adoc
 ```
 
 This generates a user_guide.html that can be viewed in a browser.
