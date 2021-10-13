@@ -16,7 +16,9 @@ include::overview.adoc[]
 
 include::distributing_agents.adoc[]
 
-include::model_101.adoc[]
+include::tutorial_random_walk.adoc[]
+
+include::tutorial_network.adoc[]
 
 
 

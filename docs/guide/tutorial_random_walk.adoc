@@ -1,4 +1,4 @@
-== How to Write a Repast4Py Simulation
+== Tutorial 1 - A Simple Model
 
 #QUESTION: Can we include a pointer to where the model code is in the distribution/repository?#
 
