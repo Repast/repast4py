@@ -337,7 +337,7 @@ self.data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD,
                                         params['meet_log_file'])    #<7>
 ----
 <1> MeetLog is the dataclass used by the aggregate reduce logging. As we saw in
-<<_logging_the_walker>> each agent updates the a shared MeetLog instance as appropriate in
+<<_logging_the_walker>> each agent updates the shared MeetLog instance as appropriate in
 its `count_colocations` method. 
 <2> The `TabularLogger` class is used for tabular-style logging. The constructor
 arguments are the communicator over which to concatenate all the table's rows and
