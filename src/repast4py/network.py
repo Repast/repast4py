@@ -4,6 +4,12 @@
 # By: Argonne National Laboratory
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
 
+"""
+The network module contains classes and functions for simulating networks (i.e., graphs) where
+agents are the nodes in the network. The network code is built-on the `networkx <https://networkx.org>`_
+python package.
+"""
+
 from mpi4py import MPI
 from dataclasses import dataclass
 import numpy as np
@@ -12,11 +18,8 @@ from itertools import chain
 import re
 import math
 import json
-import array
-from dataclasses import dataclass
 
 from typing import List, Iterable, Callable, Tuple, Dict
-
 
 from ._core import Agent
 from .core import AgentManager
@@ -32,23 +35,26 @@ class GhostedEdge:
 
 class SharedNetwork:
     """A network that can be shared across multiple process ranks through
-    ghost nodes and edges.
+    ghost nodes and edges. This is the base class for the Directed and Undirected
+    SharedNetwork classes. This class should **NOT** be instantiated directly by users.
 
-    This wraps a networkx Graph object and delegates all the network
+    This wraps a `networkx <https://networkx.org>`_ Graph object and delegates all the network
     related operations to it. That Graph is exposed as the `graph`
-    attribute. See the networkx Graph documentation for more information
-    on the network functionality that it provides. The network structure
+    attribute. See the `networkx <https://networkx.org>`_ Graph documentation for more information
+    on the network functionality that it provides. **The network structure
     should _NOT_ be changed using the networkx functions and methods
-    (adding and removing nodes, for example). Use this class'
+    (adding and removing nodes, for example)**. Use this class'
     methods for manipulating the network structure.
 
     Attributes:
-        graph (networkx Graph): a graph object that provides the network functionality.
+        graph (networkx Graph): a `networkx <https://networkx.org>`_ graph object that
+            provides the network functionality.
 
     Args:
         name: the name of the SharedNetwork
         comm: the communicator over which this SharedNetwork is distributed
-        graph (networkx Graph): the networkx graph object that provides the network functionality.
+        graph (networkx Graph): the `networkx <https://networkx.org>`_ graph object that provides the network
+            functionality.
     """
 
     def __init__(self, name: str, comm: MPI.Comm, graph: nx.Graph):
@@ -110,7 +116,7 @@ class SharedNetwork:
         self.graph.add_node(agent)
 
     def add_nodes(self, agents: List[Agent]):
-        """Adds each agent in specified list of agents as
+        """Adds each agent in the specified list of agents as
         nodes in the network.
 
         Args:
@@ -125,8 +131,7 @@ class SharedNetwork:
             agent: the agent to remove
 
         Raises:
-            NetworkXError if the agent is not a node in this
-            SharedNetwork.
+            NetworkXError: if the agent is not a node in this SharedNetwork.
         """
         self.graph.remove_node(agent)
 
@@ -142,7 +147,7 @@ class SharedNetwork:
         Examples:
             Update the weight attribute for the edge between agent1 and agent2.
 
-            >>> g.add_edge(agent1, agent2, weight=10.1)
+            >>> g.update_edge(agent1, agent2, weight=10.1)
         """
         edge_key = self._get_edge_key((u_agent, v_agent))
         for k, v in kwattr.items():
@@ -153,14 +158,13 @@ class SharedNetwork:
             self.edges_to_update.add(edge_key)
 
     def remove_edge(self, u_agent: Agent, v_agent: Agent):
-        """Removes the edge between u_agent and v_agent from
-        this SharedNetwork.
+        """Removes the edge between u_agent and v_agent.
 
         Args:
-            u_agent: the u agent.
-            v_agent: the v agent.
+            u_agent: the u node of the edge.
+            v_agent: the v node of the edge.
         Raises:
-            NetworkXError if there is no edge between u_agent and v_agent.
+            NetworkXError: if there is no edge between u_agent and v_agent.
         """
         self.graph.remove_edge(u_agent, v_agent)
 
@@ -192,6 +196,10 @@ class SharedNetwork:
 
     def contains_edge(self, u_agent: Agent, v_agent: Agent) -> bool:
         """Gets whether or not an edge exists between the u_agent and v_agent.
+
+        Args:
+            u_agent: the u node of the edge.
+            v_agent: the v node of the edge.
 
         Returns:
             True if an edge exists, otherwise False.
@@ -511,12 +519,12 @@ class SharedNetwork:
 class UndirectedSharedNetwork(SharedNetwork):
     """Encapsulates an undirected network shared over multiple processes.
 
-    This wraps a networkx Graph object and delegates all the network
+    This wraps a `networkx <https://networkx.org>`_ Graph object and delegates all the network
     related operations to it. That Graph is exposed as the `graph`
-    attribute. See the networkx Graph documentation for more information
-    on the network functionality that it provides. The network structure
-    should _NOT_ be changed using the networkx functions and methods
-    (adding and removing nodes, for example). Use this class'
+    attribute. See the `networkx <https://networkx.org>`_ Graph documentation for more information
+    on the network functionality that it provides. **The network structure
+    should NOT be changed using the networkx functions and methods
+    (adding and removing nodes, for example).** Use this class'
     methods for manipulating the network structure.
 
     Attributes:
@@ -537,7 +545,7 @@ class UndirectedSharedNetwork(SharedNetwork):
 
     @property
     def is_directed(self) -> bool:
-        """Gets whether or not this network is directory. Returns False
+        """Gets whether or not this network is directed. Returns False
 
         Returns:
             False
@@ -589,7 +597,7 @@ class UndirectedSharedNetwork(SharedNetwork):
         self.canonical_edge_keys.pop((v_agent, u_agent))
 
     def add_edge(self, u_agent: Agent, v_agent: Agent, **kwattr):
-        """Adds an edge betwwn u_agent and v_agent.
+        """Adds an edge between u_agent and v_agent.
 
         If the u and v agents are not existing nodes in the network, they
         will be added. Edge attributes can be added using keyword
@@ -643,6 +651,9 @@ class UndirectedSharedNetwork(SharedNetwork):
     def num_edges(self, agent: Agent) -> int:
         """Gets the number of edges that contain the specified agent.
 
+        Args:
+            agent: agent whose edge will be counted
+
         Returns:
             The number of edges that contain the specified agent
         """
@@ -650,19 +661,18 @@ class UndirectedSharedNetwork(SharedNetwork):
 
 
 class DirectedSharedNetwork(SharedNetwork):
-    """Encapsulates a directed network shared over multiple processes.
+    """Encapsulates a directed network shared over multiple process ranks.
 
-    This wraps a networkx DiGraph object and delegates all the network
+    This wraps a `networkx <https://networkx.org>`_ DiGraph object and delegates all the network
     related operations to it. That Graph is exposed as the `graph`
-    attribute. See the networkx Graph documentation for more information
-    on the network functionality that it provides. The network structure
-    should _NOT_ be changed using the networkx functions and methods
-    (adding and removing nodes, for example). Use this class' parent class
+    attribute. See the `networkx <https://networkx.org>`_ Graph documentation for more information
+    on the network functionality that it provides. **The network structure
+    must NOT be changed using the networkx functions and methods
+    (adding and removing nodes, for example)**. Use this class'
     methods for manipulating the network structure.
 
     Attributes:
-        graph (networkx.DiGraph): a network graph object responsible for
-        network operations.
+        graph (networkx.DiGraph): a `networkx <https://networkx.org>`_ graph object wrapped by this class.
         comm (MPI.Comm): the communicator over which the network is shared.
         names (str): the name of this network.
 
@@ -676,7 +686,10 @@ class DirectedSharedNetwork(SharedNetwork):
 
     @property
     def is_directed(self) -> bool:
-        """Returns True
+        """Gets whether or not this network is directed.
+
+        Returns:
+            True
         """
         return True
 
@@ -726,7 +739,7 @@ class DirectedSharedNetwork(SharedNetwork):
         pass
 
     def add_edge(self, u_agent: Agent, v_agent: Agent, **kwattr):
-        """Adds an edge betwwn u_agent and v_agent.
+        """Adds an edge beteen u_agent and v_agent.
 
         If the u and v agents are not existing nodes in the network, they
         will be added. Edge attributes can be added using keyword
@@ -922,53 +935,52 @@ def _create_edges(graph, graph_data: GraphData):
 def read_network(fpath: str, ctx, create_agent: Callable, restore_agent: Callable):
     """Creates and initializes the network described in the specified file.
 
-    The network will be created and added to the specified context as a projections. The nodes
+    The network will be created and added to the specified context as a projection. The nodes
     defined in the file will be created as agents. Those agents with a local rank will be added
     to the specified context, and those remote agents that participate in an edge with a local
     agent with be added as ghost agents.
 
-    The format of the file is as follows. The first line consists of a network id followed by a space followed by 0 or 1, where
+    The format of the file is as follows. The first line consists of a network id (name)
+    followed by a space followed by 0 or 1, where
     0 indicates that the network is undirected and 1 that it is directed. This first line is followed the node descriptions.
-    Each line defines a node and consists at least 3 space separated elements. These 3 are the node id, the agent type,
+    Each node description line defines a node and consists at least 3 space separated elements.
+    These 3 are the node id, the agent type,
     and the rank on which the agent should be created. These 3 are optionally followed by a json dictionary string
     containing any attributes of that agent. The node descriptions should be followed by "EDGES" to indicate
-    that the edge descriptions follow in the remaining lines. Each line defines an edge and consists of at least 2
+    that the edge descriptions follow in the remaining lines. Each edge description line defines an edge and consists of at least 2
     space separated elements. These two are the node ids of the u and v components of the edge. An optional 3rd
-    element, a json dictionary, defines any attributes (e.g., weight) to associate with that edge. For example,
+    element, a json dictionary, defines any attributes (e.g., weight) to associate with that edge. For example::
 
-    ```
-    friend_network 0
-    1 0 1 {"age": 23}
-    2 0 1 {"age" : 24}
-    3 0 0 {"age" : 30}
-    EDGES
-    1 2 {"weight": 0.5}
-    3 1 {"weight": 0.75}
-    ```
+        friend_network 0
+        1 0 1 {"age": 23}
+        2 0 1 {"age" : 24}
+        3 0 0 {"age" : 30}
+        EDGES
+        1 2 {"weight": 0.5}
+        3 1 {"weight": 0.75}
 
-    Or without node or edge attributes:
+    Without node or edge attributes:::
 
-    ```
-    friend_network 0
-    1 0 1
-    2 0 1
-    3 0 0
-    EDGES
-    1 2
-    3 1
-    ```
+        friend_network 0
+        1 0 1
+        2 0 1
+        3 0 0
+        EDGES
+        1 2
+        3 1
 
-    When creating the agents from the node definitions, the node id, the type and the rank elements must be used to
-    create the agents' unique ids.
+    The node id, the type and the rank elements are passed to a user specified Callable to create the agents.
+    In that Callable, these 3 elements must be used to create the agents' unique ids
 
     Args:
         fpath: the path to the network description file.
         ctx (repast4py.context.SharedContext): the context to add the agents to
-        create_agent: a function or method used to create an agent from a node description.
-            The signatured must be [node_id (int), agent_type (int), rank (int), agent_attributes (**kwargs)]
+        create_agent: a Callable used to create an agent from a node description.
+            The Callable must have the following signature :samp:`(node_id: int, agent_type: int, rank: int, **agent_attributes)`
             and return an agent.
-        restore_agent: the standard function or method used to deserialize agents from agent data sent from
-            another rank, that is, one that can take the result of an agent save() and return an agent.
+        restore_agent: a Callable used to deserialize agents from agent data sent from
+            another rank, that is, one that takes the tuple returned by an agent's save()
+            method and returns an agent.
     """
     with open(fpath) as f_in:
         gid, is_directed = _parse_graph_desc(f_in.readline())
@@ -1076,50 +1088,56 @@ def _metis_partition(graph: nx.Graph, network_name: str, fpath: str, n_ranks: in
 
 def write_network(graph: nx.Graph, network_name: str, fpath: str, n_ranks: int, **partition_args):
     """
-    Partitions a network over the specified process ranks and writes the specified network to a file
-    in a format that can be read by the :func:repast4py.network.read_network function. The intention is
+    Partitions a specified network over the specified process ranks and writes that network to a file
+    in a format that can be read by the :func:`repast4py.network.read_network` function. The intention is
     that `write_network` is used to create a distributed partitioned graph file outside of a running
     simulation, and once created that file can then be read during simulation initialization to create
-     a repast4py network.
+    a repast4py network.
 
-    The format of the file is as follows. The first line consists of a network anem followed by a space followed by 0 or 1, where
+    The format of the file is as follows. The first line consists of a network id (name)
+    followed by a space followed by 0 or 1, where
     0 indicates that the network is undirected and 1 that it is directed. This first line is followed the node descriptions.
-    Each line defines a node and consists at least 3 space separated elements. These 3 are the node id, the agent type id,
+    Each node description line defines a node and consists at least 3 space separated elements.
+    These 3 are the node id, the agent type,
     and the rank on which the agent should be created. These 3 are optionally followed by a json dictionary string
-    containing any attributes of that agent. The node descriptions is followed by a line containing "EDGES" to indicate
-    that the edge descriptions follow in the remaining lines. Each line defines an edge and consists of at least 2
+    containing any attributes of that agent. The node descriptions should be followed by "EDGES" to indicate
+    that the edge descriptions follow in the remaining lines. Each edge description line defines an edge and consists of at least 2
     space separated elements. These two are the node ids of the u and v components of the edge. An optional 3rd
-    element, a json dictionary, defines any attributes (e.g., weight) to associate with that edge. If a node in
-    the specified graph contains an 'agent_type' attribute  then that will written as the agent type id,
-    otherwise the type is 0.
+    element, a json dictionary, defines any attributes (e.g., weight) to associate with that edge. If a node in the graph
+    contains an 'agent_type' attribute then that will written as the agent type id for that node, otherwise the type is 0.
 
     The network is partitioned across process ranks by assigning each node to a rank. A `partition_method`
     can be specified in the `partition_args` and can be one of 'random' or 'metis'. If no `partition_method`
     is defined, then the method defaults to random where the nodes will be uniformly distributed among the process
     ranks without any load balancing. A partition method of `metis` will use the metis
     load balancer to allocate nodes to ranks. Metis is not included with repast4py and must be installed
-    seperately.  See the `networkx metis docs <https://networkx-metis.readthedocs.io/en/latest/index.html>`__ for
+    separately.  See the `networkx metis docs <https://networkx-metis.readthedocs.io/en/latest/index.html>`__ for
     more information on installation and nxmetis. Note that installing from source or github may be necessary.
 
     Args:
         graph: the graph to partition and write out.
-        network_name: the id / name of the network to partition
-        fpath: the path of the file to write the partitioned network out to
+        network_name: the id / name  to assign to the partitioned network
+        fpath: the path of the file to write the partitioned network to
         n_ranks: the number of ranks to partition the network over
-        partition_args: named arguments that determine how the graph will be partitioned. The `partition_method`
-            argument is used to determine the partition method ('random' or 'metis'). Additional arguments are
-            fowared to the partition method itself. In the 'random' case, a `rng` argument specifies the random number
-            generator use in the random partitioning. Valid values are any numpy.random.Generator instance or 'default'
-            to use the repast4py.random.default_rng. If no 'rng' is specified then by default the
-            repast4py.random.default_rng is used. In the 'metis' case, the partition_args are forwared to the
-            nxmetis' partition function. The various arguments to that can be found in the
-            `networkx metis reference <https://networkx-metis.readthedocs.io/en/latest/reference/generated/nxmetis.partition.html>`__.
+        partition_args: keyword arguments that determine how the graph will be partitioned.
+
+            * The `partition_method` keyword is used to determine the partition method ('random' or 'metis').
+
+            If `partition_method` is 'random':
+                * `rng` specifies the random number generator to use in the random partitioning. Valid values are any numpy.random.Generator instance or 'default' to use the repast4py.random.default_rng. If no 'rng' is specified then by default the repast4py.random.default_rng is used.
+
+            If `partition_method` is 'metis':
+                * The partition_args are forwared to the nxmetis' partition function. The various arguments to that can be found in the `networkx metis reference <https://networkx-metis.readthedocs.io/en/latest/reference/generated/nxmetis.partition.html>`__.
 
     Examples:
+        Random Patitioning
+
         >>> import networkx as nx
         >>> g = nx.generators.dual_barabasi_albert_graph(60, 2, 1, 0.25)
         >>> fname = './test_data/gen_net_test.txt'
         >>> write_network(g, "test", fname, 3, partition_method='random', rng='default')
+
+        Metis Partitioning
 
         >>> g = nx.complete_graph(60)
         >>> options = nxmetis.types.MetisOptions(seed=1)

@@ -3,6 +3,10 @@
 # Software Name: repast4py
 # By: Argonne National Laboratory
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+"""
+The Logging module contains classes and functions for logging data produced by a
+repast4py simulation to a file.
+"""
 
 import numpy as np
 from mpi4py import MPI
@@ -59,11 +63,11 @@ class DataSource(Protocol):
 
 class ReducingDataLogger:
 
-    ARRAY_SIZE = 500
+    _ARRAY_SIZE = 500
 
     def __init__(self, data_source: DataSource, op, rank: int):
         """Creates a ReducingDataRecorder that gets its data from the
-        specified source, reduces using the specified op and runs on
+        specified source, reduces that data using the specified op and runs on
         the specified rank.
 
         Args:
@@ -71,7 +75,7 @@ class ReducingDataLogger:
             op: an mpi reduction operator, e.g. MPI.SUM
             rank: the rank of this ReducingDataLogger
         """
-        self._data = np.zeros(ReducingDataLogger.ARRAY_SIZE, dtype=data_source.dtype)
+        self._data = np.zeros(ReducingDataLogger._ARRAY_SIZE, dtype=data_source.dtype)
         self._data_source = data_source
         self._op = op
         self._rank = rank
@@ -113,7 +117,7 @@ class ReducingDataLogger:
         data source.
         """
         if self._idx == self._data.shape[0]:
-            self._data = np.concatenate((self._data, np.zeros(ReducingDataLogger.ARRAY_SIZE,
+            self._data = np.concatenate((self._data, np.zeros(ReducingDataLogger._ARRAY_SIZE,
                                                               dtype=self._data_source.dtype)))
         self._data[self._idx] = self._data_source.value
         self._idx += 1
@@ -141,7 +145,7 @@ class ReducingDataLogger:
 
 # creates a datasource from a dataclass field
 class DCDataSource:
-    """A DCDataSource implements the :class:`repast4py.logging.DataSource` protocol for
+    """A DCDataSource implements the :class:`repast4py.logging.DataSource` protocol for Python
     :py:obj:`dataclasses.dataclass` objects. Each DCDataSource gets its data to log
     from a dataclass field.
     """
@@ -207,20 +211,32 @@ class DCDataSource:
 
 
 def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str]=None) -> List[ReducingDataLogger]:
-    """Creates ReducingDataLogger-s from a dataclasses.dataclass, optionally
+    """Creates ReducingDataLogger-s from the fields in a :py:obj:`dataclasses.dataclass`, optionally
     constraining the loggers to log only from specified fields. By default the
     names argument is None and all the dataclass fields will be logged.
 
     Args:
-        data_class: the dataclass to log
+        data_class: the dataclass providing the values to log
         op: an mpi reduction operator (e.g., MPI.SUM)
         rank: the rank of this process
-        names: dict where the keys are the names of the dataclass fields to log, and the values
-            are the names of the datasource (i.e., the column header in the output tabular data). If
-            value is None, then the dataclass field name will be used as the data source name.
+        names: a Python dict where the keys are the names of the dataclass fields to log, and the values
+            are the names of the column header in the output tabular data. If
+            value is None, then the dataclass field name will be used as the data source
+            column name.
 
     Returns:
         A list of ReducingDataLoggers that can be added to a ReducingDataSet for logging.
+
+    Examples:
+        Creating multiple different loggers from the same data source, assigning each a different reduction
+        operation. We append the new loggers to the original list with :samp:`+=`.
+
+        >>> meet_log = MeetLog()
+        >>> meet_log
+        MeetLog(total_meets=0, min_meets=0, max_meets=0)
+        >>> loggers = logging.create_loggers(meet_log, op=MPI.SUM, names={'total_meets': 'total'}, rank=rank)
+        >>> loggers += logging.create_loggers(meet_log, op=MPI.MIN, names={'min_meets': 'min'}, rank=rank)
+        >>> loggers += logging.create_loggers(meet_log, op=MPI.MAX, names={'max_meets': 'max'}, rank=rank)
     """
     loggers = []
     if names is None:
@@ -239,23 +255,24 @@ def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str]=N
 
 class ReducingDataSet:
     """A ReducingDataSet represents a tabular data set where each column
-    is produced by a ReducingDataLogger and where name of each logger is
+    is produced by a ReducingDataLogger and where the name of each logger is
     the name of the column. The produced tabular data is periodically
     written to a file.
     """
 
     def __init__(self, data_loggers: List[ReducingDataLogger], comm: MPI.Comm,
                  fpath: str, delimiter: str=',', buffer_size: int=1000):
-        """Creates a ReducingDataSet whose columns are produced from
+        """The constructor creates a ReducingDataSet whose columns are produced from
         the specified data loggers which are reduced across the specified
-        communicator.
+        communicator. The data_loggers can be created using the :func:`repast4py.logging.create_loggers`
+        function.
 
         Args:
             data_loggers: a list of ReducingDataLoggers that will produce the tabular data,
-            one data_logger per column.
+                one data_logger per column.
             comm: the communicator to reduce over
             fpath: the file to write the data to
-            delimiter: the seperator to use to seperate the column values
+            delimiter: the delimiter to use to separate the column values
             buffer_size: the number of values to log before writing to a file.
         """
         self._data_loggers = data_loggers
@@ -326,7 +343,7 @@ class ReducingDataSet:
 
 class TabularLogger:
     """Logs arbitrary values by row in a delimited tabular format. All the rows
-    logged by each rank are concatenated on a write.
+    logged by each rank are concatenated on a write into multiple rows.
 
     Args:
         comm: the communicator to reduce over
@@ -351,7 +368,7 @@ class TabularLogger:
                 writer.writerow(headers)
 
     def log_row(self, *args):
-        """Logs the specified values as row in the tabular output.
+        """Logs the specified values as a row in the tabular output.
 
         Each value in the argument list is written to a column in the
         order they appear in the argument list.
@@ -371,7 +388,7 @@ class TabularLogger:
 
     def write(self):
         """Writes all the currently logged rows to a file by gathering all the
-        rows from all ranks, concatenating them, and writing them to
+        rows from all ranks, concatenating them, and writing the total collection of rows to
         the file specified in the constructor. This is a collective
         operation and must be called by all ranks in the communicator.
         """

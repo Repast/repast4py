@@ -66,7 +66,7 @@ def find_free_filename(file_path: str) -> Path:
     file path until the file does not exist.
 
     For example, if output/counts.csv, exists check
-    if counts_1.csv, counts_2.csv, and so exists until
+    if counts_1.csv, counts_2.csv, and so on exists until
     finding one that doesn't exist.
 
     Args:

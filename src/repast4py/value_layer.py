@@ -344,15 +344,15 @@ class ValueLayer:
     """N-dimensional raster type matrix where each discrete integer coordinate
     contains a numeric value.
 
-    A ValueLayer delegates its matrix storage to a pytorch tensor. The 'grid' property
-    provides access to this tensor. The ValueLayer can be initialized with a specified value or
-    with 'random' to initialize the matrix with a random value.
+    A ValueLayer delegates its matrix storage to a pytorch tensor. The :attr:`grid` property
+    provides access to this tensor. A ValueLayer can be initialized with a specified value or
+    with :samp:`'random'` to initialize the matrix with a random value.
 
     Args:
         bounds: the dimensions of the ValueLayer
         borders: the border semantics: BorderType.Sticky or BorderType.Periodic.
         init_value: the initial value of each cell in this ValueLayer: either a numeric value or
-            'random' to specify a random initialization.
+            :samp:`'random'` to specify a random initialization.
         dtype (torch.dtype): the numeric type of this ValueLayer. Defaults to torch.float64.
 
     """
@@ -412,9 +412,9 @@ class ValueLayer:
             pt: the point whose neighbors to get
 
         Returns:
-            Tuple: A two elelment tuple consisting of the neighboring values as pytorch tensor, and
-            the neighboring locations as an np.array: (values, ngh_locations). The first value in
-            the values tensor corresponds to the first location in the ngh_locations array, and so forth.
+            Tuple: A two elelment tuple consisting of the neighboring values as a pytorch tensor, and
+            the neighboring locations as a np.array: (values, ngh_locations). The first value in
+            the values tensor is the value of the first location in the ngh_locations array, and so forth.
         """
         return self.impl.get_nghs(pt)
 
@@ -458,20 +458,19 @@ class SharedValueLayer(ValueLayer):
     """A cross-process shared N-dimensional raster type matrix where each discrete integer coordinate
     contains a numeric value.
 
-    The SharedValueLayer is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
-    some number of smaller value layers, one for each rank. For example, given a global size of (100 x 25) and
+    A SharedValueLayer is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
+    some number of smaller value layers, one for each rank. For example, given a global size of 100 x 25 and
     2 ranks, the global space will be split along the x dimension such that the SharedValueLayer in the first
-    MPI rank covers (0-50 x 0-25) and the second rank (50-100 x 0-25).
+    MPI rank covers 0-50 x 0-25 and the second rank 50-100 x 0-25.
     Each rank's SharedValueLayer contains a buffer of the specified size that duplicates or "ghosts" an adjacent
     area of the neighboring rank's SharedValueLayer. In the above example, the rank 1 space buffers the area from
-    (50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate
-    to any agent behavior. For example, if an agent can "see" 3 units away and take some action based on what it
-    perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of
-    its own local SharedValueLayer.
+    50-52 x 0-25 in rank 2, and rank 2 buffers 48-50 x 0-25 in rank 1. **Be sure to specify a buffer size appropriate
+    to any agent behavior.** For example, if an agent can "see" 3 units away and take some action based on what it
+    perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the local borders of
+    its own SharedValueLayer.
 
-    A ValueLayer delegates its matrix storage to a pytorch tensor. The 'grid' property
-    provides access to this tensor. The ValueLayer can be initialized with a specified value or
-    with 'random' to initialize the matrix with a random value.
+    A SharedValueLayer delegates its matrix storage to a pytorch tensor, accessible via
+    the :attr:`ValueLayer.grid` property.
 
     **Note: 3D SharedValueLayers are not yet supported and will raise an Exception.**
 
@@ -479,7 +478,7 @@ class SharedValueLayer(ValueLayer):
         comm (mpi4py.MPI.Intracomm): the communicator containing all the ranks over which this SharedValueLayer is shared.
         bounds: the dimensions of the ValueLayer
         borders: the border semantics: BorderType.Sticky or BorderType.Periodic.
-        buffersize: the size of this  ValueLayers's buffered area. This single value is used for all dimensions.
+        buffer_size: the size of this  ValueLayers's buffered area. This single value is used for all dimensions.
         init_value: the initial value of each cell in this ValueLayer: either a numeric value or
             'random' to specify a random initialization.
         dtype (torch.dtype): the numeric type of this ValueLayer. Defaults to torch.float64.
@@ -987,40 +986,41 @@ class SharedValueLayer(ValueLayer):
 
 
 class ReadWriteValueLayer:
-    """Wraps two :class:`repast4py.value_layer.SharedValueLayer`, one of which functions as a read layer,
-    and the other as the write layer.
+    """Encapsulates two :class:`repast4py.value_layer.SharedValueLayer`, one of which functions as a read layer,
+    and the other as the write layer. A ValueLayer is cross-process shared N-dimensional raster type matrix where each
+    discrete integer coordinate contains a numeric value. A SharedValueLayer is shared over all the ranks in the specified
+    communicator.
 
     All write operations will be performed on the write layer, and all read operations on the read layer.
-    The two can be swapped using the swap_layers method. The intention is to provide all agents with the
-    equivalent value layer state, such that they read from the read layer, but when making changes to
+    The two can be swapped using the :meth:`swap_layers` method. The intention is to present all agents with the
+    equivalent value layer state, such that they all read from the read layer, but when making changes to
     the value layer, these changes are not available via a read until the layers are swapped. This removes any
-    ordering effects such as a "first moved advantage."
-
-    A cross-process shared N-dimensional raster type matrix where each discrete integer coordinate
-    contains a numeric value.
+    ordering effects such as a "first mover advantage."
 
     A SharedValueLayer is shared over all the ranks in the specified communicator by sub-dividing the global bounds into
-    some number of smaller value layers, one for each rank. For example, given a global size of (100 x 25) and
+    some number of smaller value layers, one for each rank. For example, given a global size of 100 x 25 and
     2 ranks, the global space will be split along the x dimension such that the SharedValueLayer in the first
-    MPI rank covers (0-50 x 0-25) and the second rank (50-100 x 0-25).
+    MPI rank covers 0-50 x 0-25 and the second rank 50-100 x 0-25.
     Each rank's SharedValueLayer contains a buffer of the specified size that duplicates or "ghosts" an adjacent
     area of the neighboring rank's SharedValueLayer. In the above example, the rank 1 space buffers the area from
-    (50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate
-    to any agent behavior. For example, if an agent can "see" 3 units away and take some action based on what it
-    perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of
-    its own local SharedValueLayer.
+    50-52 x 0-25 in rank 2, and rank 2 buffers 48-50 x 0-25 in rank 1. **Be sure to specify a buffer size appropriate
+    to any agent behavior.** For example, if an agent can "see" 3 units away and take some action based on what it
+    perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the local borders of
+    its own SharedValueLayer.
 
-    A ValueLayer delegates its matrix storage to a pytorch tensor. The 'grid' property
-    provides access to this tensor. The ValueLayer can be initialized with a specified value or
+    The read and write SharedValueLayers delegate their matrix storage to a pytorch tensor, accessible via
+    the :attr:`ValueLayer.grid` property. The read and write ValueLayers can be initialized with a specified value or
     with 'random' to initialize the matrix with a random value.
+
+    **Note: 3D SharedValueLayers are not yet supported and will raise an Exception.**
 
     Args:
         comm (mpi4py.MPI.Intracomm): the communicator containing all the ranks over which this SharedValueLayer is shared.
         bounds: the dimensions of the ValueLayer
-        borders: the border semantics: BorderType.Sticky or BorderType.Periodic.
-        buffersize: the size of this  ValueLayers's buffered area. This single value is used for all dimensions.
-        init_value: the initial value of each cell in this ValueLayer: either a numeric value or
-            'random' to specify a random initialization.
+        borders: the border semantics - :attr:`BorderType.Sticky` or :attr:`BorderType.Periodic`.
+        buffer_size: the size of the ValueLayers' buffered areas. This single value is used for all dimensions.
+        init_value: the initial value of each cell in the read and write ValueLayers: either a numeric value or
+            :samp:`'random'` to specify a random initialization.
         dtype (torch.dtype): the numeric type of this ValueLayer. Defaults to torch.float64.
 
     """
@@ -1051,7 +1051,7 @@ class ReadWriteValueLayer:
         """BoundingBox: Gets the dimensions of the read and write layers."""
         return self.read_layer.bbounds
 
-    def get(self, pt):
+    def get(self, pt: DiscretePoint):
         """Gets the value at the specified point from the read layer.
 
         Args:
@@ -1062,7 +1062,7 @@ class ReadWriteValueLayer:
         """
         return self.read_layer.get(pt)
 
-    def set(self, pt, val):
+    def set(self, pt: DiscretePoint, val):
         """Sets the value at the specified location on the write layer.
 
         Args:
@@ -1078,9 +1078,9 @@ class ReadWriteValueLayer:
             pt: the point whose neighbors to get
 
         Returns:
-            Tuple: A two elelment tuple consisting of the neighboring values as pytorch tensor, and
-            the neighboring locations as an np.array: (values, ngh_locations). The first value in
-            the values tensor corresponds to the first location in the ngh_locations array, and so forth.
+            Tuple: A two elelment tuple consisting of the neighboring values as a pytorch tensor, and
+            the neighboring locations as a np.array: (values, ngh_locations). The first value in
+            the values tensor is the value of the first location in the ngh_locations array, and so forth.
         """
         return self.read.get_nghs(pt)
 

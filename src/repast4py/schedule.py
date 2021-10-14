@@ -3,6 +3,10 @@
 # Software Name: repast4py
 # By: Argonne National Laboratory
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+"""
+This module includes classes and functions for scheduling events in a Repast4py
+simulation. Users will typically only use the :class:`repast4py.schedule.SharedScheduleRunner`.
+"""
 
 import heapq
 import itertools
@@ -12,7 +16,8 @@ from mpi4py import MPI
 
 
 class ScheduledEvent:
-    """Base class for all scheduled events.
+    """A callable base class for all scheduled events. Calling
+    instances of this class will execute the Callable evt.
 
     Args:
         at: the time of the event.
@@ -27,6 +32,9 @@ class ScheduledEvent:
         self.evt()
 
     def reschedule(self, queue, sequence_count):
+        """
+        Implemented by subclasses.
+        """
         pass
 
 
@@ -44,7 +52,7 @@ class RepeatingEvent(ScheduledEvent):
         self.interval = interval
 
     def reschedule(self, queue: List, sequence_count: int):
-        """Reschedules this event to occur after it's iterval has passed.
+        """Reschedules this event to occur after its interval has passed.
 
         Args:
             queue: the priority queue list to schedule this event on
@@ -66,7 +74,7 @@ class OneTimeEvent(ScheduledEvent):
 
     """
 
-    def __init__(self, at, evt):
+    def __init__(self, at: float , evt: Callable):
         super().__init__(at, evt)
 
     def reschedule(self, queue, sequence_count):
@@ -77,11 +85,11 @@ class OneTimeEvent(ScheduledEvent):
 
 class Schedule:
     """Encapsulates a dynamic schedule of events and a method
-    for iterating  through the schedule and exectuting those events.
+    for iterating through that schedule and exectuting those events.
 
-    Events are added to the scheduled for execution at a particular "tick".
+    Events are added to the schedule for execution at a particular *tick*.
     The first valid tick is 0.
-    Events will be executed in "tick" order, earliest before latest. Events
+    Events will be executed in tick order, earliest before latest. Events
     scheduled for the same tick will be executed in the order in which they
     were added. If during the execution of a tick, an event is scheduled
     before the executing tick (i.e., scheduled to occur in the past) then
@@ -142,7 +150,7 @@ class Schedule:
         return self.queue[0][0]
 
     def execute(self):
-        """Executes this schedule by repeatedly poping the next scheduled events off the queue and
+        """Executes this schedule by repeatedly popping the next scheduled events off the queue and
         executing them.
         """
         if len(self.queue) > 0:
@@ -163,18 +171,18 @@ class SharedScheduleRunner:
     """Encapsulates a dynamic schedule of executable events shared and
     synchronized across processes.
 
-    Events are added to the scheduled for execution at a particular "tick".
+    Events are added to the scheduled for execution at a particular *tick*.
     The first valid tick is 0.
-    Events will be executed in "tick" order, earliest before latest. Events
+    Events will be executed in tick order, earliest before latest. Events
     scheduled for the same tick will be executed in the order in which they
     were added. If during the execution of a tick, an event is scheduled
     before the executing tick (i.e., scheduled to occur in the past) then
     that event is ignored. The scheduled is synchronized across process ranks
-    by determining the global cross-process minimum next scheduled even time, and executing events
-    for that time. In this way, no schedule runs ahead of any other.
+    by determining the global cross-process minimum next scheduled event time, and executing
+    only the events schedule for that time. In this way, no schedule runs ahead of any other.
 
     Args:
-        comm: the communicator over which this scheduled is shared.
+        comm: the communicator over which this schedule is shared.
     """
 
     def __init__(self, comm: MPI.Intracomm):
@@ -209,7 +217,7 @@ class SharedScheduleRunner:
         self.next_tick = self.schedule.next_tick()
 
     def schedule_end_event(self, evt: Callable):
-        """Schedules the specified callable for execution when the schedule terminates and the
+        """Schedules the specified event (a Callable) for execution when the schedule terminates and the
         simulation ends.
 
         Args:
@@ -227,7 +235,7 @@ class SharedScheduleRunner:
         self.schedule.schedule_event(at, self.stop)
 
     def stop(self):
-        """Stops scheduled execution. All events scheduled for the current tick will execute and 
+        """Stops schedule execution. All events scheduled for the current tick will execute and
         then schedule execution will stop.
         """
         self.go = False
@@ -241,7 +249,7 @@ class SharedScheduleRunner:
         return self.schedule.tick
 
     def execute(self):
-        """Executes this SharedSchedule by repeatedly poping the next scheduled events off the queue and
+        """Executes this SharedSchedule by repeatedly popping the next scheduled events off the queue and
         executing them.
         """
         while self.go:
@@ -261,20 +269,20 @@ def init_schedule_runner(comm: MPI.Intracomm) -> SharedScheduleRunner:
     """Initializes the default schedule runner, a dynamic schedule of executable events shared and
     synchronized across processes.
 
-    Events are added to the scheduled for execution at a particular "tick".
+    Events are added to the scheduled for execution at a particular *tick*.
     The first valid tick is 0.
-    Events will be executed in "tick" order, earliest before latest. Events
+    Events will be executed in tick order, earliest before latest. Events
     scheduled for the same tick will be executed in the order in which they
     were added. If during the execution of a tick, an event is scheduled
     before the executing tick (i.e., scheduled to occur in the past) then
     that event is ignored. The scheduled is synchronized across process ranks
-    by determining the global cross-process minimum next scheduled even time, and executing events
-    for that time. In this way, no schedule runs ahead of any other.
+    by determining the global cross-process minimum next scheduled event time, and executing
+    only the events schedule for that time. In this way, no schedule runs ahead of any other.
 
     Args:
         comm: the communicator over which this scheduled is shared.
     Returns:
-        SharedScheduleRunner: The default SharedScheduledRunner instance that can be used to 
+        SharedScheduleRunner: The default SharedScheduledRunner instance that can be used to
         schedule events.
     """
     global __runner
@@ -286,18 +294,8 @@ def runner() -> SharedScheduleRunner:
     """Gets the default schedule runner, a dynamic schedule of executable events shared and
     synchronized across processes.
 
-    Events are added to the scheduled for execution at a particular "tick".
-    The first valid tick is 0.
-    Events will be executed in "tick" order, earliest before latest. Events
-    scheduled for the same tick will be executed in the order in which they
-    were added. If during the execution of a tick, an event is scheduled
-    before the executing tick (i.e., scheduled to occur in the past) then
-    that event is ignored. The scheduled is synchronized across process ranks
-    by determining the global cross-process minimum next scheduled even time, and executing events
-    for that time. In this way, no schedule runs ahead of any other.
-
     Returns:
-        SharedScheduleRunner: The default SharedScheduledRunner instance that can be used to 
+        SharedScheduleRunner: The default SharedScheduledRunner instance that can be used to
         schedule events.
     """
 

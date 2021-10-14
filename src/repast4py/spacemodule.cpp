@@ -214,7 +214,7 @@ static PyObject* DiscretePoint_richcmp(PyObject* self, PyObject* other, int op) 
 PyDoc_STRVAR(dp_dp,
     "DiscretePoint(x, y, z=0)\n\n"
     
-    "A 3D point with discrete (int) coordinates.\n\n"
+    "A 3D point with discrete (integer) coordinates.\n\n"
     "Args:\n"
     "   x (int): the x coordinate.\n"
     "   y (int): the y coordinate.\n"
@@ -450,7 +450,7 @@ static PyObject* ContinuousPoint_richcmp(PyObject* self, PyObject* other, int op
 PyDoc_STRVAR(cp_cp,
     "ContinuousPoint(x, y, z=0)\n\n"
     
-    "A 3D point with continous (float) coordinates.\n\n"
+    "A 3D point with continuous (floating point) coordinates.\n\n"
     "Args:\n"
     "   x (float): the x coordinate.\n"
     "   y (float): the y coordinate.\n"
@@ -569,7 +569,7 @@ static PyMethodDef GridStickyBorders_methods[] = {
 PyDoc_STRVAR(gsb_gsb,
     "GridStickyBorders(bounding_box)\n\n"
     
-    "Grid Borders with \"sticky\" semantics.\n\n"
+    "Grid Borders with :attr:`BorderType.Sticky` semantics.\n\n"
     "Borders objects can transform a coordinate depending on the border semantics. Sticky "
     "borders will clip the coordinates to the current bounds if the coordinates are outside "
     " the current bounds.\n\n"
@@ -947,13 +947,13 @@ PyDoc_STRVAR(grd_move,
     "Moves the specified agent to the specified location, returning the moved to location.\n\n"
     "If the agent does not move beyond the grid's bounds, then the returned location will be "
     "be the same as the argument location. If the agent does move out of bounds, then the location "
-    "is determined by the grid border's semantics (e.g., a location on the border if using \"sticky\" borders).\n\n"
+    "is determined by the grid border's semantics (e.g., a location on the border if using :attr:`BorderType.Sticky` borders).\n\n"
     "Args:\n"
     "    agent(repast4py.core.Agent): the agent to move.\n"
     "    pt(repast4py.space.DiscretePoint): the location to move to.\n\n"
     "Returns:\n"
     "    repast4py.space.DiscretePoint: the location the agent has moved to or None if the agent cannot move to the specified location (e.g., if "
-    "    occupancy type is single and the location is occupied."
+    "    the occupancy type is :attr:`OccupancyType.Single` and the location is occupied.)"
 );
 
 PyDoc_STRVAR(grd_location,
@@ -970,7 +970,7 @@ PyDoc_STRVAR(grd_geta,
     "get_agent(pt)\n\n"
     
     "Gets the agent at the specified location. If more than one agent exists at "
-    "the specified location, the first agent to move to that location from among those currently at that location "
+    "the specified location, the first agent to have moved to that location from among those currently at that location "
     "will be returned.\n\n"
     "Args:\n"
     "    pt(repast4py.space.DiscretePoint): the location to get the agent at.\n\n"
@@ -981,7 +981,7 @@ PyDoc_STRVAR(grd_geta,
 PyDoc_STRVAR(grd_getas,
     "get_agents(pt)\n\n"
     
-    "Gets an iterator over all agents at the specified location.\n\n"
+    "Gets an iterator over all the agents at the specified location.\n\n"
     "Args:\n"
     "    pt(repast4py.space.DiscretePoint): the location to get the agents at.\n\n"
     "Returns:\n"
@@ -1001,13 +1001,13 @@ static PyMethodDef Grid_methods[] = {
 
 PyDoc_STRVAR(grd_grd,
     "Grid(name, bounds, borders, occupancy)\n\n"
-    "An N-dimensional cartesian discrete space where agents can occupy locations defined by "
+    "An N-dimensional cartesian discrete space where agents can occupy locations at "
     "a discrete integer coordinate.\n\n"
     "Args:\n"
     "   name (str): the name of the grid.\n"
     "   bounds (repast4py.geometry.BoundingBox): the dimensions of the grid.\n"
-    "   borders (repast4py.space.BorderType): the border semantics: BorderType.Sticky or BorderType.Periodic\n"
-    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple or OccupancyType.Single"
+    "   borders (repast4py.space.BorderType): the border semantics - :attr:`BorderType.Sticky` or :attr:`BorderType.Periodic`.\n"
+    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell - :attr:`OccupancyType.Multiple` or :attr:`OccupancyType.Single`."
 );
 
 static PyTypeObject R4Py_GridType = {
@@ -1073,7 +1073,7 @@ static PyObject* SharedGrid_new(PyTypeObject* type, PyObject* args, PyObject* kw
 static int SharedGrid_init(R4Py_SharedGrid* self, PyObject* args, PyObject* kwds) {
     // bounds=box, border=BorderType.Sticky, occupancy=OccupancyType.Multiple
     static char* kwlist[] = {(char*)"name",(char*)"bounds", (char*)"borders",
-        (char*)"occupancy", (char*)"buffersize", (char*)"comm", NULL};
+        (char*)"occupancy", (char*)"buffer_size", (char*)"comm", NULL};
 
     const char* name;
     PyObject* bounds;
@@ -1344,7 +1344,7 @@ PyDoc_STRVAR(sgrd_rm,
 PyDoc_STRVAR(sgrd_cnt,
     "contains(agent)\n\n"
     
-    "Gets whether or not this shared grid projection contains the specified agent.\n\n"
+    "Gets whether or not the **local** bounds of this shared grid projection contains the specified agent.\n\n"
     "Args:\n"
     "    agent(repast4py.core.Agent): the agent to check.\n\n"
     "Returns:\n"
@@ -1357,14 +1357,14 @@ PyDoc_STRVAR(sgrd_move,
     "Moves the specified agent to the specified location, returning the moved to location.\n\n"
     "If the agent does not move beyond the shared grid's global bounds, then the returned location will be "
     "be the same as the argument location. If the agent does move out of the global bounds, then the location "
-    "is determined by the shared grid border's semantics (e.g., a location on the border if using "
-    "\"sticky\" borders.\n\n"
+    "is determined by the shared grid's border semantics (e.g., a location on the border if using "
+    ":attr:`BorderType.Sticky` borders.\n\n"
     "Args:\n"
     "    agent(repast4py.core.Agent): the agent to move.\n"
     "    pt(repast4py.space.DiscretePoint): the location to move to.\n\n"
     "Returns:\n"
     "    repast4py.space.DiscretePoint: the location the agent has moved to or None if the agent cannot move to the specified location (e.g., if "
-    "    occupancy type is single and the location is occupied."
+    "    the occupancy type is :attr:`OccupancyType.Single` and the location is occupied.)"
 );
 
 PyDoc_STRVAR(sgrd_location,
@@ -1381,7 +1381,7 @@ PyDoc_STRVAR(sgrd_geta,
     "get_agent(pt)\n\n"
     
     "Gets the agent at the specified location. If more than one agent exists at "
-    "the specified location, the first agent to move to that location from among those currently at that location "
+    "the specified location, the first agent to have moved to that location from among those currently at that location "
     "will be returned.\n\n"
     "Args:\n"
     "    pt(repast4py.space.DiscretePoint): the location to get the agent at.\n\n"
@@ -1392,7 +1392,7 @@ PyDoc_STRVAR(sgrd_geta,
 PyDoc_STRVAR(sgrd_getas,
     "get_agents(pt)\n\n"
     
-    "Gets an iterator over all agents at the specified location.\n\n"
+    "Gets an iterator over all the agents at the specified location.\n\n"
     "Args:\n"
     "    pt(repast4py.space.DiscretePoint): the location to get the agents at.\n\n"
     "Returns:\n"
@@ -1416,7 +1416,7 @@ PyDoc_STRVAR(sgrd_lb,
     "Gets the local bounds of this shared grid.\n\n"
     "The local bounds are the bounds of this shared grid on the current rank. For example, if "
     "the global bounds are 100 in the x dimension and 100 in the y dimension, and there are 4 ranks, "
-    "then the local bounds will be some quadrant of those global bounds (0 - 50) x (0 - 50) for example.\n\n"
+    "then the local bounds will be some quadrant of those global bounds 0 - 50 x 0 - 50 for example.\n\n"
     "Returns:\n"
     "    repast4py.geometry.BoundingBox: the local bounds as a BoundingBox."
 );
@@ -1493,27 +1493,27 @@ static PyGetSetDef SharedGrid_get_setters[] = {
 };
 
 PyDoc_STRVAR(sgrd_sgrd,
-    "SharedGrid(name, bounds, borders, occupancy, buffersize, comm)\n\n"
+    "SharedGrid(name, bounds, borders, occupancy, buffer_size, comm)\n\n"
     
     "An N-dimensional cartesian discrete space where agents can occupy locations defined by "
     "a discretete integer coordinate.\n\n"
     "The grid is shared over all the ranks in the specified communicator by sub-dividing the global bounds into "
-    "some number of smaller grids, one for each rank. For example, given a global grid size of (100 x 25) and "
+    "some number of smaller grids, one for each rank. For example, given a global grid size of 100 x 25 and "
     "2 ranks, the global grid will be split along the x dimension such that the SharedGrid in the first MPI rank "
-    "covers (0-50 x 0-25) and the second rank (50-100 x 0-25). "
+    "covers 0-50 x 0-25 and the second rank 50-100 x 0-25. "
     "Each rank's SharedGrid contains buffers of the specified size that duplicate or \"ghosts\" an adjacent "
     "area of the neighboring rank's SharedGrid. In the above example, the rank 1 grid buffers the area from "
-    "(50-52 x 0-25) in rank 2, and rank 2 buffers (48-50 x 0-25) in rank 1. Be sure to specify a buffer size appropriate "
-    "to any agent behavior. For example, if an agent can \"see\" 3 units away and take some action based on what it "
+    "50-52 x 0-25 in rank 2, and rank 2 buffers 48-50 x 0-25 in rank 1. **Be sure to specify a buffer size appropriate "
+    "to any agent behavior.** For example, if an agent can \"see\" 3 units away and take some action based on what it "
     "perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of "
     "its own local SharedGrid. When an agent moves beyond the borders of its current SharedGrid, it will be transferred "
-    "from its current rank, and into that containing the section of the global grid that it has moved into.\n\n"
+    "from its current rank, and to the rank containing the section of the global grid that it has moved into.\n\n"
     "Args:\n"
     "   name (str): the name of the grid.\n"
     "   bounds (repast4py.geometry.BoundingBox): the global dimensions of the grid.\n"
-    "   borders (repast4py.space.BorderType): the border semantics: BorderType.Sticky or BorderType.Periodic\n"
-    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple or OccupancyType.Single.\n"
-    "   buffersize (int): the size of this SharedGrid buffered area. This single value is used for all dimensions.\n"
+    "   borders (repast4py.space.BorderType): the border semantics - :attr:`BorderType.Sticky` or :attr:`BorderType.Periodic`.\n"
+    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell - :attr:`OccupancyType.Multiple` or :attr:`OccupancyType.Single`.\n"
+    "   buffer_size (int): the size of this SharedGrid's buffered area. This single value is used for all dimensions.\n"
     "   comm (mpi4py.MPI.Intracomm): the communicator containing all the ranks over which this SharedGrid is shared."
 );
 
@@ -1795,13 +1795,13 @@ PyDoc_STRVAR(cspace_move,
     "Moves the specified agent to the specified location, returning the moved to location.\n\n"
     "If the agent does not move beyond the continuous space's bounds, then the returned location will be "
     "be the same as the argument location. If the agent does move out of bounds, then the location "
-    "is determined by the continuous space's border's semantics (e.g., a location on the border if using \"sticky\" borders.\n\n"
+    "is determined by the continuous space's border's semantics (e.g., a location on the border if using :attr:`BorderType.Sticky` borders.\n\n"
     "Args:\n"
     "    agent(repast4py.core.Agent): the agent to move.\n"
     "    pt(repast4py.space.ContinuousPoint): the location to move to.\n\n"
     "Returns:\n"
     "    repast4py.space.ContinuousPoint: the location the agent has moved to or None if the agent cannot move to the specified location (e.g., if "
-    "    occupancy type is single and the location is occupied."
+    "    the occupancy type is :attr:`OccupancyType.Single` and the location is occupied.)"
 );
 
 PyDoc_STRVAR(cspace_location,
@@ -1818,7 +1818,7 @@ PyDoc_STRVAR(cspace_geta,
     "get_agent(pt)\n\n"
     
     "Gets the agent at the specified location. If more than one agent exists at "
-    "the specified location, the first agent to move to that location from among those currently at that location "
+    "the specified location, the first agent to have moved to that location from among those currently at that location "
     "will be returned.\n\n"
     "Args:\n"
     "    pt(repast4py.space.ContinuousPoint): the location to get the agent at.\n\n"
@@ -1829,7 +1829,7 @@ PyDoc_STRVAR(cspace_geta,
 PyDoc_STRVAR(cspace_getas,
     "get_agents(pt)\n\n"
     
-    "Gets an iterator over all agents at the specified location.\n\n"
+    "Gets an iterator over all the agents at the specified location.\n\n"
     "Args:\n"
     "    pt(repast4py.space.ContinuousPoint): the location to get the agents at.\n\n"
     "Returns:\n"
@@ -1864,12 +1864,12 @@ PyDoc_STRVAR(cspace_cspace,
     "An N-dimensional cartesian continuous space where agents can occupy locations defined by "
     "a continuous floating point coordinate.\n\n"
     "The ContinuousSpace uses a `tree <https://en.wikipedia.org/wiki/Quadtree>`_ (quad or oct depending on the number of "
-    "dimensions) to speed up spatial queries. The tree can be tuned using the tree threshold parameter.\n\n"
+    "dimensions) to optimize spatial queries. The tree can be tuned using the tree threshold parameter.\n\n"
     "Args:\n"
     "   name (str): the name of the grid.\n"
     "   bounds (repast4py.geometry.BoundingBox): the dimensions of the grid.\n"
-    "   borders (repast4py.space.BorderType): the border semantics: BorderType.Sticky or BorderType.Periodic\n"
-    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple or OccupancyType.Single.\n"
+    "   borders (repast4py.space.BorderType): the border semantics - :attr:`BorderType.Sticky` or :attr:`BorderType.Periodic`\n"
+    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell - :attr:`OccupancyType.Multiple` or :attr:`OccupancyType.Single`\n"
     "   tree_threshold (int): the space's tree cell maximum capacity. When this capacity is reached, the cell splits."
 );
 
@@ -1948,7 +1948,7 @@ static int SharedCSpace_init(R4Py_SharedCSpace* self, PyObject* args, PyObject* 
     // }
 
     static char* kwlist[] = {(char*)"name",(char*)"bounds", (char*)"borders",
-        (char*)"occupancy", (char*)"buffersize", (char*)"comm", (char*)"tree_threshold", NULL};
+        (char*)"occupancy", (char*)"buffer_size", (char*)"comm", (char*)"tree_threshold", NULL};
 
     const char* name;
     PyObject* bounds;
@@ -2272,7 +2272,7 @@ PyDoc_STRVAR(scspace_rm,
 PyDoc_STRVAR(scspace_cnt,
     "contains(agent)\n\n"
     
-    "Gets whether or not this shared continuous space projection contains the specified agent.\n\n"
+    "Gets whether or not the **local** bounds of this shared continuous space projection contains the specified agent.\n\n"
     "Args:\n"
     "    agent(repast4py.core.Agent): the agent to check.\n\n"
     "Returns:\n"
@@ -2285,14 +2285,14 @@ PyDoc_STRVAR(scspace_move,
     "Moves the specified agent to the specified location, returning the moved to location.\n\n"
     "If the agent does not move beyond the shared continuous space's global bounds, then the returned location will be "
     "be the same as the argument location. If the agent does move out of the global bounds, then the location "
-    "is determined by the shared continuous space border's semantics (e.g., a location on the border if using "
-    "\"sticky\" borders.\n\n"
+    "is determined by the shared continuous space's border semantics (e.g., a location on the border if using "
+    ":attr:`BorderType.Sticky` borders).\n\n"
     "Args:\n"
     "    agent(repast4py.core.Agent): the agent to move.\n"
     "    pt(repast4py.space.ContinuousPoint): the location to move to.\n\n"
     "Returns:\n"
     "    repast4py.space.ContinuousPoint: the location the agent has moved to or None if the agent cannot move to the specified location (e.g., if "
-    "    occupancy type is single and the location is occupied."
+    "    the occupancy type is :attr:`OccupancyType.Single` and the location is occupied.)"
 );
 
 PyDoc_STRVAR(scspace_location,
@@ -2309,7 +2309,7 @@ PyDoc_STRVAR(scspace_geta,
     "get_agent(pt)\n\n"
     
     "Gets the agent at the specified location. If more than one agent exists at "
-    "the specified location, the first agent to move to that location from among those currently at that location "
+    "the specified location, the first agent to have moved to that location from among those currently at that location "
     "will be returned.\n\n"
     "Args:\n"
     "    pt(repast4py.space.ContinuousPoint): the location to get the agent at.\n\n"
@@ -2320,7 +2320,7 @@ PyDoc_STRVAR(scspace_geta,
 PyDoc_STRVAR(scspace_getas,
     "get_agents(pt)\n\n"
     
-    "Gets an iterator over all agents at the specified location.\n\n"
+    "Gets an iterator over all the agents at the specified location.\n\n"
     "Args:\n"
     "    pt(repast4py.space.ContinuousPoint): the location to get the agents at.\n\n"
     "Returns:\n"
@@ -2344,7 +2344,7 @@ PyDoc_STRVAR(scspace_lb,
     "Gets the local bounds of this shared continuous space.\n\n"
     "The local bounds are the bounds of this shared continuous space on the current rank. For example, if "
     "the global bounds are 100 in the x dimension and 100 in the y dimension, and there are 4 ranks, "
-    "then the local bounds will be some quadrant of those global bounds, (0 - 50) x (0 - 50) for example.\n\n"
+    "then the local bounds will be some quadrant of those global bounds, 0 - 50 x 0 - 50 for example.\n\n"
     "Returns:\n"
     "    repast4py.geometry.BoundingBox: the local bounds as a BoundingBox."
 );
@@ -2395,6 +2395,7 @@ PyDoc_STRVAR(scspace_within,
     "get_agents_within(bbox)\n\n"
     
     "Gets an iterator over all the agents within the specified bounding box.\n\n"
+    "**The bounding box is assumed to be within the local bounds of this SharedCSpace.**\n\n"
     "Args:\n"
     "    box(repast4py.geometry.BoundingBox): the bounding box to get the agents within.\n\n"
     "Returns:\n"
@@ -2420,7 +2421,7 @@ static PyMethodDef SharedCSpace_methods[] = {
 };
 
 PyDoc_STRVAR(scspace_scspace,
-    "SharedContinuousSpace(name, bounds, borders, occupancy, buffersize, comm, tree_threshold)\n\n"
+    "SharedContinuousSpace(name, bounds, borders, occupancy, buffer_size, comm, tree_threshold)\n\n"
     
     "An N-dimensional cartesian discrete space where agents can occupy locations defined by "
     "a continuous floating point coordinate.\n\n"
@@ -2434,15 +2435,15 @@ PyDoc_STRVAR(scspace_scspace,
     "to any agent behavior. For example, if an agent can \"see\" 3 units away and take some action based on what it "
     "perceives, then the buffer size should be at least 3, insuring that an agent can properly see beyond the borders of "
     "its own local SharedContinuousSpace. When an agent moves beyond the borders of its current SharedContinuousSpace, it will be transferred "
-    "from its current rank, and into that containing the section of the global grid that it has moved into. "
+    "from its current rank, and to the rank containing the section of the global grid that it has moved into. "
     "The SharedContinuousSpace uses a `tree <https://en.wikipedia.org/wiki/Quadtree>`_ (quad or oct depending on the number of "
     "dimensions) to speed up spatial queries. The tree can be tuned using the tree threshold parameter.\n\n"
     "Args:\n"
     "   name (str): the name of the grid.\n"
     "   bounds (repast4py.geometry.BoundingBox): the global dimensions of the grid.\n"
-    "   borders (repast4py.space.BorderType): the border semantics: BorderType.Sticky or BorderType.Periodic\n"
-    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell: OccupancyType.Multiple or OccupancyType.Single.\n"
-    "   buffersize (int): the size of this SharedContinuousSpace's buffered area. This single value is used for all dimensions.\n"
+    "   borders (repast4py.space.BorderType): the border semantics - :attr:`BorderType.Sticky` or :attr:`BorderType.Periodic`.\n"
+    "   occupancy (repast4py.space.OccupancyType): the type of occupancy in each cell - :attr:`OccupancyType.Multiple` or :attr:`OccupancyType.Single`.\n"
+    "   buffer_size (int): the size of this SharedContinuousSpace's buffered area. This single value is used for all dimensions.\n"
     "   comm (mpi4py.MPI.Intracomm): the communicator containing all the ranks over which this SharedGrid is shared.\n"
     "   tree_threshold (int): the space's tree cell maximum capacity. When this capacity is reached, the cell splits."
 );
@@ -2652,17 +2653,17 @@ static PyGetSetDef CartesianTopology_get_setters[] = {
 };
 
 PyDoc_STRVAR(cart_cbn,
-    "compute_buffer_nghs(buffersize)\n\n"
+    "compute_buffer_nghs(buffer_size)\n\n"
     
-    "Gets an iterator over the collection of buffer synchronization meta data for the current rank for the specified buffersize.\n\n"
+    "Gets an iterator over the collection of buffer synchronization meta data for the current rank for the specified buffer_size.\n\n"
     "This data contains information for each cartesian neighbor of the current rank specifying what subsection of "
     "this grid or space should be sent what rank when synchronizing buffers. This method should not typically be "
     "called by users, but is rather part of the internal synchronization mechanism.\n\n"
     "Args:\n"
-    "    buffersize(int): the size of the buffer.\n\n"
+    "    buffer_size(int): the size of the buffer.\n\n"
     "Returns:\n"
-    "    iterator: an iterator over a tuples of buffer synchronization meta data: (rank, (xmin, xmax, ymin, ymax, zmin, zmax)) "
-    "where rank is the neighbors rank, and the nested tuple specifies what part of this space or grid to send."
+    "    iterator: an iterator over tuples of buffer synchronization meta data: :samp:`(rank, (xmin, xmax, ymin, ymax, zmin, zmax))` "
+    "where rank is the neighbor's rank, and the nested tuple specifies what part of this space or grid to send."
 );
 
 
@@ -2677,7 +2678,7 @@ PyDoc_STRVAR(cart_cart,
     "A CartesianTopology is used by a SharedGrid or SharedContinuousSpace to create an efficient communicator over which the "
     "grid or space is distributed and to compute the buffer synchronization metadata used to synchronize the buffers between "
     "grid and space neighbors.\n\n"
-    "This class should not typically be created by users, but is rather part of the internal synchronization mechanism "
+    "This class should **not** typically be created by users, but is rather part of the internal synchronization mechanism "
     "used by the shared cartesian spaces. More info on MPI topologies can be found `here <https://wgropp.cs.illinois.edu/courses/cs598-s16/lectures/lecture28.pdf>`_.\n\n"
     "Args:\n"
     "   comm (mpi4py.MPI.Intracomm): the communicator to create the cartesian topology communicator from.\n"
