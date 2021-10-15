@@ -182,12 +182,23 @@ static PyGetSetDef DiscretePoint_get_setters[] = {
     {NULL}
 };
 
+PyDoc_STRVAR(dp_reset_from_array,
+    "_reset_from_array(np_array)\n\n"
+    "Resets the coordinate values of this DiscretePoint from the specified array's elements. "
+    "The array must be of the integer type, have a single dimension and have at least one element. The "
+    "x coordinate is set from the first element, y from the second, and z from the 3rd.\n\n"
+    "**This method should ONLY be used in code fully responsible for the point, that is, the "
+    "point was not returned from any repast4py method or function.**\n\n"
+    "Args:\n"
+    "    np_array(numpy.array): the array to reset from."
+);
+
 static PyMethodDef DiscretePoint_methods[] = {
     {"_reset1D", DiscretePoint_reset1D, METH_VARARGS, ""},
     {"_reset2D", DiscretePoint_reset2D, METH_VARARGS, ""},
     {"_reset3D", DiscretePoint_reset3D, METH_VARARGS, ""},
     {"_reset", DiscretePoint_reset, METH_VARARGS, ""},
-    {"_reset_from_array", DiscretePoint_reset_from_array, METH_VARARGS, ""},
+    {"_reset_from_array", DiscretePoint_reset_from_array, METH_VARARGS, dp_reset_from_array},
 
     {NULL, NULL, 0, NULL}
 };
@@ -218,7 +229,8 @@ PyDoc_STRVAR(dp_dp,
     "Args:\n"
     "   x (int): the x coordinate.\n"
     "   y (int): the y coordinate.\n"
-    "   z (int, optional): the z coordinate. Defaults to 0");
+    "   z (int, optional): the z coordinate. Defaults to 0\n\n"
+    ".. automethod:: _reset_from_array");
     
 
 
@@ -406,7 +418,16 @@ PyDoc_STRVAR(cp_z,
 PyDoc_STRVAR(cp_c,
     "numpy.array: Gets this ContinuousPoint's coordinates as 3 element numpy array.");
  
-
+PyDoc_STRVAR(cp_reset_from_array,
+    "_reset_from_array(np_array)\n\n"
+    "Resets the coordinate values of this ContinuousPoint from the specified array's elements. "
+    "The array must have a single dimension and have at least one element. The "
+    "x coordinate is set from the first element, y from the second, and z from the 3rd.\n\n"
+    "**This method should ONLY be used in code fully responsible for the point, that is, the "
+    "point was not returned from any repast4py method or function.**\n\n"
+    "Args:\n"
+    "    np_array(numpy.array): the array to reset from."
+);
 
 static PyGetSetDef ContinuousPoint_get_setters[] = {
     {(char*)"x", (getter)ContinuousPoint_get_x, NULL, cp_x, NULL},
@@ -421,7 +442,7 @@ static PyMethodDef ContinuousPoint_methods[] = {
     {"_reset2D", ContinuousPoint_reset2D, METH_VARARGS, ""},
     {"_reset3D", ContinuousPoint_reset3D, METH_VARARGS, ""},
     {"_reset", ContinuousPoint_reset, METH_VARARGS, ""},
-    {"_reset_from_array", ContinuousPoint_reset_from_array, METH_VARARGS, ""},
+    {"_reset_from_array", ContinuousPoint_reset_from_array, METH_VARARGS, cp_reset_from_array},
     {NULL, NULL, 0, NULL}
 };
 
@@ -454,7 +475,8 @@ PyDoc_STRVAR(cp_cp,
     "Args:\n"
     "   x (float): the x coordinate.\n"
     "   y (float): the y coordinate.\n"
-    "   z (float, optional): the z coordinate. Defaults to 0.0");
+    "   z (float, optional): the z coordinate. Defaults to 0.0\n\n"
+    ".. automethod:: _reset_from_array");
 
 
 static PyTypeObject ContinuousPointType = {
