@@ -17,6 +17,8 @@ cp $THIS/../guide/images/* $REPO/guide/images
 
 echo "Building API Docs"
 mkdir -p $REPO/apidoc
+cd $THIS/../..
+CC=mpicxx CXX=mpicxx python setup.py build_ext --inplace
 cd $THIS/..
 make clean
 make html

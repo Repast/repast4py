@@ -189,14 +189,15 @@ class Zombie(core.Agent):
             elif count == maximum[1]:
                 maximum[0].append(ngh)
 
-        max_ngh = maximum[0][random.default_rng.integers(0, len(maximum[0]))]
+        if len(maximum[0]) > 0:
+            max_ngh = maximum[0][random.default_rng.integers(0, len(maximum[0]))]
 
-        if not np.all(max_ngh == pt.coordinates):
-            direction = (max_ngh - pt.coordinates[0:3]) * 0.25
-            pt = model.space.get_location(self)
-            # timer.start_timer('zombie_move')
-            model.move(self, pt.x + direction[0], pt.y + direction[1])
-            # timer.stop_timer('zombie_move')
+            if not np.all(max_ngh == pt.coordinates):
+                direction = (max_ngh - pt.coordinates[0:3]) * 0.25
+                pt = model.space.get_location(self)
+                # timer.start_timer('zombie_move')
+                model.move(self, pt.x + direction[0], pt.y + direction[1])
+                # timer.stop_timer('zombie_move')
 
         pt = grid.get_location(self)
         for obj in grid.get_agents(pt):
