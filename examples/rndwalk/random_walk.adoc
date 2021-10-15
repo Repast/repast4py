@@ -1,4 +1,4 @@
-= Rumor Spreading Example Model
+= Random Walk Example Model
 :icons: font
 :website: http://repast.github.io
 :xrefstyle: full
@@ -7,4 +7,5 @@
 
 == Overview
 
-include::rumor_overview.adoc[]
+include::random_walk_overview.adoc[]
+

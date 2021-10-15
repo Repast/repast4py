@@ -1,5 +1,5 @@
 = Repast for Python (Repast4Py) User Guide
-Version 1.0 September 2021
+Version 1.0 October 2021
 :toc2:
 :icons: font
 :numbered:
@@ -19,6 +19,3 @@ include::distributing_agents.adoc[]
 include::tutorial_random_walk.adoc[]
 
 include::tutorial_network.adoc[]
-
-
-

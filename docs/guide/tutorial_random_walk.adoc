@@ -515,10 +515,10 @@ data.
 
 The simulation is run from the command line:
 
-`mpirun -n 4 python examples/rndwalk/rndwalk.py examples/rndwalk/random_walk_model.yaml`
+`mpirun -n 4 python examples/rndwalk/rndwalk.py examples/rndwalk/random_walk.yaml`
 
 Here we are running the simulation with 4 process ranks and the model input parameters are
-in the `examples/rndwalk/random_walk_model.yaml` file.
+in the `examples/rndwalk/random_walk.yaml` file.
 
 [source,yaml,numbered]
 ----

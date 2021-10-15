@@ -1,0 +1,11 @@
+The Rumor model is a simple network model that illustrates repast4py's network 
+agent-based model features. The simulation models the spread of a rumor through a networked population.
+During initialization some number of agents (network nodes) are marked as rumor spreaders. Then at each iteration of the model: 
+
+1. A random draw is made to determine if the network neighbors of any rumor-spreading nodes have received the rumor. 
+This draw is performed once for each neighbor. 
+2. After all of the neighbors that can receive the rumor have been processed,
+the collection of rumor spreaders is updated to include those nodes that received the rumor.
+3. The total number of rumor spreaders and the number of new rumor spreaders are logged.
+
+See https://jozik.github.io/goes_bing/guide/user_guide.html#_tutorial_2_the_rumor_network_model[Tutorial 2] in the Repast4Py User's Guide for a complete explanation of the Rumor model.

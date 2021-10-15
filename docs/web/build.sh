@@ -4,6 +4,7 @@ set -eu
 
 REPO=$HOME/Documents/repos/goes_bing
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
+ROOT=$( cd ../../  ; /bin/pwd )
 
 # Update the landing page
 echo "Building the landing page"
@@ -23,6 +24,25 @@ cd $THIS/..
 make clean
 make html
 cp -r _build/html/* $REPO/apidoc/
+
+echo "Building Examples"
+mkdir -p $REPO/examples
+cd $THIS/../../examples
+asciidoctor examples.adoc
+cp examples.html $REPO/examples/examples.html
+
+adocs=("examples/rumor/rumor_model.adoc" "examples/rndwalk/random_walk.adoc")
+for f in "${adocs[@]}"
+do
+    path=$ROOT/$f
+    # pd=$( dirname $path)
+    # cd $pd
+    # echo $pd
+    asciidoctor $path
+done
+
+cd $ROOT
+zip $REPO/examples/repast4py_example_models.zip -r examples -i@$THIS/examples_to_include
 
 
 # cd $REPO
