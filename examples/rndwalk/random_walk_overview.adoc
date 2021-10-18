@@ -8,5 +8,5 @@ determining the number of colocated agents at their grid locations.
 3. The sum, minimum, and maxiumum number of agents met are calculated across all process ranks, and these 
 values are logged as the total, minimum, and maximum `meet` values.
 
-See https://jozik.github.io/goes_bing/guide/user_guide.html#_tutorial_1_a_simple_model[Tutorial 1] in the Repast4Py
+See https://jozik.github.io/goes_bing/guide/user_guide.html#_tutorial_1_a_simple_random_walk_model[Tutorial 1] in the Repast4Py
 User's Guide for a complete explanation of the Random Walk model.

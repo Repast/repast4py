@@ -6,7 +6,7 @@ agent-based model features. The simulation models the spread of a rumor through 
 During initialization some number of agents (network nodes) are marked as rumor spreaders. At each iteration of the simulation, a random draw is made to determine if the neighbors of any rumor-spreading nodes have received the rumor. This draw is performed once for each neighbor. After all of the neighbors that can receive the rumor have been processed, the collection of rumor spreaders is updated
 to include those nodes that received the rumor.
 
-*This text assumes you have already read the _Repast4Py Users Guide_ up through <<_tutorial_1_a_simple_model, Tutorial 1>>.*
+*This text assumes you have already read the _Repast4Py Users Guide_ up through <<_tutorial_1_a_simple_random_walk_model, Tutorial 1>>.*
 
 See the {website}/examples/examples.html[Repast4Py Examples] page to download the source code for this model 
 and for more information on getting started with the examples.
@@ -123,7 +123,7 @@ we only update if the `received_rumor` state has changed from False to True. If 
 then add this agent to the Model's list of rumor spreading agents (<<_seeding_the_rumors>>). 
 
 ==== The Model Class
-As in <<_tutorial_1_a_simple_model, Tutorial 1>>, the Model class encapsulates the simulation.
+As in <<_tutorial_1_a_simple_random_walk_model, Tutorial 1>>, the Model class encapsulates the simulation.
 It is responsible for initialization, scheduling events, creating agents and their network, and managing logging.
 It also defines the scheduled events that drive the simulation forward.
 
@@ -250,7 +250,7 @@ the sum of all these values is the total number of initial rumor spreaders
 specified by the input parameter.
 
 ===== Logging
-As we saw in <<_tutorial_1_a_simple_model, Tutorial 1>>, there are
+As we saw in <<_tutorial_1_a_simple_random_walk_model, Tutorial 1>>, there are
 two types of logging supported by Repast4Py, tabular and reduce-type logging (see the `repast4py.logging` module
 {website}/apidoc/source/repast4py.logging.html#module-repast4py.logging[API documentation] for more information).
 
