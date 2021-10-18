@@ -3,6 +3,9 @@
 # Software Name: repast4py
 # By: Argonne National Laboratory
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+"""
+The parameters module contains functions for working with model input parameters.
+"""
 
 import yaml
 import json
@@ -14,26 +17,23 @@ from repast4py import random
 
 params = {}
 """
-Dict: once init
+Dict: After calling :func:`repast4py.parameters.init_params`, this dictionary
+will contain the model parameters.
 """
 
 
 def create_args_parser():
-    """Creates an argparse parser with two arguments for
-    accepting a yaml format file containing model parameter input,
-    and an optional json dictionary string that can override that input.
+    """Creates an argparse parser with two arguments: 1)
+    a yaml format file containing model parameter input,
+    and 2) an optional json dictionary string that can override that input.
 
-    The two added arguments are:
-    1. parameters_file: a yaml format file
-    2. parameters: a json dictionary string that can override the
-    parameters specified in the yaml format.
-
-    This function is intended to work in concert with the :func:`repast4py.util.parse_params`
+    This function is intended to work in concert with the :func:`repast4py.parameters.init_params`
     function where the results of the argparse argument parsing are passed as arguments to
     that function.
 
     Examples:
         >>> parser = create_args_parser()
+        ...
         >>> args = parser.parse_args()
         >>> params = init_params(args.parameters_file, args.parameters)
     """
@@ -45,18 +45,18 @@ def create_args_parser():
 
 
 def init_params(parameters_file: str, parameters: str) -> Dict:
-    """Parses model input parameters.
+    """Initializes the :attr:`repast4py.parameters.params` dictionary with
+    the model input parameters.
 
-    Parameter parsing reads the parameters file, overrides
-    any of those properties with those in the parameters string,
-    and then executes the code that creates the derived parameters.
+    This reads the parameters file, overrides
+    any of those parameter values with those in the parameters string.
     This will automatically set the random number generator's seed
     if the parameters file or the parameters string contain a
     'random.seed' parameter.
 
     Args:
-        parameters_file: yaml format file containing model parameters
-        parameters: json format string that overrides those in the file
+        parameters_file: yaml format file containing model parameters as key value pairs.
+        parameters: json map format string that overrides those in the file
     Returns:
         A dictionary containing the final model parameters.
     """
