@@ -3,7 +3,7 @@ Version 1.0 October 2021
 :toc2:
 :icons: font
 :numbered:
-:website: http://repast.github.io
+:website: https://jozik.github.io/goes_bing
 :xrefstyle: full
 :imagesdir: images
 :source-highlighter: pygments

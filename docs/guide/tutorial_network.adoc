@@ -8,7 +8,8 @@ to include those nodes that received the rumor.
 
 *This text assumes you have already read the _Repast4Py Users Guide_ up through <<_tutorial_1_a_simple_model, Tutorial 1>>.*
 
-The source code for this example model can be downloaded from #TODO: update link [here]#.
+See the {website}/examples/examples.html[Repast4Py Examples] page to download the source code for this model 
+and for more information on getting started with the examples.
 
 === The Network
 The Rumor model network is initialized from the `examples/rumor/network.txt` file included with the example model.
@@ -56,7 +57,7 @@ and write it out to `fname`.
 <3> If nxmetis is not available, distribute the graph using the default random partition method,
 and write it out to `fname`.
 
-See the API documentation for `repast4py.network.write_network` for more information.
+See the API documentation for {website}/apidoc/source/repast4py.network.html#repast4py.network.write_network[`repast4py.network.write_network`] for more information.
 
 === The Rumor Model Implementation
 The Rumor Model implementation follows the typical Repast4Py structure and consists of the following parts.
@@ -180,12 +181,14 @@ self.net = self.context.get_projection('rumor_network')    <4>
 `restore_agent` functions to create the agents and their necessary ghosts (<<_creating_and_restoring_rumoragents>>).
 The created network is added to the specified context as part of this call.
 <4> Gets a reference to the named network from the context. The network
-input file specifies the network name on its first line.
+input file specifies the network name on its first line. This is the
+network created in <3> and is an instance of an
+{website}/apidoc/source/repast4py.network.html#repast4py.network.UndirectedSharedNetwork[`UndirectedSharedNetwork`].
 
 ===== Seeding the Rumors
 We seed the network with some initial rumor spreaders by selecting a parameterized number of
 agents and setting their `received_rumor` attribute to True. These agents
-are added to the `Model`'s list of rumor spreaders.
+are added to the `Model's` list of rumor spreaders.
 
 [source,python,numbered]
 ----
@@ -196,13 +199,13 @@ def __init__(self, comm, params):
     self._seed_rumor(params['initial_rumor_count'], comm)
 ----
 
-The `_seed_rumor` method uses MPI's Scatter function to send
+The `\_seed_rumor` method uses MPI's Scatter function to send
 each rank the number of agents to initialize as rumor spreaders. 
 An MPI4Py scatter call takes a collection or array of values created on 
 one rank (the root rank) and sends the _ith_ element
 of that collection or array to rank _i_. So for example,
 rank 0 gets the _zeroth_ element, rank 1 gets the _first_, and
-so on. In `_seed_rumor`, we use a numpy array of ints as the array
+so on. In `\_seed_rumor`, we use a numpy array of ints as the array
 to scatter and the _ith_ element of the array is the number of rumor
 spreaders to initialize on rank _i_.
 
@@ -248,7 +251,8 @@ specified by the input parameter.
 
 ===== Logging
 As we saw in <<_tutorial_1_a_simple_model, Tutorial 1>>, there are
-two types of logging supported by Repast4Py, tabular and reduce-type logging (see the `repast4py.logging` module API for more information).
+two types of logging supported by Repast4Py, tabular and reduce-type logging (see the `repast4py.logging` module
+{website}/apidoc/source/repast4py.logging.html#module-repast4py.logging[API documentation] for more information).
 
 The Rumor model uses the second of these log types. The dataclass that we log records
 the total number of rumor spreaders and the number of new rumor spreaders added during
@@ -373,7 +377,7 @@ def create_rumor_agent(nid, agent_type, rank, **kwargs):    <1>
 ----
 <1> The nid, agent_type, and rank arguments are read from the network
 input file and passed to this function. See the `repast4py.network.read_network`
-API documentation for more info. #TODO: API Link#.
+{website}/apidoc/source/repast4py.network.html#repast4py.network.read_network[API documentation] for more info.
 
 
 As described in <<_the_network>>, when an edge links two nodes

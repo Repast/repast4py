@@ -1,6 +1,4 @@
-== Tutorial 1 - A Simple Model
-
-#QUESTION: Can we include a pointer to where the model code is in the distribution/repository?#
+== Tutorial 1 - A Simple Random Walk Model
 
 This tutorial will guide you through coding a simple model, focusing on components
 and concepts common to every model. The simulation itself consists of a number
@@ -16,6 +14,9 @@ values are logged as the total, minimum, and maximum `meet` values.
 In addition, every 10 timesteps: 
 
 1. The individual agent _meet_ counts are logged across all the process ranks.
+
+See the {website}/examples/examples.html[Repast4Py Examples] page to download the source code for this model 
+and for more information on getting started with the examples.
 
 The code consists of the following components:
 
@@ -136,7 +137,9 @@ def count_colocations(self, grid: SharedGrid, meet_log: MeetLog):
 ----
 <1> `SharedGrid.get_num_agents` returns the number of agents at a specified location.
 
-TIP: To learn more about built-in agent and grid functionality, see the API documentation for `repast4py.core.Agent` and `repast4py.space.SharedGrid`.
+TIP: To learn more about built-in agent and grid functionality, see the 
+API documentation for {website}/apidoc/source/repast4py.core.html#repast4py.core.Agent[`repast4py.core.Agent`]
+and {website}/apidoc/source/repast4py.space.html#repast4py.space.SharedGrid[`repast4py.space.SharedGrid`].
 
 
 As we will see below, the Model class will schedule the execution of these two functions on every agent at every timestep. In this way, each agent executes its behavior each timestep.
@@ -217,7 +220,8 @@ events will no longer be popped off the schedule and executed.
 _clean up_ type operation when the simulation ends, closing a log file, for example.
 This is called at the time specified in the call to `schedule_stop`.
 
-TIP: Once the default scheduler runner has been initialized with `schedule.init_schedule_runner`, you can get a reference to it with `schedule.runner()`. See the schedule model API documentation for
+TIP: Once the default scheduler runner has been initialized with `schedule.init_schedule_runner`, you can get a reference to it with `schedule.runner()`. See the schedule module
+{website}/apidoc/source/repast4py.schedule.html[API documentation] for
 more information on different ways to schedule events (methods and functions).
 
 IMPORTANT: A simulation stopping time must be set with `schedule_stop`. Without a stopping time
@@ -257,7 +261,8 @@ the y and z dimensions. Here we create a 2D box (the z extent is 0) starting at 
 extending for `params['world.width]` in the x dimension and `params['world.height']` in
 the y dimension.
 <3> `space.SharedGrid` takes a name, its bounds, its border, and occupancy types, as well
-as a buffer size, and a communicator as arguments. See the `SharedGrid` API documentation
+as a buffer size, and a communicator as arguments. See the `SharedGrid`
+{website}/apidoc/source/repast4py.space.html#repast4py.space.SharedGrid[API documentation]
 for a description of these arguments. The concept of a buffer was described in the
 xref:overview.adoc#_distributed_simulation[Distributed Simulation] section.
 <4> Once a xref:overview.adoc#_contexts_and_projections[projection] has been created
@@ -309,7 +314,8 @@ type of logging, you create a _logger_, which is responsible for logging the dat
 and performing the reduction operation on the field(s). These loggers are then added to
 a `logging.ReducingDataSet`. Calling `logging.ReducingDataSet.log(tick)` will log the
 current value of the dataclass field(s) in the loggers and perform the cross-process
-reduction. See the `logging` module API for more information.
+reduction. See the `logging` module
+{website}/apidoc/source/repast4py.logging.html[API documentation] for more information.
 
 The Walker Model uses both of these logging types. The first is used to log the individual _meet_count_ of
 each agent, and the second to log that total number of meets, as well as the minimum and maximum number.
@@ -429,7 +435,9 @@ def step(self):
 ----
 <1> Calls `walk` on each `Walker` agent. `self.context.agents` returns an iterator over all the 
 agents in the model. See <<_walking_the_walker>> for more information on the `walk` method,
-and the `SharedContext` API documenation for more information on the `agents` method.
+and the `SharedContext`
+{website}/apidoc/source/repast4py.context.html#repast4py.context.SharedContext.agents[API documenation]
+for more information on the `agents` method.
 <2> Synchronizes the state of the simulation across processes using the `restore_walker`
 function to restore any `Walkers` that have moved processes. See <<_restoring_walkers>>
 for more information.
@@ -581,7 +589,8 @@ num_agents = parameters.params['num.agents']
 
 If the parameters file or the json input contains a parameter named `random.seed`,
 the default random number generator (i.e., `repast4py.random.default_rng`) is initialized
-with that seed. See the `repast4py.parameters` API documentation for more information.
+with that seed. See the `repast4py.parameters`
+{website}/apidoc/source/repast4py.parameters.html[API documentation] for more information.
 
 Lastly we have a simple `run` function that creates the `Model` class and calls its
 `start` method, which starts the simulation by starting schedule execution. This `run` function is called
