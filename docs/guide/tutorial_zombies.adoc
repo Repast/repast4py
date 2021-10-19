@@ -113,7 +113,9 @@ class Zombie(core.Agent):
 <14> The zombie only is able to move a distance of `0.25` spaces per step (i.e. its speed is `0.25 spaces/setp`). Thus, to move the zombie, we first find the direction it will travel, and then move the zombie `0.25` spaces in that direction. We compute the direction of where the zombie is moving by subtracting its current location from its desired location. 
 <15> Thus far, our locations have been all Discrete Point objects. However, our zombie will not be moving a full grid point. Thus, we utilize the Continuous Point object of our Repast4py continuous space as the starting point of our zombie's move.
 <16> We then move the zombie using the Model's `move()` method (#TODO add in internal reference to where this is described#)
-<17> Now that the zombie has moved, we query its new location for any humans that are present. If humans are present, we then use the `infect()` method from our Model class to infect the colocated humans. Note, as the Zombie is only moving 0.25 spaces, it is possible for the grid location after moving to be the same as the one before moving. 
+<17> Now that the zombie has moved, we query its new location for any humans that are present. If humans are present, we then use the `infect()` method from the Human agent class to change the corresponding Human agent's `infected` state to `True`. The `infect()` method of the Human agent is described in the <<The Human agent,next section>>.
+
+NOTE: As the Zombie is only moving 0.25 spaces, it is possible for the grid location of the Zombie agent after moving to be the same as its grid location before moving. 
 
 To move our zombie agent between processes, we must save its state. Because the zombie agent does not have an internal state, our `save` method only entails saving each zombie agent's unique id tuple:
 [source,python,numbered]
@@ -123,7 +125,7 @@ To move our zombie agent between processes, we must save its state. Because the 
 ----
 
 
-==== The `Human` agent
+==== The Human agent
 
 The Human agent has two states: 
 
@@ -142,17 +144,16 @@ Just like the Zombie agents, we implement our humans using the `Human` class, wh
 ----
 from repast4py import core
 
-class Zombie(core.Agent): #<1>
+class Human(core.Agent): #<1>
 
-    TYPE = 1 #<2>
+    TYPE = 0 #<2>
 
     def __init__(self, a_id, rank): #<3>
-        super().__init__(id=a_id, type=Zombie.ID, rank=rank)
+        super().__init__(id=a_id, type=Human.TYPE, rank=rank)
 ----
-<1> `Zombie` subclasses `repast4py.core.Agent`. Subclassing `Agent` is a requirement for all Repast4Py agent implementations.
-<2> `ID` is a class variable that defines an agent type id for each Zombie agent. This is a required part of the unique agent id tuple. (#TODO: Change this to `TYPE` instead?#)
+<1> `Human` subclasses `repast4py.core.Agent`. Subclassing `Agent` is a requirement for all Repast4Py agent implementations.
+<2> `TYPE` is a class variable that defines an agent type id for each Human agent. This is a required part of the unique agent id tuple.
 <3> In order to uniquely identify the agent across all ranks in the simulation, the `repast4py.core.Agent` constructor takes the following three arguments: an integer id that uniquely identifes an agent on the process where it was created, a non-negative integer identifying the type of the agent, and the rank on which the agent is created.
-
 
 Each human has three underlying behaviors: 
 
