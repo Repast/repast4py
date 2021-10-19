@@ -1,0 +1,614 @@
+== Tutorial 3 - The Zombies Model
+
+In the example from <<Tutorial 1 - A Simple Model, Tutorial 1>>, we developed a basic model for a class of Agents to randomly walk around a 2-dimensional Cartesian grid and "meeting" fellow agents by counting colocation of other agents in the same grid space. For this example, we extend our demonstration of Repast4py capabilities through the implementation of an additional Zombies Agent class, and usage of a Continuous Space.
+
+For each timestep, the following occurs:
+
+. Zombies wander around looking for humans to infect. 
+. Humans will look to see if any zombies are nearby, and if so, they will move away from them to avoid them, moving at twice the speed as their zombie counterparts.
+. If a zombie is able to move to the same space as a human, the zombie will then infect the human. 
+. Once infected, the human will become increasingly sick, eventually die, and then turn into a zombie.
+
+The code to implement the Zombie model consists of the following components:
+
+* Two agent classes: a `Zombie` class that implements the behavior of the zombies, and a `Human` class that implements the state and behavior of the human agents. 
+* A `Model` class responsible initializing and managing the simulation, including the model's context and spatial projections. 
+* Additional Repast4py spatial projections and functionality, including the usage of the Continuous Space projection in conjunction with the Discrete Space.  
+* Usage of additional Python libraries, including the `@jitclass` Python library, which is able to compute the Moore neighborhood...a `GridNghFinder` class that computes the immediate neighborhood of grid spaces for both the `Zombie` and `Human` agents to search, (#TODO#)
+* Methods to initialize and run the model.
+* Components specific to running the Zombies model on a distributed system, including a `restore_agent` function that restores both Zombie and Human agents when moved from one MPI rank to another. (#TODO - Collapse this point into the agent class description#)
+
+Details of each of these components are described throughout the rest of this tutorial.
+
+=== The agent classes
+
+The `Zombies` model implements two different agent classes: a `Zombie` and a `Human`. While both of these agents are implemented in a similar fashion to the <<The Walker Agent, `Walker` agent>>, they differ distinctly in the following ways:
+
+* First, if a `Human` agent becomes infected by a `Zombie` agent, the human will eventually die and be converted into a `Zombie` agent. The method that transitions a human's state from `alive` to `dead`, and then turning into a `Zombie` agent is described in XX (#TODO#).
+* Second, we introduce a speed for both the `Zombie` and `Human` agents. We do this by introducing a Continuous Space projection. Thus, when a `Zombie` or `Human` moves in the spatial projection, they move in fractional rather than whole distances. They compute the distance they are moving via the Continous Space projection, but this Continuous Space projection is then converted to a Discrete Space location. These spatial aspects are described in detail in XX (#TODO#) 
+* Additionally, location of both agent types are stored within the `Model` class rather than within each agent's respective class. Thus, the states for both the `Human` and `Zombie` agents do not include their spatial location. Instead, each agent queries the Model class for their location on the spatial grids.
+
+==== The `Zombie` agent
+
+We implement our Zombie agent using the `Zombie` class; the `Zombie` class is a subclass of `repast4py.core.Agent` which yields each new agent a unique agent id tuple. The following code initiates each Zombie agent:
+
+[source,python,numbered]
+----
+from repast4py import core
+
+class Zombie(core.Agent): #<1>
+
+    ID = 1 #<2>
+
+    def __init__(self, a_id, rank): #<3>
+        super().__init__(id=a_id, type=Zombie.ID, rank=rank)
+----
+<1> `Zombie` subclasses `repast4py.core.Agent`. Subclassing `Agent` is a requirement for all Repast4Py agent implementations.
+<2> `ID` is a class variable that defines an agent type id for each Zombie agent. This is a required part of the unique agent id tuple. (#TODO: Change this to `TYPE` instead?#)
+<3> In order to uniquely identify the agent across all ranks in the simulation, the `repast4py.core.Agent` constructor takes the following three arguments: (i) an integer id that uniquely identifes an agent on the process where it was created, (ii) a non-negative integer identifying the type of the agent, and (iii) the rank on which the agent is created.
+
+The Zombie agent behavior is implemented via its `step` method. The step method has each `Zombie` observe its immediate space to see where the most humans are located (if any). The `Zombie` will then move towards the space in its immediate vicinity that contains the most humans. If more than one space have the same number of `Human` agents, the `Zombie` will choose one of these spaces randomly to move towards. If no humans are within the immediate vicinity, the `Zombie` will stay in its current location.
+
+NOTE: Each Zombie is characterized solely by its behavior. That is, the `Zombie` agent does not have an internal state.  (#TODO: Anything more to say here?#)
+
+The following snippet of code demonstrates the Zombie agent behavior:  
+
+[source,python,numbered]
+----
+from repast4py import core, space, schedule, logging, random
+from repast4py.space import ContinuousPoint as cpt
+from repast4py.space import DiscretePoint as dpt
+
+...
+
+class Zombie(core.Agent):
+
+    ...
+
+    def step(self):
+        grid = model.grid #<1>
+        pt = grid.get_location(self) #<2>
+        nghs = model.ngh_finder.find(pt.x, pt.y) #<3> 
+
+        at = dpt(0, 0) #<4>
+        maximum = [[], -(sys.maxsize - 1)] #<5>
+        for ngh in nghs: #<6>
+            at._reset_from_array(ngh) #<7>
+            count = 0 #<8>
+            for obj in grid.get_agents(at): #<9>
+                if obj.uid[1] == Human.ID: 
+                    count += 1
+            if count > maximum[1]: #<10>
+                maximum[0] = [ngh]
+                maximum[1] = count
+            elif count == maximum[1]: #<11>
+                maximum[0].append(ngh)
+
+        max_ngh = maximum[0][random.default_rng.integers(0, len(maximum[0]))] #<12>
+
+        if not np.all(max_ngh == pt.coordinates): #<13>
+            direction = (max_ngh - pt.coordinates[0:3]) * 0.25 #<14>
+            pt = model.space.get_location(self) #<15>
+            model.move(self, pt.x + direction[0], pt.y + direction[1]) #<16>
+
+        pt = grid.get_location(self) #<17>
+        for obj in grid.get_agents(pt): 
+            if obj.uid[1] == Human.ID: 
+                obj.infect() 
+                break
+----
+<1> As all agents in this model move on the same grid projection, we pass in the shared grid object from our model class.
+<2> The `Zombie` agent does not store their location on the grid as a state. Instead, it queries the shared grid object with `grid.get_location(self)` to determine its location on the grid projection. This location is a `Discrete Point`.
+<3> Using the grid neighbor finder class, we obtain the Moore neighborhood of our Zombie agent's location on the grid projection. Note, `pt` has two attributes (i.e. its X and Y coordinate) that must be passed to `ngh_finder` class. (#TODO Is `pt` a class or an object?#)
+<4> In order to cycle over the Moore neighborhood of grid points, we instantiate a discrete point `at` to serve as the array implementation of the grid point we are querying. (#TODO Not sure the `at` variable is explained very well#)
+<5> We initialize a list `maximum` to store the set of grid locations we are querying that contain the most `Human` agents. The first position in `maximum` (i.e. `maximum[0]`) is a list that will be appended to include all of the grid space neighbors containing the highest number of `Human` agents, while the second position (i.e. `maximum[1]`) stores the count of `Human` agents corresponding to that list. Each component of this list is reset when the count of `Human` agents is greater at the current grid location being queried than the prior spaces.
+<6> This begins our loop through the set of grid spaces in the Zombie's Moore neighborhood.
+<7> (#TODO: Not sure how to explain this part#)
+<8> Initialize our `count` variable to keep track of the number of `Human` agents at the corresponding `ngh` grid location.
+<9> Queries the objects located at the corresponding grid location. Iterates over the objects, and keeps track of which are a `Human` agent, increasing `count` for each.
+<10> Checks if the number of humans at the current location is greater than any of the previous grid locations searched. If so, creates a new list at `maximum[0]` with the current grid location as its first entry, and stores the corresndpongin human `count` as the new `maximum[1]`.
+<11> If the grid location has the same count as the current maximum and does not exceed it, then it adds grid location to the `maximum[0]` list, and `maximum[1]` stays as is.
+<12> After iterating over the zombie's neighborhood, we now have a list that contains the grid locations with the most humans. We user our built in Repast4Py default random number generator (`repast4py.random.default_rng`) to select a random entry from our `maximum[0]` list. This location is where our zombie will move to.
+<13> We check if the location the zombie has chosen to move to is the location that zombie is currently located at. If so, the zombie does not move and stays at its current location. If not, the zombie moves toward the selected location.
+<14> The zombie only is able to move a distance of `0.25` spaces per step (i.e. its speed is `0.25 spaces/setp`). Thus, to move the zombie, we first find the direction it will travel, and then move the zombie `0.25` spaces in that direction. We compute the direction of where the zombie is moving by subtracting its current location from its desired location. 
+<15> Thus far, our locations have been all Discrete Point objects. However, our zombie will not be moving a full grid point. Thus, we utilize the Continuous Point object of our Repast4py continuous space as the starting point of our zombie's move.
+<16> We then move the zombie using the Model's `move()` method (#TODO add in internal reference to where this is described#)
+<17> Now that the zombie has moved, we query its new location for any humans that are present. If humans are present, we then use the `infect()` method from our Model class to infect the colocated humans. Note, as the Zombie is only moving 0.25 spaces, it is possible for the grid location after moving to be the same as the one before moving. 
+
+To move our zombie agent between processes, we must save its state. Because the zombie agent does not have an internal state, our `save` method only entails saving each zombie agent's unique id tuple:
+[source,python,numbered]
+----
+    def save(self):
+        return (self.uid,)
+----
+
+
+==== The `Human` agent
+
+The Human agent has two states: 
+
+. whether or not they are infected, and
+. the duration of their infection (which is 0 if not infected)
+
+Additionally, the human has the following behaviors:
+
+. looks for a Zombie in their immediate vicinity,
+. moves away from any Zombies they see in order to avoid becoming infected, and
+. becomes sicker if they have been infected.
+
+Just like the Zombie agents, we implement our humans using the `Human` class, which is a subclass of `repast4py.core.Agent` and yields each new agent a unique agent id tuple. The following code initiates each Human agent:
+
+[source,python,numbered]
+----
+from repast4py import core
+
+class Zombie(core.Agent): #<1>
+
+    TYPE = 1 #<2>
+
+    def __init__(self, a_id, rank): #<3>
+        super().__init__(id=a_id, type=Zombie.ID, rank=rank)
+----
+<1> `Zombie` subclasses `repast4py.core.Agent`. Subclassing `Agent` is a requirement for all Repast4Py agent implementations.
+<2> `ID` is a class variable that defines an agent type id for each Zombie agent. This is a required part of the unique agent id tuple. (#TODO: Change this to `TYPE` instead?#)
+<3> In order to uniquely identify the agent across all ranks in the simulation, the `repast4py.core.Agent` constructor takes the following three arguments: an integer id that uniquely identifes an agent on the process where it was created, a non-negative integer identifying the type of the agent, and the rank on which the agent is created.
+
+
+Each human has three underlying behaviors: 
+
+. Moving away from Zombies
+. Becoming infected by a Zombie
+. And becoming sicker when infected
+
+The step method for the human agent is similar to that of the zombie in that it contains the details on how a human agent moves away from zombie agents. Additionally, the human step method progresses a human agent's illness once they are infected by a zombie. The human step method is as follows:
+
+[source,python,numbered]
+----
+def step(self):
+        space_pt = model.space.get_location(self) #<1>
+        alive = True #<2>
+        if self.infected: #<3>
+            self.infected_duration += 1 #<4>
+            alive = self.infected_duration < 10 #<5>
+
+        if alive: #<6>
+            grid = model.grid #<7>
+            pt = grid.get_location(self)
+            nghs = model.ngh_finder.find(pt.x, pt.y)  
+
+            minimum = [[], sys.maxsize] #<8>
+            at = dpt(0, 0, 0)
+            for ngh in nghs:
+                at._reset_from_array(ngh)
+                count = 0
+                for obj in grid.get_agents(at):
+                    if obj.uid[1] == Zombie.TYPE:
+                        count += 1
+                if count < minimum[1]:
+                    minimum[0] = [ngh]
+                    minimum[1] = count
+                elif count == minimum[1]:
+                    minimum[0].append(ngh)
+
+            min_ngh = minimum[0][random.default_rng.integers(0, len(minimum[0]))]#<9>
+
+            if not is_equal(min_ngh, pt.coordinates): #<10>
+                direction = (min_ngh - pt.coordinates) * 0.5 
+                model.move(self, 
+                            space_pt.x + direction[0], space_pt.y + direction[1])
+
+        return (not alive, space_pt) #<11>
+----
+<1> We have our human agent query where it is located in the shared continuous `space` projection from our model class.
+<2> Because our human agent is still in our model's context (i.e. it is still implementing the `step()` at every scheduled event), we assume the human is `alive`. 
+<3> We check whether or not our human agent is infected. 
+<4> If our agent is infected, we progress the length of time our human has been infected by one.
+<5> Once a human agent's infection duration reaches 10 steps, it will then no longer be alive, and we set our `alive` variable to `False`. 
+<6> Human agents still alive then move away from any zombie neighbors.
+<7> As we did with the zombies, we pass in the shared grid object from our model class and our human agent queries their location. 
+<8> Then, using a similar method as the zombie agents, the human obtains its Moore neighborhood, but this time looks for the neighbor with the _least_ number of zombies.  
+<9> The human then selects randomly a location to move to from the list of neighboring spaces with the least number of zombies.
+<10> We check if the location the human has chosen to move to is the location that the human is currently located at. The human agents are faster than their fellow zombies, and move at a speed of `0.5 spaces/step`. Thus, the human computes its direction, and then moves `0.5` spaces in that direction. 
+<11> After a human's step is complete, it returns a tuple that tells the Model class whether or not the human agent is still alive (i.e. whether or not `self.infected_duration >= 10`), and if not, where the human agent is located. 
+
+NOTE: As our Model class manages removing a human that is no longer alive from the model's context. As will be described in (#XX#), the Model class will convert any `not alive` human agents into zombie agents.
+
+The mechanism for a Human agent to become infected is changing its `infected` state from `False` to `True`. Thus, each Human agent also has an `infect` method:
+[source,python,numbered]
+----
+class Human(core.Agent):
+
+    ...
+
+    def infect(self):
+        self.infected = True
+----
+
+NOTE: When a human becomes infected by a zombie, it is the zombie that initiates the infection by calling the `infect()` method of the corresponding human agent it is infecting. The zombie calling this method is at the end of the Zombie agent `step()` function, which is described earlier in <<The `Zombie` agent>>.
+
+To move our human agent between processes, we must save its state. Unlike our zombie agent, saving the human state entails saving its `infected` and `infected_duration` states _in addition to_ its unique agent id tuple. The `save` method for the human agent was described in detail in the <<Saving and Restoring Agents>> subsection. But for the sake of being comprehensive, we include the code snippet of the method here:
+
+[source,python,numbered]
+----
+class Human(core.Agent):
+
+    ...
+
+    def save(self) -> Tuple:
+        """Saves the state of this Human as a Tuple.
+
+        Used to move this Human from one MPI rank to another.
+
+        Returns:
+            The saved state of this Human.
+        """
+        return (self.uid, self.infected, self.infected_duration)
+----
+
+
+
+
+==== Restoring the agents
+
+All agents must have a restore function that can take a tuple produced by the save method and return an agent. A shared `restore_agent` function for both the zombie and the human agents is created, and was described in detail in the <<Saving and Restoring Agents>> subsection, but for the sake of being comprehensive, we include the code snippet of the function here:
+
+[source,python,numbered]
+----
+def restore_agent(agent_data: Tuple):
+    """Creates an agent from the specified agent_data.
+
+    This is used to re-create agents when they have moved from one MPI rank to another.
+    The tuple returned by the agent's save() method is moved between ranks, and restore_agent
+    is called for each tuple in order to create the agent on that rank. Here we also use
+    a cache to cache any agents already created on this rank, and only update their state
+    rather than creating from scratch.
+
+    Args:
+        agent_data: the data to create the agent from. This is the tuple returned from the agent's save() method
+                    where the first element is the agent id tuple, and any remaining arguments encapsulate
+                    agent state.
+    """
+    uid = agent_data[0]
+    # 0 is id, 1 is type, 2 is rank
+    if uid[1] == Human.TYPE:
+        if uid in agent_cache:
+            h = agent_cache[uid]
+        else:
+            h = Human(uid[0], uid[2])
+            agent_cache[uid] = h
+
+        # restore the agent state from the agent_data tuple
+        h.infected = agent_data[1]
+        h.infected_duration = agent_data[2]
+        return h
+    else:
+        # note that the zombie has no internal state
+        # so there's nothing to restore other than
+        # the Zombie itself
+        if uid in agent_cache:
+            return agent_cache[uid]
+        else:
+            z = Zombie(uid[0], uid[2])
+            agent_cache[uid] = z
+            return z
+----
+
+
+
+=== The Model class 
+
+As was demonstrated in the earlier tutorials, the Model class encapsulates the simulation and is responsible for initialization, scheduling events, creating agents and the grid/space the agents inhabit, and managng logging. In addition, the scheduled events that drive the simulation forward are methods of the Model class.
+
+
+==== Scheduling Events and Creating the Context
+
+For the Zombies model, the scheduling of events, and the creation of the context is similar to the implementation in the <Tutorial 1 - A Simple Model, Walker Model>. For the Zombies model, it is implemented in the Model class with the following:
+
+[source,python,numbered]
+----
+class Model:
+
+    def __init__(self, comm, params): #<1>
+        self.comm = comm #<2> 
+        self.context = ctx.SharedContext(comm) #<3>
+        self.rank = self.comm.Get_rank() #<4>
+
+        self.runner = schedule.init_schedule_runner(comm) #<5>
+        self.runner.schedule_repeating_event(1, 1, self.step) #<6>
+        self.runner.schedule_stop(params['stop.at']) #<7>
+        self.runner.schedule_end_event(self.at_end) #<8>
+----
+<1> The Model constructor that takes an MPI communicator and dictionary of model input parameters.
+<2> Sets the MPI communicator. 
+<3> Creates a context to hold the agents and the network projection.
+<4> Gets the rank of the process the code is running on. (#TODO What does this mean for more than one process? The Model class is impelemented on all processes, right?#) 
+<5> Initializes schedule runner.
+<6> Schedules the repeating event of `Model.step`, beginning at tick 1 and repeating every tick thereafter.  
+<7> Schedules the tick at which the simulation should stop, and events will no longer be executed.
+<8> Schedules a simulation end event to occur after events have stopped.
+
+==== Implementing Spatial Projections
+
+After initializing the schedule, adding events, and creating the context to hold the population of agents, we must now provide some sort of structure to our agents and their relationships. Similar to the <<Creating the Context and Grid,Random Walker model>>, we implement the structure using spatial projections of a 2-dimensional cartesian space using the `repast4py.space` module.  
+
+Before we create our projections, we first must define a `BoundingBox` equal to the desired size of our space:
+[source,python,numbered]
+---- 
+box = space.BoundingBox(
+                0, #<1>
+                params['world.width'],  #<2>
+                0, #<3>
+                params['world.height'], #<4>
+                0, #<5>
+                0  #<6>
+            )
+----
+<1> The minimum `x` coordinate as `0`
+<2> The extent of the `x` dimension, defined in the `params` file as `world.width`
+<3> The minimum `y` coordinate as `0`
+<4> The extent of the `y` dimension, defined in the `params` file as `world.height`
+<5> The minimum `z` coordinate as `0`
+<6> As this is a 2-D space, the extent of the `z` dimension is set to `0` 
+
+We then create a `SharedGrid` the size of our `BoundingBox`. This grid is a discrete space in which the coordinates are discrete (#TODO: Get a better distinction#):
+[source,python,numbered]
+---- 
+self.grid = space.SharedGrid( 
+                    'grid', #<1>
+                    bounds=box, #<2>
+                    borders=BorderType.Sticky, #<3>
+                    occupancy=OccupancyType.Multiple, #<4>
+                    buffer_size=2, #<5>
+                    comm=comm #<6>
+                )
+self.context.add_projection(self.grid) #<7>
+----
+<1> Set the name of our shared grid projection as `grid`
+<2> Set the size of our grid projection the size of our bounding box `box` 
+<3> Set the borders of our proejection as `Sticky`
+<4> Allow multiple agents to occupy each space
+<5> Set the spatial buffer size to be `2` for each process such that agents can see  2 units beyond their process rank's subgrid 
+<6> Set the MPI communicator for the spatial projection
+<7> Add the projection to the context so that it can properly synchronized across processes
+
+Unlike in the <<Tutorial 1 - A Simple Model, Random Walker model>>, our Zombies model implements an additional continuous spatial projection, where an agent’s location is expressible as a non-discrete coordinate. Our continous space is implemented with the following:
+[source,python,numbered]
+---- 
+self.space = space.SharedCSpace(
+                    'space', #<1>
+                    bounds=box, #<2>
+                    borders=BorderType.Sticky, #<3>
+                    occupancy=OccupancyType.Multiple, #<4>
+                    buffer_size=2, #<5>
+                    comm=comm, #<6>
+                    tree_threshold=100 #<7>
+                )
+self.context.add_projection(self.space) #<8>
+----
+<1> Set the name of our shared space projection as `space`
+<2> Set the size of our space projection the size of our bounding box `box` 
+<3> Set the borders of our proejection as `Sticky`
+<4> Allow multiple agents to occupy each space
+<5> Set the spatial buffer size to be `2` for each process such that agents can see  2 units beyond their process rank's subgrid 
+<6> Set the MPI communicator for the spatial projection
+<7> #TODO#
+<8> Add the projection to the context so that it can properly synchronized across processes
+
+NOTE: We use two spatial projections in our Zombies model: a discrete `grid` projection, and a continuous `space` projection. Even thought the `space` and `grid` projections are distinct, they are built from the same bounding box. Thus, they are the same size, which allows us to translate (#find a more appropriate word here -- is this a 1-1 translation?#) between the two projections. Thus, for the Zombies model, because our agents have a speed less than `1 space/step`, we use the `space` projection to move the agents. However, when our agents query their neighborhood, it is more convenient to query a set of discrete grid locations. Thus, we use the `grid` equivalent of the agent's `space` location to quantify the number of agents within the corresponding grid neighborhood.
+
+==== Creating the Agents
+
+We create our world of agents within the Model class. First, we 
+[source,python,numbered]
+----
+local_bounds = self.space.get_local_bounds()
+world_size = comm.Get_size()
+----
+
+
+[source,python,numbered]
+----
+total_human_count = params['human.count']
+pp_human_count = int(total_human_count / world_size)
+if self.rank < total_human_count % world_size:
+    pp_human_count += 1
+
+for i in range(pp_human_count):
+    h = Human(i, self.rank)
+    self.context.add(h)
+    x = random.default_rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+    y = random.default_rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
+    self.move(h, x, y)
+----
+
+[source,python,numbered]
+----
+total_zombie_count = params['zombie.count']
+pp_zombie_count = int(total_zombie_count / world_size)
+if self.rank < total_zombie_count % world_size:
+    pp_zombie_count += 1
+
+for i in range(pp_zombie_count):
+    zo = Zombie(i, self.rank)
+    self.context.add(zo)
+    x = random.default_rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent)
+    y = random.default_rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent)
+    self.move(zo, x, y)
+
+self.zombie_id = pp_zombie_count
+----
+
+[source,python,numbered]
+----
+self.ngh_finder = GridNghFinder(0, 0, box.xextent, box.yextent)
+----
+
+
+==== Initializing the Logging
+
+-log_counts
+
+[source,python,numbered]
+----
+self.counts = Counts()
+        loggers = logging.create_loggers(self.counts, op=MPI.SUM, rank=self.rank)
+        self.data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, params['counts_file'])
+----
+
+==== Scheduled methods
+
+
+- step 
+- move
+- at end
+- run
+- remove agent
+- add zombie
+
+
+
+=== Additional functionality
+
+==== Cross rank reduction
+
+
+Do the cross-rank reduction manually and print the result
+
+[source,python,numbered]
+----
+if tick % 10 == 0:
+    human_count = np.zeros(1, dtype='int64')
+    zombie_count = np.zeros(1, dtype='int64')
+    self.comm.Reduce(np.array([self.counts.humans], dtype='int64'), human_count, op=MPI.SUM, root=0)
+    self.comm.Reduce(np.array([self.counts.zombies], dtype='int64'), zombie_count, op=MPI.SUM, root=0)
+    if (self.rank == 0):
+        print("Tick: {}, Human Count: {}, Zombie Count: {}".format(tick, human_count[0], zombie_count[0]),
+                flush=True)
+----
+
+NOTE: different than the Walker Model, we log and do the rank within our step... rather than as a scheduled event (#TODO#)
+
+==== The Grid Neighbor Finder class
+
+
+==== The Find Min Zombies function
+
+[source,python,numbered]
+----
+@numba.jit(nopython=True)
+def find_min_zombies(nghs, grid):
+    """Given """
+    minimum = [[], sys.maxsize]
+    at = dpt(0, 0, 0)
+    for ngh in nghs:
+        at._reset_from_array(ngh)
+        count = 0
+        for obj in grid.get_agents(at):
+            if obj.id[2] == Zombie.ID:
+                count += 1
+        if count < minimum[1]:
+            minimum[0] = [ngh]
+            minimum[1] = count
+        elif count == minimum[1]:
+            minimum[0].append(ngh)
+
+    return minimum[0][random.default_rng.integers(0, len(minimum[0]))]
+----
+
+
+
+
+=== The distributed components
+
+
+
+[source,python,numbered]
+----
+# Do the cross-rank reduction manually and print the result
+if tick % 10 == 0:
+    human_count = np.zeros(1, dtype='int64')
+    zombie_count = np.zeros(1, dtype='int64')
+    self.comm.Reduce(np.array([self.counts.humans], dtype='int64'), human_count, op=MPI.SUM, root=0)
+    self.comm.Reduce(np.array([self.counts.zombies], dtype='int64'), zombie_count, op=MPI.SUM, root=0)
+    if (self.rank == 0):
+        print("Tick: {}, Human Count: {}, Zombie Count: {}".format(tick, human_count[0], zombie_count[0]),
+              flush=True)
+----
+
+
+
+=== Running the simulation
+
+==== Setting model parameters
+
+An accompanying `YAML` file is where we set the simulation instance for our Repast4py model. For this tutorial's specific instance of the Zombie model, our parameters are set in `zombie_model.yaml` as the following:
+
+[source,yaml,numbered]
+----
+random.seed: 42
+stop.at: 50.0
+human.count: 8000
+zombie.count: 400
+world.width: 200
+world.height: 200
+run.number: 1
+counts_file: './output/agent_counts.csv'
+----
+
+We define the run to ... #XX#
+
+[source,python,numbered]
+----
+def run(params: Dict):
+    """Creates and runs the Zombies Model.
+
+    Args:
+        params: the model input parameters
+    """
+    global model
+    model = Model(MPI.COMM_WORLD, params)
+    model.run()
+----
+
+==== Running from the command line
+
+We initialize with XX such that a simulation of Zombies model can be run from the command line: 
+
+[source,python,numbered]
+----
+if __name__ == "__main__":
+    parser = create_args_parser()
+    args = parser.parse_args()
+    params = init_params(args.parameters_file, args.parameters)
+    run(params)
+----
+
+The Zombies simulation can be run from the command line using:
+
+`PYTHONPATH=./src mpirun -n 4 python examples/zombies/zombies.py examples/zombies/zombie_model.yaml`
+
+
+
+
+
+
+
+
+
+
+
+
+// <4> We instantiate a discrete point to XX... As we iterate over the neighborhood of locations around the Zombie, we will update our `at` variable to be the location of the iterator (#TODO What type of variable is `ngh` such that we must create a discrete point and store it with `at`?#)
+// <5> We initialize a list to store the XX... (#Why do we want this data type as a list?#)
+// <6> (#TODO Where is the `\_reset_from_array` method initialized?#)
+// <7> Initialize our count variable to keep track of the number of `Humans` in the space being searched.
+// <8> Obtains all of the objects at the grid location being searched and iterates over the objects.
+// <9> Checks which objects are `Human`, and increases `count` variable for each `Human` object.
+// <10> Checks if the number of humans at the current location is greater than any of the previous spaces searched. If so, stores the grid location and its number of `Human` agents as the new maximum.
+// <11> If the grid space equals the same count as the current maximum but does not exceed the human count, then it stores this point as a list. (#TODO Mention that we have the first entry in our `maximum` list be a list so that we can store all of the points and select a random from it.#)
+// <12> We select a random space from the set of locations where more than one neighbor grid space contains a maximum number of `Human` agents. (#TODO If there are no maxiumum loations, were does the zombie move?#)
+
+
+//  we will describe in greater detail in Section XX (#TODO#), we use the model class that stores the agent locations on the shared grid to find the location of our `Zombie` agent. We obtain our Zombie agent's location on the grid with the `Model` class `grid.get_location(self)` method (described in Section XX). (#TODO#)
+
+//  <4> We instantiate a discrete point to XX... As we iterate over the neighborhood of locations around the Zombie, we will update our `at` variable to be the location of the iterator (#TODO What type of variable is `ngh` such that we must create a discrete point and store it with `at`?#)
