@@ -515,9 +515,24 @@ self.zombie_id = pp_zombie_count #<11>
 <11> (#TODO#)
 
 
-==== Initializing the Logging
+==== Logging
 
-For the Zombies model, we first create a logger to log a dataclass of the agent counts. The logger for our agent counts is declared outside of our Model class, and described later in (XXTODO internal reference##). We initiate our logger within our Model class with the following:
+For the Zombies model, we first create a logger to log a dataclass of the agent counts. The logger for our agent counts is declared outside of our Model class as follows:
+
+[source,python,numbered]
+----
+@dataclass
+class Counts:
+    """Dataclass used by repast4py aggregate logging to record
+    the number of Humans and Zombies after each tick.
+    """
+    humans: int = 0
+    zombies: int = 0
+----
+
+We initiate our logger within our Model class with the following:
+
+===== Initializing the logging
 
 [source,python,numbered]
 ----
@@ -540,6 +555,50 @@ class Model:
 <3> Creates a `logging.ReducingDataSet` from the list of loggers. `params['counts_file']` is the name of the file to log to
 
 //After the logging is initialized, the state of the simulation is logged for the starting tick `0`.
+
+===== The log_counts method
+
+For every tick the `step` method in the Model class is executed, it implements a `log_counts` method, described as follows:
+
+[source,python,numbered]
+----
+class Model:
+
+    ...
+
+    def log_counts(self, tick): #<1>
+        # Get the current number of zombies and humans and log
+        counts = self.context.size([Human.TYPE, Zombie.TYPE]) #<2>
+        self.counts.humans = counts[Human.TYPE] #<3>
+        self.counts.zombies = counts[Zombie.TYPE] #<4>
+        self.data_set.log(tick) #<5>
+
+        # Do the cross-rank reduction manually and print the result
+        if tick % 10 == 0: #<6>
+            human_count = np.zeros(1, dtype='int64') #<7>
+            zombie_count = np.zeros(1, dtype='int64') #<8>
+            self.comm.Reduce(np.array([self.counts.humans], dtype='int64'), human_count, op=MPI.SUM, root=0) #<9>
+            self.comm.Reduce(np.array([self.counts.zombies], dtype='int64'), zombie_count, op=MPI.SUM, root=0) #<10>
+            if (self.rank == 0): #<11>
+                print("Tick: {}, Human Count: {}, Zombie Count: {}".format(tick, human_count[0], zombie_count[0]),flush=True) #<12>
+
+----
+<1> Pass the current simulation tick into the `log_counts` method
+<2> Obtains a (#TODO - variable type - dict?#) of the agents within the model context.
+<3> Of the agents in `counts`, quantifies the `Human` agents and stores as `self.counts.humans`
+<4> Of the agents in `counts`, quantifies the `Zombie` agents and stores as `self.counts.zombies`
+<5> Passes the `Human` and `Zombie` agent counts at the given `tick` to the `self.data_set` logger initiated for the <<Initializing the logging,Model class instance>>.
+<6> For every `10` ticks, a subroutine is implemented that prints the data to the console (#TODO Is console the correct term here?#).
+<7> The `human_count` variable to be printed is initiated as a one-dimensional `numpy` array of a single integer intially set to `0`.
+<8> The `zombie_count` variable to be printed is initiated as a one-dimensional `numpy` array of a single integer intially set to `0`.
+<9> A cross-process reduce-type (e.g., summation) operation is carried out on the `self.counts.humans` and assigned to the `human_count` array. 
+<10> A cross-process reduce-type (e.g., summation) operation is carried out on the `self.counts.zombies` and assigned to the `zombie_count` array. 
+<11> (#TODO#)
+<12> The `human_count` and `zombie_count` for the given tick are printed to the console.
+
+
+NOTE: different than the Walker Model, we log within our step method, rather than as a scheduled event (#TODO Is there a reason for this?#)
+
 
 ==== Scheduled methods
 
@@ -574,7 +633,7 @@ class Model:
             model.add_zombie(pt)
 ----
 <1> Defines the current tick value for the corresponding step.
-<2> Logs the current values of the `self.log_counts` by calling log on the `self.data_set ReducingDataSet`. The log method takes a floating point argument that specifies the tick at which the data is logged. In this case, we use the current tick value.
+<2> Logs the current values of the `self.log_counts` by calling log on the `self.data_set ReducingDataSet`. The log method takes a floating point argument that specifies the tick at which the data is logged. In this case, we use the current tick value. The `log_counts` method is described below, in <<>>
 <3> Synchronizes the state of the simulation across processes using the `restore_agent` function to restore any agents (Zombies and Humans) that have moved processes. See <<Restoring the agents,earlier in this tutorial>> and <<Saving and Restoring Agents>> for more details on this function.
 <4> Iterates over all the Zombie agents in the model by obtaining an iterator from the `SharedContext`.
 <5> Each Zombie agent then implements one instance of its step function, <<The Zombie step() method,described earlier>>.
@@ -648,55 +707,6 @@ class Model:
     def run(self):
         self.runner.execute()
 ----
-
-
-===== Log Counts
-
-[source,python,numbered]
-----
-class Model:
-
-    ...
-
-    def log_counts(self, tick):
-        # Get the current number of zombies and humans and log
-        counts = self.context.size([Human.TYPE, Zombie.TYPE])
-        self.counts.humans = counts[Human.TYPE]
-        self.counts.zombies = counts[Zombie.TYPE]
-        self.data_set.log(tick)
-
-        ...
-
-----
-
-
-===== Cross rank reduction
-
-
-Do the cross-rank reduction manually and print the result
-
-[source,python,numbered]
-----
-class Model:
-
-    ...
-
-    def log_counts(self, tick):
-            
-        ...
-
-        # Do the cross-rank reduction manually and print the result
-        if tick % 10 == 0:
-            human_count = np.zeros(1, dtype='int64')
-            zombie_count = np.zeros(1, dtype='int64')
-            self.comm.Reduce(np.array([self.counts.humans], dtype='int64'), human_count, op=MPI.SUM, root=0)
-            self.comm.Reduce(np.array([self.counts.zombies], dtype='int64'), zombie_count, op=MPI.SUM, root=0)
-            if (self.rank == 0):
-                print("Tick: {}, Human Count: {}, Zombie Count: {}".format(tick, human_count[0], zombie_count[0]),
-                    flush=True)
-----
-
-NOTE: different than the Walker Model, we log and do the rank within our step... rather than as a scheduled event (#TODO#)
 
 === Additional functionality 
 
@@ -781,29 +791,10 @@ def find_min_zombies(nghs, grid):
 
 
 
-=== Other
-
-==== Logger
-
-[source,python,numbered]
-----
-@dataclass
-class Counts:
-    """Dataclass used by repast4py aggregate logging to record
-    the number of Humans and Zombies after each tick.
-    """
-    humans: int = 0
-    zombies: int = 0
-----
-
-
-
-
 === Running the simulation
 
-==== Setting model parameters
 
-An accompanying `YAML` file is where we set the simulation instance for our Repast4py model. For this tutorial's specific instance of the Zombie model, our parameters are set in `zombie_model.yaml` as the following:
+An accompanying `YAML` file is where the parameters of the simulation instance of our model are set. For this tutorial's specific instance of the Zombie model, our parameters are set in `zombie_model.yaml` as the following:
 
 [source,yaml,numbered]
 ----
@@ -817,7 +808,24 @@ run.number: 1
 counts_file: './output/agent_counts.csv'
 ----
 
-We define the run to ... #XX#
+An `if name == 'main'`` code block is used to parse the input parameters using the `repast4py.parameters` module, and then run the simulation. 
+
+[source,python,numbered]
+----
+if __name__ == "__main__":
+    parser = create_args_parser() #<1>
+    args = parser.parse_args() #<2>
+    params = init_params(args.parameters_file, args.parameters) #<3>
+    run(params) #<4>
+----
+<1> Creates the default command line argument parser.
+<2> Parses the command line into its arguments using that default parser
+<3> Creates the model input parameters dictionary from those arguments using `parameters.init_params`
+<4> Runs the simulation instance
+
+NOTE: The default command line parser created with `parameters.create_args_parser` accepts a path to a YAML format parameters input file. However, a JSON format dictionary string that is provided can override the parameters in the parameters YAML file.
+
+The `run` function creates the Model class and calls its start method, which then begins the simulation by initiating schedule execution. This run function is called in the `if name == 'main'` code block.
 
 [source,python,numbered]
 ----
@@ -832,24 +840,12 @@ def run(params: Dict):
     model.run()
 ----
 
-==== Running from the command line
+The Zombies simulation can be run from the command line using the following (#TODO - reformat the following command line such that it is a single line#):
 
-We initialize with XX such that a simulation of Zombies model can be run from the command line: 
-
-[source,python,numbered]
+[source,bash,numbered]
 ----
-if __name__ == "__main__":
-    parser = create_args_parser()
-    args = parser.parse_args()
-    params = init_params(args.parameters_file, args.parameters)
-    run(params)
+PYTHONPATH=./src mpirun -n 4 python examples/zombies/zombies.py examples/zombies/zombie_model.yaml
 ----
-
-The Zombies simulation can be run from the command line using:
-
-`PYTHONPATH=./src mpirun -n 4 python examples/zombies/zombies.py examples/zombies/zombie_model.yaml`
-
-
 
 
 
