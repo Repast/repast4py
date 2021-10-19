@@ -15,38 +15,58 @@
   </tr>
 </table>
 
-Repast for Python (Repast4Py) is a distributed agent-based simulation toolkit written in Python.
-Modern CPUs typically contain multiple cores, each of which is capable of running concurrently.
-Repast4Py attempts to leverage this hardware by distributing a simulation over multiple processes
-running in parallel on these cores. A typical agent-based simulation consists of a population of agents 
-each of which performs some behavior each timestep or at some frequency. In practice, this
-is often implemented as a loop over the agent population in which each agent executes its behavior. 
-The time it takes to complete the loop depends on the number of agents and the complexity of the behavior.
-By distributing the agent population across multiple processes running in parallel, each process 
-executes its own loop over only a subset of the population, allowing for larger agent populations and more 
-complex behavior without increasing the runtime. Repast4Py is also a natural fit for implementing
-agent-based simulations on high performance computers and clusters, such as those hosted by
-universities, national laboratories, and cloud computing providers. Such machines can have
-thousands or 10s of thousands of processor cores available, allowing for very large and
-complex simulations.
+## Repast4Py
 
-Repast4Py is part of the [Repast](https://repast.github.io) family of agent-based modeling toolkits
-which have been successfully used in many application domains including social science, consumer products, 
-supply chains, hydrogen infrastructures, manufacturing, epidemiology, biomedical systems modeling, and ancient 
-pedestrian traffic to name a few.
+Repast for Python (Repast4Py) is the newest member of the [Repast Suite](https://repast.github.io) of free and open source agent-based modeling and simulation software.
+It builds on [Repast HPC](https://repast.github.io/repast_hpc.html), and provides the ability to build large, distributed agent-based models (ABMs) that span multiple processing cores. 
+Distributed ABMs enable the development of complex systems models that capture the scale and relevant details of many problems of societal importance. Where Repast HPC is implemented in C++ and is more HPC expert focused, Repast4Py is a Python package and is designed to provide an easier on-ramp for researchers from diverse scientific communities to apply large-scale distributed ABM methods. See our paper on Repast4Py for additional information about the design and implementation.
 
-### Installation ###
+### Requirements
 
-pip install repast4py
+Repast4Py requires Python 3.7+
 
-or 
+Repast4Py can run on Linux, macOS and Windows provided there is a working MPI implementation
+installed and mpi4py is supported. Repast4Py is developed and tested on Linux. We recommend
+that Windows users use the Windows Subsystem for Linux (WSL). Installation instructions for
+WSL can be found [here](https://docs.microsoft.com/en-us/windows/wsl/install).
 
-If need to install from source,
+Under Linux, MPI can be installed using your OS's package manager. For example, 
+under Ubuntu 20.04 (and thus WSL), the mpich MPI implementation can be installed with:
 
-install mpi -- `apt get install libmpich-dev`
+```bash
+$ sudo apt install mpich
+```
 
-CC=mpicxx CXX=mpicxx pip install repast4py
+A typical campus cluster, or HPC resource will have MPI and mpi4py installed. 
+Check the resource's documentation on available software for more details.
 
-### Documentation ###
+### Installation
 
-Links to docs
+Repast4Py can be downloaded and installed from PyPi using pip. 
+However, since Repast4Py includes native MPI C++ code that needs to be compiled,
+the C compiler `CC` environment variable must be set
+to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation.
+
+```
+env CC=mpicxx pip install repast4py
+```
+
+
+### Documentation
+
+* [User's Guide](https://jozik.github.io/goes_bing/guide/user_guide.html)
+* [API Docs](https://jozik.github.io/goes_bing/apidoc/index.html)
+* [Example Models](https://jozik.github.io/goes_bing/examples/examples.html)
+
+### Contact and Support
+
+* [GitHub Issues](https://github.com/Repast/repast4py/issues)
+* [GitHub Repository](https://github.com/Repast/repast4pyV)
+
+In addition to filing issues on GitHub, support is also available via Stack Overflow. 
+Please use the `repast4py` tag to ensure that we are notified of your question. 
+
+Jonathan Ozik is the Repast project lead. Please contact him through 
+the [Argonne Staff Directory](https://www.anl.gov/staff-directory) if you
+have project-related questions.
+
