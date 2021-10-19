@@ -539,6 +539,8 @@ meet_log_file: 'output/meet_log.csv'
 agent_log_file: 'output/agent_log.csv'
 ----
 
+==== Parsing Input Parameters
+
 An `if __name__ == '__main__'` code block is used to parse the input parameters and
 run the simulation. The `repast4py.parameters` module contains utility functions
 for parsing both command line and model input parameter files, including a 

@@ -413,11 +413,8 @@ rumor_probability: 0.1
 counts_file: output/rumor_counts.csv
 ----
 
-#TODO: Consider removing the text below or referring to the same section in Tutorial 1 to avoid repetition of generic information already introduced.#
-
-An `if __name__ == '__main__'` code block is used to parse the input parameters and
-run the simulation. Within that, utility functions in the `repast4py.parameters` module 
-parse both the command line and model input parameter files.
+The Rumor Model uses the standard `if __name__ == '__main__'` code block to parse the input parameters and
+run the simulation. 
 
 [source,python,numbered]
 ----
@@ -432,28 +429,7 @@ if __name__ == "__main__":
 <3> Create the model input parameters dictionary from those arguments using
 `parameters.init_params`
 
-The default command line parser created with `parameters.create_args_parser` accepts
-a path to a yaml format parameters input file, and a json format dictionary string
-that will override parameters in the parameters file.
-
-```
-$ python examples/rndwalk/rndwalk.py -h
-usage: rumor.py [-h] parameters_file [parameters]
-
-positional arguments:
-  parameters_file  parameters file (yaml format)
-  parameters       json parameters string
-
-optional arguments:
-  -h, --help       show this help message and exit
-```
-
-`parameters.init_params` takes the parameters file and the json string and creates a dictionary
-of model input parameters whose keys are the parameter names and values are the parameter values.
-
-If the parameters file or the json input contains a parameter named `random.seed`,
-the default random number generator (i.e., `repast4py.random.default_rng`) is initialized
-with that seed. See the `repast4py.parameters` API documenation for more information.
+See <<_parsing_input_parameters, Parsing Input Parameters>> in Tutorial 1 for more details.
 
 Lastly we have a simple `run` function that creates the `Model` class and calls its
 `start` method which starts the simulation by starting schedule execution. This `run` function is called

@@ -4,7 +4,7 @@ We've seen in the <<_distributed_simulation, Distributed Simulation>> section ho
 to stitch a simulation together across processes and that when agents move out of their local
 grid or continuous space subsection they are moved to the process responsible for the destination
 subsection. While much of this is handled internally by Repast4Py, this section describes in more detail the 
-code the user needs to provide in order for moving and copying to work correctly. We will use examples from the Zombies and Rumor demonstration models (#QUESTION: Can we add a link or some indication for where these are?#) to illustrate the core concepts.
+code the user needs to provide in order for moving and copying to work correctly. We will use examples from the Zombies and Rumor demonstration models. See the {website}/examples/examples.html[Repast4Py Examples] page to download the source code for these models and for more information on getting started with the examples.
 
 === Agent ID
 For moving and copying agents across processes to work each agent must have a unique id. 
@@ -19,8 +19,8 @@ simulation while the second allows us to create agents of the appropriate type w
 between ranks. 
 
 In order to ensure that all agents in Repast4Py have an agent id, all agents must inherit from the
-`repast4py.core.Agent` class which requires these components in its constructor. For example, in the
-Zombies demonstration model, the `Human` agents are subclasses of the `repast4py.core.Agent`
+{website}/apidoc/source/repast4py.core.html#repast4py.core.Agent[`repast4py.core.Agent`] class which requires these components in its constructor. For example, in the
+Zombies demonstration model, the `Human` agents are subclasses of the `repast4py.core.Agent`.
 
 [source,python,numbered]
 ----
@@ -63,7 +63,7 @@ attributes of the `repast4py.core.Agent` class.
 (12, 0, 4)
 ----
 
-IMPORTANT: All agents must subclass `repast4py.core.Agent`.
+IMPORTANT: All agents must subclass `repast4py.core.Agent`. See the {website}/apidoc/source/repast4py.core.html#repast4py.core.Agent[API documenation] for `repast4py.core.Agent` for more details of the `Agent` class.
 
 === Saving and Restoring Agents
 Moving or copying an agent between processes consists of saving the agent state, moving / copying that state
@@ -189,6 +189,7 @@ As mentioned in the <<_distributed_simulation, Distributed Simulation>> section,
 Repast4Py application runs in a separate memory space from all the other processes. Consequently,
 we need to synchronize the model state across processes by moving agents, filling
 projection buffers with ghosts, and updating ghosted states, as necessary. Synchronization
-is performed by calling the `SharedContext.synchronize` method and passing it your restore function.
+is performed by calling the
+{website}/apidoc/source/repast4py.context.html#repast4py.context.SharedContext.synchronize[`SharedContext.synchronize`]method and passing it your restore function.
 The `synchronization` method will use the agent `save` method(s) and your restore function
 to synchronize the state of the simulation across its processes. 
