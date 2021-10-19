@@ -1,22 +1,24 @@
 == Tutorial 3 - The Zombies Model
 
-In the example from <<Tutorial 1 - A Simple Model, Tutorial 1>>, we developed a basic model for a class of Agents to randomly walk around a 2-dimensional Cartesian grid and "meeting" fellow agents by counting colocation of other agents in the same grid space. For this example, we extend our demonstration of Repast4py capabilities through the implementation of an additional Zombies Agent class, and usage of a Continuous Space.
+In <<Tutorial 1 - A Simple Model,Tutorial 1>>, we developed a basic model for a class of Agents to randomly walk around a 2-dimensional Cartesian grid and "meeting" fellow agents by counting colocation of other agents in the same grid space. For this example, we extend our demonstration of Repast4py capabilities through the implementation of an additional Zombies Agent class, and usage of a Continuous Space.
 
 For each timestep, the following occurs:
 
 . Zombies wander around looking for humans to infect. 
-. Humans will look to see if any zombies are nearby, and if so, they will move away from them to avoid them, moving at twice the speed as their zombie counterparts.
-. If a zombie is able to move to the same space as a human, the zombie will then infect the human. 
+. Humans look to see if any zombies are nearby, and if so, they will move to avoid them, moving at twice the speed as their zombie counterparts.
+. If a zombie is able to move to the grid space as a human, the zombie will then infect the human. 
 . Once infected, the human will become increasingly sick, eventually die, and then turn into a zombie.
 
 The code to implement the Zombie model consists of the following components:
 
-* Two agent classes: a `Zombie` class that implements the behavior of the zombies, and a `Human` class that implements the state and behavior of the human agents. 
-* A `Model` class responsible initializing and managing the simulation, including the model's context and spatial projections. 
-* Additional Repast4py spatial projections and functionality, including the usage of the Continuous Space projection in conjunction with the Discrete Space.  
-* Usage of additional Python libraries, including the `@jitclass` Python library, which is able to compute the Moore neighborhood...a `GridNghFinder` class that computes the immediate neighborhood of grid spaces for both the `Zombie` and `Human` agents to search, (#TODO#)
-* Methods to initialize and run the model.
-* Components specific to running the Zombies model on a distributed system, including a `restore_agent` function that restores both Zombie and Human agents when moved from one MPI rank to another. (#TODO - Collapse this point into the agent class description#)
+* Two agent classes: <<The `Zombie` agent,a Zombie class>> that implements the behavior of the zombie agents, <<The `Human` agent,a Human class>> that implements the state and behavior of the human agents, as well as <<Restoring the agents,an restore function>> that restores both Zombie and Human agents when moved from one MPI rank to another.
+* <<The Model class,A Model class>> responsible for initializing and managing the simulation, including:
+** <<Scheduling Events and Creating the Context,The context>> for the model 
+** Additional Repast4py spatial projections and functionality, including the usage of <<<<Implementing Spatial Projections,a Continuous Space projection in conjunction with a Discrete Space projection>>.  
+** The <<Scheduled methods,events scheduled throughout the simulation>>
+** The <<Logging,logging of data>>
+* <<Additional functionality,Usage of additional Python libraries>>, including the `numba` Python library, which (#XX TODO#) 
+* Methods to <<Running the simulation,initialize and run the model>> 
 
 Details of each of these components are described throughout the rest of this tutorial.
 
