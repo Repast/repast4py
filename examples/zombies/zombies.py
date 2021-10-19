@@ -29,7 +29,7 @@ def find_min_zombies(nghs, grid):
         at._reset_from_array(ngh)
         count = 0
         for obj in grid.get_agents(at):
-            if obj.id[2] == Zombie.ID:
+            if obj.uid[1] == Zombie.TYPE:
                 count += 1
         if count < minimum[1]:
             minimum[0] = [ngh]
@@ -98,10 +98,10 @@ class Human(core.Agent):
         rank: the starting MPI rank of this Human.
     """
 
-    ID = 0
+    TYPE = 0
 
     def __init__(self, a_id: int, rank: int):
-        super().__init__(id=a_id, type=Human.ID, rank=rank)
+        super().__init__(id=a_id, type=Human.TYPE, rank=rank)
         self.infected = False
         self.infected_duration = 0
 
@@ -139,7 +139,7 @@ class Human(core.Agent):
                 at._reset_from_array(ngh)
                 count = 0
                 for obj in grid.get_agents(at):
-                    if obj.uid[1] == Zombie.ID:
+                    if obj.uid[1] == Zombie.TYPE:
                         count += 1
                 if count < minimum[1]:
                     minimum[0] = [ngh]
@@ -162,10 +162,10 @@ class Human(core.Agent):
 
 class Zombie(core.Agent):
 
-    ID = 1
+    TYPE = 1
 
     def __init__(self, a_id, rank):
-        super().__init__(id=a_id, type=Zombie.ID, rank=rank)
+        super().__init__(id=a_id, type=Zombie.TYPE, rank=rank)
 
     def save(self):
         return (self.uid,)
@@ -181,7 +181,7 @@ class Zombie(core.Agent):
             at._reset_from_array(ngh)
             count = 0
             for obj in grid.get_agents(at):
-                if obj.uid[1] == Human.ID:
+                if obj.uid[1] == Human.TYPE:
                     count += 1
             if count > maximum[1]:
                 maximum[0] = [ngh]
@@ -201,7 +201,7 @@ class Zombie(core.Agent):
 
         pt = grid.get_location(self)
         for obj in grid.get_agents(pt):
-            if obj.uid[1] == Human.ID:
+            if obj.uid[1] == Human.TYPE:
                 obj.infect()
                 break
 
@@ -225,7 +225,7 @@ def restore_agent(agent_data: Tuple):
     """
     uid = agent_data[0]
     # 0 is id, 1 is type, 2 is rank
-    if uid[1] == Human.ID:
+    if uid[1] == Human.TYPE:
         if uid in agent_cache:
             h = agent_cache[uid]
         else:
@@ -329,13 +329,13 @@ class Model:
         self.context.synchronize(restore_agent)
 
         # timer.start_timer('z_step')
-        for z in self.context.agents(Zombie.ID):
+        for z in self.context.agents(Zombie.TYPE):
             z.step()
         # timer.stop_timer('z_step')
 
         # timer.start_timer('h_step')
         dead_humans = []
-        for h in self.context.agents(Human.ID):
+        for h in self.context.agents(Human.TYPE):
             dead, pt = h.step()
             if dead:
                 dead_humans.append((h, pt))
@@ -361,9 +361,9 @@ class Model:
 
     def log_counts(self, tick):
         # Get the current number of zombies and humans and log
-        counts = self.context.size([Human.ID, Zombie.ID])
-        self.counts.humans = counts[Human.ID]
-        self.counts.zombies = counts[Zombie.ID]
+        counts = self.context.size([Human.TYPE, Zombie.TYPE])
+        self.counts.humans = counts[Human.TYPE]
+        self.counts.zombies = counts[Zombie.TYPE]
         self.data_set.log(tick)
 
         # Do the cross-rank reduction manually and print the result
