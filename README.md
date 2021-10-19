@@ -51,7 +51,6 @@ to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation
 env CC=mpicxx pip install repast4py
 ```
 
-
 ### Documentation
 
 * [User's Guide](https://jozik.github.io/goes_bing/guide/user_guide.html)
