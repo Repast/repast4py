@@ -126,10 +126,12 @@ To move our zombie agent between processes, we must save its state. Because the 
 ==== The `Human` agent
 
 The Human agent has two states: 
+
 . whether or not they are infected, and
 . the duration of their infection (which is 0 if not infected)
 
 Additionally, the human has the following behaviors:
+
 . looks for a Zombie in their immediate vicinity,
 . moves away from any Zombies they see in order to avoid becoming infected, and
 . becomes sicker if they have been infected.
@@ -142,7 +144,7 @@ from repast4py import core
 
 class Zombie(core.Agent): #<1>
 
-    ID = 1 #<2>
+    TYPE = 1 #<2>
 
     def __init__(self, a_id, rank): #<3>
         super().__init__(id=a_id, type=Zombie.ID, rank=rank)
@@ -151,9 +153,146 @@ class Zombie(core.Agent): #<1>
 <2> `ID` is a class variable that defines an agent type id for each Zombie agent. This is a required part of the unique agent id tuple. (#TODO: Change this to `TYPE` instead?#)
 <3> In order to uniquely identify the agent across all ranks in the simulation, the `repast4py.core.Agent` constructor takes the following three arguments: an integer id that uniquely identifes an agent on the process where it was created, a non-negative integer identifying the type of the agent, and the rank on which the agent is created.
 
+
+Each human has three underlying behaviors: 
+
+. Moving away from Zombies
+. Becoming infected by a Zombie
+. And becoming sicker when infected
+
+The step method for the human agent is similar to that of the zombie in that it contains the details on how a human agent moves away from zombie agents. Additionally, the human step method progresses a human agent's illness once they are infected by a zombie. The human step method is as follows:
+
+[source,python,numbered]
+----
+def step(self):
+        space_pt = model.space.get_location(self) #<1>
+        alive = True #<2>
+        if self.infected: #<3>
+            self.infected_duration += 1 #<4>
+            alive = self.infected_duration < 10 #<5>
+
+        if alive: #<6>
+            grid = model.grid #<7>
+            pt = grid.get_location(self)
+            nghs = model.ngh_finder.find(pt.x, pt.y)  
+
+            minimum = [[], sys.maxsize] #<8>
+            at = dpt(0, 0, 0)
+            for ngh in nghs:
+                at._reset_from_array(ngh)
+                count = 0
+                for obj in grid.get_agents(at):
+                    if obj.uid[1] == Zombie.TYPE:
+                        count += 1
+                if count < minimum[1]:
+                    minimum[0] = [ngh]
+                    minimum[1] = count
+                elif count == minimum[1]:
+                    minimum[0].append(ngh)
+
+            min_ngh = minimum[0][random.default_rng.integers(0, len(minimum[0]))]#<9>
+
+            if not is_equal(min_ngh, pt.coordinates): #<10>
+                direction = (min_ngh - pt.coordinates) * 0.5 
+                model.move(self, 
+                            space_pt.x + direction[0], space_pt.y + direction[1])
+
+        return (not alive, space_pt) #<11>
+----
+<1> We have our human agent query where it is located in the shared continuous `space` projection from our model class.
+<2> Because our human agent is still in our model's context (i.e. it is still implementing the `step()` at every scheduled event), we assume the human is `alive`. 
+<3> We check whether or not our human agent is infected. 
+<4> If our agent is infected, we progress the length of time our human has been infected by one.
+<5> Once a human agent's infection duration reaches 10 steps, it will then no longer be alive, and we set our `alive` variable to `False`. 
+<6> Human agents still alive then move away from any zombie neighbors.
+<7> As we did with the zombies, we pass in the shared grid object from our model class and our human agent queries their location. 
+<8> Then, using a similar method as the zombie agents, the human obtains its Moore neighborhood, but this time looks for the neighbor with the _least_ number of zombies.  
+<9> The human then selects randomly a location to move to from the list of neighboring spaces with the least number of zombies.
+<10> We check if the location the human has chosen to move to is the location that the human is currently located at. The human agents are faster than their fellow zombies, and move at a speed of `0.5 spaces/step`. Thus, the human computes its direction, and then moves `0.5` spaces in that direction. 
+<11> After a human's step is complete, it returns a tuple that tells the Model class whether or not the human agent is still alive (i.e. whether or not `self.infected_duration >= 10`), and if not, where the human agent is located. 
+
+NOTE: As our Model class manages removing a human that is no longer alive from the model's context. As will be described in (#XX#), the Model class will convert any `not alive` human agents into zombie agents.
+
+The mechanism for a Human agent to become infected is changing its `infected` state from `False` to `True`. Thus, each Human agent also has an `infect` method:
+[source,python,numbered]
+----
+class Human(core.Agent):
+
+    ...
+
+    def infect(self):
+        self.infected = True
+----
+
+NOTE: When a human becomes infected by a zombie, it is the zombie that initiates the infection by calling the `infect()` method of the corresponding human agent it is infecting. The zombie calling this method is at the end of the Zombie agent `step()` function, which is described earlier in <<The `Zombie` agent>>.
+
+To move our human agent between processes, we must save its state. Unlike our zombie agent, saving the human state entails saving its `infected` and `infected_duration` states _in addition to_ its unique agent id tuple. The `save` method for the human agent was described in detail in the <<Saving and Restoring Agents>> subsection. But for the sake of being comprehensive, we include the code snippet of the method here:
+
+[source,python,numbered]
+----
+class Human(core.Agent):
+
+    ...
+
+    def save(self) -> Tuple:
+        """Saves the state of this Human as a Tuple.
+
+        Used to move this Human from one MPI rank to another.
+
+        Returns:
+            The saved state of this Human.
+        """
+        return (self.uid, self.infected, self.infected_duration)
+----
+
+
+
+
 ==== Restoring the agents
 
-All agents must have a restore function that can take a tuple produced by the save method and return an agent. The `restore_agent` function for the zombie and the human agents are the same, and was described in detail in <Saving and Restoring Agents>.   
+All agents must have a restore function that can take a tuple produced by the save method and return an agent. A shared `restore_agent` function for both the zombie and the human agents is created, and was described in detail in the <<Saving and Restoring Agents>> subsection, but for the sake of being comprehensive, we include the code snippet of the function here:
+
+[source,python,numbered]
+----
+def restore_agent(agent_data: Tuple):
+    """Creates an agent from the specified agent_data.
+
+    This is used to re-create agents when they have moved from one MPI rank to another.
+    The tuple returned by the agent's save() method is moved between ranks, and restore_agent
+    is called for each tuple in order to create the agent on that rank. Here we also use
+    a cache to cache any agents already created on this rank, and only update their state
+    rather than creating from scratch.
+
+    Args:
+        agent_data: the data to create the agent from. This is the tuple returned from the agent's save() method
+                    where the first element is the agent id tuple, and any remaining arguments encapsulate
+                    agent state.
+    """
+    uid = agent_data[0]
+    # 0 is id, 1 is type, 2 is rank
+    if uid[1] == Human.TYPE:
+        if uid in agent_cache:
+            h = agent_cache[uid]
+        else:
+            h = Human(uid[0], uid[2])
+            agent_cache[uid] = h
+
+        # restore the agent state from the agent_data tuple
+        h.infected = agent_data[1]
+        h.infected_duration = agent_data[2]
+        return h
+    else:
+        # note that the zombie has no internal state
+        # so there's nothing to restore other than
+        # the Zombie itself
+        if uid in agent_cache:
+            return agent_cache[uid]
+        else:
+            z = Zombie(uid[0], uid[2])
+            agent_cache[uid] = z
+            return z
+----
+
 
 
 === The Model class 
