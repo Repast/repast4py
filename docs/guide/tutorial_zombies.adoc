@@ -307,6 +307,14 @@ def restore_agent(agent_data: Tuple):
             return z
 ----
 
+Additionally, an `agent_cache` dictionary is defined and used when restoring agents: 
+
+[source,python,numbered]
+----
+agent_cache = {}
+----
+
+This dictionary is the cache of previously created agents. The dictionary keys are the agent unique ids, and the values are the agent instances. The dictionary is used for both Zombie and Human agents.
 
 
 === The Model class 
@@ -411,6 +419,24 @@ self.context.add_projection(self.space) #<8>
 <8> Add the projection to the context so that it can properly synchronized across processes
 
 NOTE: We use two spatial projections in our Zombies model: a discrete `grid` projection, and a continuous `space` projection. Even though the `space` and `grid` projections are distinct from each other, they are built from the same bounding box. Thus, they are the same size, which allows us to translate between the two projections. Specifically, the continuous space is able to map onto the discrete grid. Thus, for the Zombies model, because our agents have a speed less than `1 space/tick`, we use the `space` projection to move the agents and maintain where they are located. However, when our agents query their neighborhood, it is more convenient to query a set of discrete grid locations. Thus, we use the `grid` equivalent of each agent's continuous `space` location to quantify the number of agents within the corresponding grid neighborhood.
+
+Within the model class, a `Move` method is defined and called by agents when moving to a different location on both the`grid` and `space` projections. We described when both a <<The Zombie step() method,Zombie>> and <<The Human step() method,Human>> agent call the move method during their respective `step()` methods.
+
+[source,python,numbered]
+----
+class Model:
+
+    ...
+
+    def move(self, agent, x, y): #<1>
+        self.space.move(agent, cpt(x, y)) #<2>
+        self.grid.move(agent, dpt(int(math.floor(x)), int(math.floor(y)))) #<3>
+----
+<1> When the `move` method is called, the agent calling the method passes the `x` and `y` location on the `space` projection it is moving to.
+<2> A `repast4py.space` method that places the agent at the given continuous point `cpt(x, y)` on the continuous `space` projection
+<3> A `repast4py.space` method that places the agent at the given discrete point `dpt(int(math.floor(x)), int(math.floor(y)))` on the discrete `grid` projection. 
+
+NOTE: The discrete points passed to the discrete grid must be of type integer. (#TODO double check this)
 
 ==== Creating the Agents
 
@@ -557,7 +583,43 @@ class Model:
 <8> Each Human agent then implements one instance of its step function, <<The Human step() method,described earlier>>. A boolean variable `dead` is returned along with the location in the `space` projection for each human agent. 
 <9> We check if the current human is dead (i.e. the variable `dead` is `True`). 
 <10> If the human is dead, we add the human agent `h` to our list of dead humans for this step.
-<11> For each newly dead human, we then convert the human agent into a zombie, as <<Converting a Human into a Zombie,described later>>.
+<11> For each newly dead human, we then convert the human agent into a zombie, using the `remove_agent` and `add_zombie` methods described below.
+
+When an infected human is sick for `10` ticks, the human then _dies_ and becomes a Zombie. At the end of the step method, we have a list of humans who are "dead" and must be converted to a Zombie. We implement this process with two methods: first, we remove the human from the context with `remove_agent()`, and second we add a zombie back into the context with `add_zombie()`, both of which are defined in the Model class.
+
+Our `remove_agent()` method is the following:
+[source,python,numbered]
+----
+class Model:
+
+    ...
+
+    def remove_agent(self, agent): #<1>
+        self.context.remove(agent) #<2>
+----
+<1> Method is declared to read in the human agent passed to it.
+<2> We remove the human agent from the Model's context, which then ensures it is removed from the corresponding projections and population of agents. 
+
+We then convert the human into a zombie with the `add_zombie()` method, which adds a new Zombie agent at the final location of the newly removed Human:
+[source,python,numbered]
+----
+class Model:
+
+    ...
+
+    def add_zombie(self, pt): #<1>
+        z = Zombie(self.zombie_id, self.rank) #<2>
+        self.zombie_id += 1 #<3>
+        self.context.add(z) #<4>
+        self.move(z, pt.x, pt.y) #<5>
+----
+<1> The final location of the human agent that just died is passed into the `add_zombie` method
+<2> A new Zombie agent is instantiated. 
+<3> #TODO#  
+<4> We add the newly created zombie to the Model's context
+<5> We set the location of the new Zombie agent as the final location of the dead human agent
+
+IMPORTANT: Even though the human agent is no longer within the Model context, the new zombie agent taking the human's place has its own unique agent tuple id. (#TODO - Anything else to add here?#)
 
 ===== At End
 
@@ -587,60 +649,6 @@ class Model:
         self.runner.execute()
 ----
 
-
-==== Additional Model class methods
-
-===== Move
-
-[source,python,numbered]
-----
-class Model:
-
-    ...
-
-    def move(self, agent, x, y):
-        self.space.move(agent, cpt(x, y))
-        self.grid.move(agent, dpt(int(math.floor(x)), int(math.floor(y))))
-----
-
-
-===== Converting a Human into a Zombie 
-
-When an infected human is sick for `10` ticks, the human then _dies_ and becomes a Zombie. We implement this process with two methods: first, we remove the human from the context with `remove_agent()`, and second we add a zombie back into the context with `add_zombie()`.
-
-We remove a human agent with the following:
-[source,python,numbered]
-----
-class Model:
-
-    ...
-
-    def remove_agent(self, agent): #<1>
-        self.context.remove(agent) #<2>
-----
-<1> Method is declared to read in the human agent passed to it.
-<2> We remove the human agent from the Model's context, which then ensures it is removed from the corresponding projections and population of agents. 
-
-We convert the human into a zombie by adding a new Zombie agent at the final location of the Human:
-[source,python,numbered]
-----
-class Model:
-
-    ...
-
-    def add_zombie(self, pt): #<1>
-        z = Zombie(self.zombie_id, self.rank) #<2>
-        self.zombie_id += 1 #<3>
-        self.context.add(z) #<4>
-        self.move(z, pt.x, pt.y) #<5>
-----
-<1> The final location of the human agent that just died is passed into the `add_zombie` method
-<2> A new Zombie agent is instantiated. 
-<3> #TODO#  
-<4> We add the newly created zombie to the Model's context
-<5> We set the location of the new Zombie agent as the final location of the dead human agent
-
-IMPORTANT: Even though the human agent is no longer within the Model context, the new zombie agent taking the human's place has its own unique agent tuple id. (#TODO - Anything else to add here?#)
 
 ===== Log Counts
 
