@@ -49,6 +49,8 @@ class Zombie(core.Agent): #<1>
 
     def __init__(self, a_id, rank): #<3>
         super().__init__(id=a_id, type=Zombie.TYPE, rank=rank)
+
+    ...
 ----
 <1> `Zombie` subclasses `repast4py.core.Agent`. Subclassing `Agent` is a requirement for all Repast4Py agent implementations.
 <2> `TYPE` is a class variable that defines an agent type id for each Zombie agent. This is a required part of the unique agent id tuple. 
@@ -134,6 +136,10 @@ NOTE: In the zombie step method, a zombie primarily uses its location with regar
 To move our `Zombie` agent between processes, we must save its state. Because the zombie agent does not have an internal state, our `save` method only entails saving each `Zombie` agent's unique id tuple:
 [source,python,numbered]
 ----
+class Zombie(core.Agent):
+
+    ...
+
     def save(self):
         return (self.uid,)
 ----
@@ -158,12 +164,16 @@ Similar to the Zombie agents, we implement our `Human` agents using the `Human` 
 ----
 from repast4py import core
 
+...
+
 class Human(core.Agent): #<1>
 
     TYPE = 0 #<2>
 
     def __init__(self, a_id, rank): #<3>
         super().__init__(id=a_id, type=Human.TYPE, rank=rank)
+
+    ...    
 ----
 <1> `Human` subclasses `repast4py.core.Agent`. Subclassing `Agent` is a requirement for all Repast4Py agent implementations.
 <2> `TYPE` is a class variable that defines an agent type id for each Human agent. This is a required part of the unique agent id tuple.
@@ -184,7 +194,11 @@ The `step` method for the human agent is similar to that of the zombie in that i
 
 [source,python,numbered]
 ----
-def step(self):
+class Human(core.Agent):
+
+    ...
+
+    def step(self):
         space_pt = model.space.get_location(self) #<1>
         alive = True #<2>
         if self.infected: #<3>
@@ -218,6 +232,8 @@ def step(self):
                             space_pt.x + direction[0], space_pt.y + direction[1])
 
         return (not alive, space_pt) #<11>
+    
+    ...
 ----
 <1> We have our human agent query where it is located in the shared continuous `space` projection from our model class.
 <2> Because our human agent is still in our model's context (i.e. it is still implementing the `step()` at every scheduled event), we assume the human is `alive`. 
@@ -243,6 +259,8 @@ class Human(core.Agent):
 
     def infect(self):
         self.infected = True
+
+    ...
 ----
 
 NOTE: When a human becomes infected by a zombie, it is the zombie that initiates the infection by calling the `infect()` method of the corresponding human agent it is infecting. The zombie calling this method is at the end of <<The Zombie step() method,the Zombie agent's step() method>>, which was described earlier.
@@ -273,6 +291,8 @@ All agents must have a restore function that can take a tuple produced by the sa
 
 [source,python,numbered]
 ----
+...
+
 def restore_agent(agent_data: Tuple):
     """Creates an agent from the specified agent_data.
 
@@ -333,6 +353,12 @@ For the Zombies model, the scheduling of events and the creation of the context 
 
 [source,python,numbered]
 ----
+from repast4py import core, space, schedule, logging, random
+from repast4py import context as ctx
+from repast4py.parameters import create_args_parser, init_params
+
+...
+
 class Model:
 
     def __init__(self, comm, params): #<1>
@@ -344,6 +370,10 @@ class Model:
         self.runner.schedule_repeating_event(1, 1, self.step) #<6>
         self.runner.schedule_stop(params['stop.at']) #<7>
         self.runner.schedule_end_event(self.at_end) #<8>
+
+        ...
+
+    ...
 ----
 <1> The Model constructor that takes an MPI communicator and dictionary of model input parameters.
 <2> Sets the MPI communicator. 
@@ -381,6 +411,8 @@ class Model:
             )
 
         ...
+
+    ...
 ----
 <1> The minimum `x` coordinate as `0`
 <2> The extent of the `x` dimension, defined in the `params` file as `world.width`
@@ -420,6 +452,8 @@ class Model:
         self.context.add_projection(self.grid) #<7>
 
         ...
+
+    ...
 ----
 <1> Set the name of our shared grid projection as `grid`
 <2> Set the size of our grid projection the size of our bounding box `box` 
@@ -459,6 +493,8 @@ class Model:
         self.context.add_projection(self.space) #<8>
 
         ...
+
+    ...
 ----
 <1> Set the name of our shared space projection as `space`
 <2> Set the size of our space projection the size of our bounding box `box` 
@@ -522,7 +558,7 @@ class Model:
 
     def __init__(self, comm, params):
 
-    ...
+        ...
 
         total_human_count = params['human.count'] #<1>
         pp_human_count = int(total_human_count / world_size) #<2>
@@ -535,6 +571,10 @@ class Model:
             x = random.default_rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent) #<8>
             y = random.default_rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent) #<9>
             self.move(h, x, y) #<10>
+
+        ...
+
+    ...
 ----
 <1> Obtain the number of Human agents from the parameters dictionary.
 <2> Compute an average number of Human agents per processor.
@@ -551,19 +591,27 @@ In a similar manner, we seed our Model with a starting number of Zombie agents:
 
 [source,python,numbered]
 ----
-total_zombie_count = params['zombie.count'] #<1>
-pp_zombie_count = int(total_zombie_count / world_size) #<2>
-if self.rank < total_zombie_count % world_size: #<3>
-    pp_zombie_count += 1 #<4>
+class Model:
 
-for i in range(pp_zombie_count): #<5>
-    zo = Zombie(i, self.rank) #<6>
-    self.context.add(zo) #<7>
-    x = random.default_rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent) #<8>
-    y = random.default_rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent) #<9>
-    self.move(zo, x, y) #<10>
+    def __init__(self, comm, params):
 
-self.zombie_id = pp_zombie_count #<11>
+        ...
+
+        total_zombie_count = params['zombie.count'] #<1>
+        pp_zombie_count = int(total_zombie_count / world_size) #<2>
+        if self.rank < total_zombie_count % world_size: #<3>
+            pp_zombie_count += 1 #<4>
+
+        for i in range(pp_zombie_count): #<5>
+            zo = Zombie(i, self.rank) #<6>
+            self.context.add(zo) #<7>
+            x = random.default_rng.uniform(local_bounds.xmin, local_bounds.xmin + local_bounds.xextent) #<8>
+            y = random.default_rng.uniform(local_bounds.ymin, local_bounds.ymin + local_bounds.yextent) #<9>
+            self.move(zo, x, y) #<10>
+
+        self.zombie_id = pp_zombie_count #<11>
+
+    ...
 ----
 <1> Obtain the number of Zombie agents from the parameters dictionary.
 <2> Compute an average number of Zombie agents per processor.
@@ -585,6 +633,10 @@ For the Zombies model, we first create a logger to log a dataclass of the agent 
 
 [source,python,numbered]
 ----
+from dataclasses import dataclass
+
+...
+
 @dataclass
 class Counts:
     """Dataclass used by repast4py aggregate logging to record
@@ -594,12 +646,16 @@ class Counts:
     zombies: int = 0
 ----
 
-We initiate our logger within our Model class with the following:
-
 ===== Initializing the logging
+
+We initiate our logger within our Model class with the following:
 
 [source,python,numbered]
 ----
+from repast4py import logging 
+
+...
+
 class Model:
 
     def __init__(self, comm, params):
@@ -612,6 +668,7 @@ class Model:
 
         ...
 
+    ...
 ----
 <1> Initiates the `Counts()` dataclass object that contains the aggregate counts of the number of Zombie and Human agents
 <2> Creates a logger that uses `self.counts` as the source of the data to log. The logger performs a cross process summation (`op=MPI.SUM`) of that data to log.
@@ -645,7 +702,6 @@ class Model:
             self.comm.Reduce(np.array([self.counts.zombies], dtype='int64'), zombie_count, op=MPI.SUM, root=0) #<10>
             if (self.rank == 0): #<11>
                 print("Tick: {}, Human Count: {}, Zombie Count: {}".format(tick, human_count[0], zombie_count[0]),flush=True) #<12>
-
 ----
 <1> Pass the current simulation tick into the `log_counts` method
 <2> Obtains a (#TODO - variable type - dict?#) of the agents within the model context.
@@ -694,6 +750,8 @@ class Model:
         for h, pt in dead_humans: #<11>
             model.remove_agent(h)
             model.add_zombie(pt)
+
+    ...
 ----
 <1> Defines the current tick value for the corresponding step.
 <2> Logs the current values of the `self.log_counts` by calling log on the `self.data_set ReducingDataSet`. The log method takes a floating point argument that specifies the tick at which the data is logged. In this case, we use the current tick value. The `log_counts` method is described below, in <<>>
@@ -734,6 +792,8 @@ class Model:
         self.zombie_id += 1 #<3>
         self.context.add(z) #<4>
         self.move(z, pt.x, pt.y) #<5>
+
+    ...
 ----
 <1> The final location of the human agent that just died is passed into the `add_zombie` method
 <2> A new Zombie agent is instantiated. 
@@ -754,6 +814,8 @@ class Model:
 
     def at_end(self):
         self.data_set.close()
+
+    ...
 ----
 
 
@@ -775,14 +837,14 @@ class Model:
 
 One of the benefits of implementing Repast4py with the Python language is the numerous scientific libraries available that can be utilized in conjunction with our Repast models. Thus far, we have demonstrated the use of a few different Python libraries, including:
 
-* MPI4py (#TODO - add link to part of documentation where it is used#)
-* Networkx (#TODO - add link to part of documentation where it is used#)
-* Numpy (#TODO - add link to part of documentation where it is used#)
-* #TODO - Any other ones to point out?#
+* MPI4py (described in <<Distributed Simulation>>)
+* Networkx (see <<Tutorial 2 - The Rumor Network Model,the Rumor Network tutorial>>) 
+* Numpy (used in all the tutorials, but notably, `numpy.random` is used for the `repast4py.random` module.
+* #TODO - Any other ones we want to point out?#
 
 :cpp: C++
 
-For the Zombies model, we utilize an additional Python library, known as `Numba`. One of the drawbacks of the Python--an _interpreted_ language--is that code runs slower than other languages, specifically, _compiled_ languages, such as {cpp} Fortunately, there are tools that exist that can allow us to take advantage of both the ease-of-use of interpreted languages such as Python, but the speed and efficiency of compiled languages such as {cpp}. One of these tools that has been developed for Python is the `Numba` library. 
+For the Zombies model, we utilize an additional Python library, known as `Numba`. One of the drawbacks of the Python--an _interpreted_ language--is that code runs slower than other languages, specifically, _compiled_ languages, such as {cpp}. Fortunately, there are tools that exist that can allow us to take advantage of both the ease-of-use of interpreted languages such as Python, but the speed and efficiency of compiled languages such as {cpp}. One of these tools that has been developed for Python is the `Numba` library. 
 
 Numba is a _just-in-time_ compiler for Python. It takes small portions of Python code, compiles the subset of code (usually in the form of function blocks), and caches the code so it does not need to be compiled again during the runtime of the program. It is particularly useful for portions of code that are numerically oriented and/or have a lot of loops (i.e. repeated "math" and basic computational processes). 
 
@@ -794,9 +856,9 @@ For the Zombies model, we are able to implement Numba to speed up the process of
 
 ==== The Grid Neighbor Finder class
 
-Every agent at every tick much search their neighborhood of grid locations to determine which grid location has the most humans or the least zombies. Because this neighborhood of grid locations is dependent on each agent's current location, the neighborhood must be computed _every_ tick for _every_ agent. For our example model instance (described below in <<Running the simulation>>), we run a simulation with `50 ticks` and `8400 agents`. Thus, for this one simulation, we must find this neighborhood of grid locations over `400,000` times. Even just a small computational savings we obtain for the numerical procedures we must repeat this number of times can significantly improve the performance of our simulation.
+Every agent at every tick much search their neighborhood of grid locations to determine which grid location has the most humans or the least zombies. Because this neighborhood of grid locations is dependent on each agent's current location, the neighborhood must be computed _every_ tick for _every_ agent. For our example model instance (described below in <<Running the simulation>>), we run a simulation with `50 ticks` and `8400 agents`. Thus, for this one simulation, we must find this neighborhood of grid locations over `400,000` times. Even just a small computational savings we obtain for one numerical procedure we must repeat this number of times can significantly improve the performance of our simulation.
 
-We implement our `GridNghFinder` as a `class`. In order to utilize Numba for our `GridNghFinder`class, we must first must declare the data types of the arguements passed to our class. When querying the neighborhood of locations, we use our `grid` projection, which allows us to represent our neighborhood as a set of integer arrays (i.e. a set of 9, `1 x 1` 2-dimensional arrays of integers). Thus, we will pass the list of values that we need to find this neighborhood. The values we pass are defined in the following:
+We implement our `GridNghFinder` as a `class`. In order to utilize Numba for our `GridNghFinder` class, we must first declare the data types of the arguments to be passed to our class. When querying the neighborhood of locations, we use our `grid` projection, which allows us to represent our neighborhood as a set of integer arrays (i.e. a set of nine, `1x1` two-dimensional arrays of integers). Thus, we will pass the list of values that we need to find this neighborhood. The values we pass are defined in the following:
 
 [source,python,numbered]
 ----
@@ -806,27 +868,23 @@ from numba import int32, int64 #<2>
 ...
 
 spec = [  #<3>
-    ('m', int32[:]), #<4>
-    ('n', int32[:]), #<5>
-    ('mo', int32[:]), #<6>
-    ('no', int32[:]), #<7>
-    ('xmin', int32), #<8>
-    ('ymin', int32), #<9>
-    ('ymax', int32), #<10>
-    ('xmax', int32) #<11>
+    ('mo', int32[:]), #<4>
+    ('no', int32[:]), #<5>
+    ('xmin', int32),  #<6>
+    ('ymin', int32),  #<7>
+    ('ymax', int32),  #<8>
+    ('xmax', int32)   #<9>
 ]
 ----
-<1> #TODO#
-<2> #TODO#
-<3> #TODO#
-<4> #TODO#
-<5> #TODO#
-<6> #TODO#
-<7> #TODO#
-<8> #TODO#
-<9> #TODO#
-<10> #TODO#
-<11> #TODO#
+<1> Import the numba library
+<2> Import the types to be used
+<3> Declare `spec` to specify the types for the argument to be passed to the Numba class
+<4> An array field, `mo`, of 32-bit signed integer types
+<5> An array field, `no`, of 32-bit signed integer types
+<6> A 32-bit signed integer type scalar field, `xmin`
+<7> A 32-bit signed integer type scalar field, `ymin`
+<8> A 32-bit signed integer type scalar field, `xmax`
+<9> A 32-bit signed integer type scalar field, `ymax`
 
 NOTE: As data type checking in Python is only done when the code is run, the process of declaring the data types for a function's arguments a priori is different than if we were to keep the function strictly as a Python function. 
 
@@ -843,52 +901,50 @@ from numba.experimental import jitclass #<1>
 class GridNghFinder:
 
     def __init__(self, xmin, ymin, xmax, ymax): #<3>
-        self.m = np.array([-1, 0, 1, -1, 1, -1, 0, 1], dtype=np.int32) #<4>
-        self.n = np.array([1, 1, 1, 0, 0, -1, -1, -1], dtype=np.int32) #<5>
-        self.mo = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.int32) #<6>
-        self.no = np.array([1, 1, 1, 0, 0, 0, -1, -1, -1], dtype=np.int32) #<7>
-        self.xmin = xmin #<8>
-        self.ymin = ymin #<9>
-        self.xmax = xmax #<10>
-        self.ymax = ymax #<11>
+        self.mo = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.int32) #<4>
+        self.no = np.array([1, 1, 1, 0, 0, 0, -1, -1, -1], dtype=np.int32) #<5>
+        self.xmin = xmin  #<6>
+        self.ymin = ymin  #<7>
+        self.xmax = xmax  #<8>
+        self.ymax = ymax  #<9>
 
-    def find(self, x, y): #<12>
-        xs = self.mo + x #<13>
-        ys = self.no + y #<14>
+    def find(self, x, y): #<10>
+        xs = self.mo + x  #<11>
+        ys = self.no + y  #<12>
 
-        xd = (xs >= self.xmin) & (xs < self.xmax) #<15>
-        xs = xs[xd] #<16>
-        ys = ys[xd] #<17>
+        xd = (xs >= self.xmin) & (xs < self.xmax) #<13>
+        xs = xs[xd] #<14>
+        ys = ys[xd] #<15>
 
-        yd = (ys >= self.ymin) & (ys < self.ymax) #<18>
-        xs = xs[yd] #<19>
-        ys = ys[yd] #<20>
+        yd = (ys >= self.ymin) & (ys < self.ymax) #<16>
+        xs = xs[yd] #<17>
+        ys = ys[yd] #<18>
 
-        return np.stack((xs, ys, np.zeros(len(ys), dtype=np.int32)), axis=-1) #<21>
+        return np.stack((xs, ys, np.zeros(len(ys), dtype=np.int32)), axis=-1) #<19>
 ----
-<1> #TODO#
-<2> #TODO#
-<3> #TODO#
-<4> #TODO#
-<5> #TODO#
-<6> #TODO#
-<7> #TODO#
-<8> #TODO#
-<9> #TODO#
-<10> #TODO#
-<11> #TODO#
-<12> #TODO#
-<13> #TODO#
-<14> #TODO#
-<15> #TODO#
-<16> #TODO#
-<17> #TODO#
-<18> #TODO#
-<19> #TODO#
-<20> #TODO#
-<21> #TODO# 
+<1> Numba supports code generation for classes with the `numba.jitclass()` decorator
+<2> Declare the `jitclass` passing our variable `spec` that specifies the field types. 
+<3> Initialize the variables 
+<4> Create an array of relative `x-values` for the neighborhood to be created
+<5> Create an array of relative `y-values` for the neighborhood to be created
+<6> `xmin = 0` is the minimum horizontal location on the `grid` projection (#TODO Is there an equivalent to `box.xextent` but for the lower limit of `x`?#)
+<7> `ymin = 0` is the minimum vertical location on the `grid` projection (#TODO Is there an equivalent to `box.yextent` but for the lower limit of `y`?#)
+<8> `xmax` is the maximum horizontal location on the `grid` projection, queried from our Bounding Box `box.xextent`
+<9> `ymax` is the maximum vertical location on the `grid` projection, queried from our Bounding Box `box.yextent`
+<10> Pass in the center location of our neighborhood (i.e. the current `grid` location of our corresponding agent who is querying the neighborhood)
+<11> Compute a new array, `xs` by adding the agent's current `x` position to `mo` (the array of relative `x-values`). `xs` is now an array of all the `x-values` of the agent's neighborhood (regardless of if the x-values are beyond the bounds of our `grid`) 
+<12> Compute a new array, `ys` by adding the agent's current `y` position to `no` (the array of relative `y-values`). `ys` is now an array of all the `y-values` of the agent's neighborhood (regardless of if the y-values are beyond the bounds of our `grid`) 
+<13> Create `xd`, a Boolean array that specifies the index location of our `xs` array values that are within the Model's `grid` projection boundary (i.e., an array whose values are `FALSE` at the indices corresponding to `xs` values less than `0` and greater than `xmax`, and `TRUE` otherwise)
+<14> Reduce `xs` to only values with indices corresponding to `TRUE` values in `xd` 
+<15> Reduce `ys` to only values with indices corresponding to `TRUE` values in `xd` 
+<16> Create `yd`, a Boolean array that specifies the index location of our `xs` array values that are within the Model's `grid` projection boundary (i.e., an array whose values are `FALSE` at the indices corresponding to `ys` values less than `0` and greater than `ymax`, and `TRUE` otherwise) 
+<17> Reduce `xs` to only values with indices corresponding to `TRUE` values in `yd` 
+<18> Reduce `ys` to only values with indices corresponding to `TRUE` values in `yd` 
+<19> Return the 2-D array of the grid neighborhood within the `grid` projection's bounds for the given agent
 
+(## Not sure how well I explained the above##)
 (## Maybe add in an example of the input and output for the class here?##)
+
 
 === Running the simulation
 An accompanying `YAML` file is where the parameters of the simulation instance of our model are set. For this tutorial's specific instance of the Zombie model, our parameters are set in `zombie_model.yaml` as the following:
@@ -905,10 +961,14 @@ run.number: 1
 counts_file: './output/agent_counts.csv'
 ----
 
-An `if name == 'main'`` code block is used to parse the input parameters using the `repast4py.parameters` module, and then run the simulation. 
+An `if name == 'main'` code block is used to parse the input parameters using the `repast4py.parameters` module, and then run the simulation. 
 
 [source,python,numbered]
 ----
+from repast4py.parameters import create_args_parser, init_params
+
+...
+
 if __name__ == "__main__":
     parser = create_args_parser() #<1>
     args = parser.parse_args() #<2>
@@ -926,6 +986,10 @@ The `run` function creates the Model class and calls its start method, which the
 
 [source,python,numbered]
 ----
+from mpi4py import MPI
+
+...
+
 def run(params: Dict):
     """Creates and runs the Zombies Model.
 
