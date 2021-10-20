@@ -1,5 +1,3 @@
-<<<
-
 == Tutorial 3 - The Zombies Model
 
 In <<Tutorial 1 - A Simple Model,Tutorial 1>>, we developed a basic model for a class of Agents to randomly walk around a 2-dimensional Cartesian grid and "meeting" fellow agents by counting colocation of other agents in the same grid space. For this example, we extend our demonstration of Repast4py capabilities through the implementation of an additional Zombies Agent class, and usage of a Continuous Space.
@@ -16,10 +14,10 @@ The code to implement the Zombie model consists of the following components:
 * Two agent classes: <<The `Zombie` agent,a Zombie class>> that implements the behavior of the zombie agents, <<The `Human` agent,a Human class>> that implements the state and behavior of the human agents, as well as <<Restoring the agents,an restore function>> that restores both Zombie and Human agents when moved from one MPI rank to another.
 * <<The Model class,A Model class>> responsible for initializing and managing the simulation, including:
 ** <<Scheduling Events and Creating the Context,The context>> for the model 
-** Additional Repast4py spatial projections and functionality, including the usage of <<<<Implementing Spatial Projections,a Continuous Space projection in conjunction with a Discrete Space projection>>.  
+** Additional Repast4py spatial projections and functionality, including the usage of <<Implementing Spatial Projections,a Continuous Space projection in conjunction with a Discrete Space projection>>.  
 ** The <<Scheduled methods,events scheduled throughout the simulation>>
 ** The <<Logging,logging of data>>
-* <<Additional functionality,Usage of additional Python libraries>>, including the `numba` Python library, which (#XX TODO#) 
+* <<Additional functionality,Usage of additional Python libraries>>, including the `Numba` Python library, which allows us to run specific parts of the code using "just-in-time" compile methods 
 * Methods to <<Running the simulation,initialize and run the model>> 
 
 Details of each of these components are described throughout the rest of this tutorial.
@@ -42,6 +40,8 @@ The following code initiates each `Zombie` agent:
 [source,python,numbered]
 ----
 from repast4py import core
+
+...
 
 class Zombie(core.Agent): #<1>
 
@@ -348,7 +348,7 @@ class Model:
 <1> The Model constructor that takes an MPI communicator and dictionary of model input parameters.
 <2> Sets the MPI communicator. 
 <3> Creates a context to hold the agents and the network projection.
-<4> Gets the rank of the process the code is running on. (#TODO What does this mean for more than one process? The Model class is impelemented on all processes, right?#) 
+<4> Gets the rank of the process the code is running on.  
 <5> Initializes schedule runner.
 <6> Schedules the repeating event of `Model.step`, beginning at tick 1 and repeating every tick thereafter.  
 <7> Schedules the tick at which the simulation should stop, and events will no longer be executed.
@@ -361,7 +361,17 @@ After initializing the schedule, adding events, and creating the context to hold
 Before we create our projections, we first must define a `BoundingBox` equal to the desired size of our space:
 [source,python,numbered]
 ---- 
-box = space.BoundingBox(
+from repast4py import space
+
+...
+
+class Model:
+
+    def __init__(self, comm, params):
+
+        ...
+
+        box = space.BoundingBox(
                 0, #<1>
                 params['world.width'],  #<2>
                 0, #<3>
@@ -369,6 +379,8 @@ box = space.BoundingBox(
                 0, #<5>
                 0  #<6>
             )
+
+        ...
 ----
 <1> The minimum `x` coordinate as `0`
 <2> The extent of the `x` dimension, defined in the `params` file as `world.width`
@@ -379,10 +391,25 @@ box = space.BoundingBox(
 
 IMPORTANT: (#TODO Is a bounding box a requirement for any continuous/discrete spatial projection? Or is it only required for rectangular spatial projections?#)
 
-We then create a `SharedGrid` the size of our `BoundingBox`. This grid is a discrete space in which the coordinates are discrete (#TODO: Get a better distinction#):
+We then create a `SharedGrid` the size of our `BoundingBox`. This grid is a discrete space in which the coordinates are discrete (#TODO: Write out a better distinction between the two types of spatial projections#):
 [source,python,numbered]
 ---- 
-self.grid = space.SharedGrid( 
+from repast4py import core, space, schedule, logging, random
+from repast4py import context as ctx
+
+from repast4py.space import ContinuousPoint as cpt
+from repast4py.space import DiscretePoint as dpt
+from repast4py.space import BorderType, OccupancyType
+
+...
+
+class Model:
+
+    def __init__(self, comm, params):
+
+        ...
+
+        self.grid = space.SharedGrid( 
                     'grid', #<1>
                     bounds=box, #<2>
                     borders=BorderType.Sticky, #<3>
@@ -390,7 +417,9 @@ self.grid = space.SharedGrid(
                     buffer_size=2, #<5>
                     comm=comm #<6>
                 )
-self.context.add_projection(self.grid) #<7>
+        self.context.add_projection(self.grid) #<7>
+
+        ...
 ----
 <1> Set the name of our shared grid projection as `grid`
 <2> Set the size of our grid projection the size of our bounding box `box` 
@@ -403,7 +432,22 @@ self.context.add_projection(self.grid) #<7>
 Unlike in <<Tutorial 1 - A Simple Model,the Random Walker model>>, our Zombies model implements an additional continuous spatial projection, where an agent’s location is expressible as a non-discrete coordinate. Our continous space is implemented with the following:
 [source,python,numbered]
 ---- 
-self.space = space.SharedCSpace(
+from repast4py import core, space, schedule, logging, random
+from repast4py import context as ctx
+
+from repast4py.space import ContinuousPoint as cpt
+from repast4py.space import DiscretePoint as dpt
+from repast4py.space import BorderType, OccupancyType
+
+...
+
+class Model:
+
+    def __init__(self, comm, params):
+
+        ...
+
+        self.space = space.SharedCSpace(
                     'space', #<1>
                     bounds=box, #<2>
                     borders=BorderType.Sticky, #<3>
@@ -412,7 +456,9 @@ self.space = space.SharedCSpace(
                     comm=comm, #<6>
                     tree_threshold=100 #<7>
                 )
-self.context.add_projection(self.space) #<8>
+        self.context.add_projection(self.space) #<8>
+
+        ...
 ----
 <1> Set the name of our shared space projection as `space`
 <2> Set the size of our space projection the size of our bounding box `box` 
@@ -420,7 +466,7 @@ self.context.add_projection(self.space) #<8>
 <4> Allow multiple agents to occupy each space
 <5> Set the spatial buffer size to be `2` for each process such that agents can see  2 units beyond their process rank's subgrid 
 <6> Set the MPI communicator for the spatial projection
-<7> #TODO#
+<7> #TODO - Not sure what `tree_threshold` signifies. Is that the size of the float used to describe the continuous space?#
 <8> Add the projection to the context so that it can properly synchronized across processes
 
 NOTE: We use two spatial projections in our Zombies model: a discrete `grid` projection, and a continuous `space` projection. Even though the `space` and `grid` projections are distinct from each other, they are built from the same bounding box. Thus, they are the same size, which allows us to translate between the two projections. Specifically, the continuous space is able to map onto the discrete grid. Thus, for the Zombies model, because our agents have a speed less than `1 space/tick`, we use the `space` projection to move the agents and maintain where they are located. However, when our agents query their neighborhood, it is more convenient to query a set of discrete grid locations. Thus, we use the `grid` equivalent of each agent's continuous `space` location to quantify the number of agents within the corresponding grid neighborhood.
@@ -431,6 +477,15 @@ Within the `Model` class, a `move` method is defined and called by agents when m
 
 [source,python,numbered]
 ----
+import math
+
+from repast4py import space
+
+from repast4py.space import ContinuousPoint as cpt
+from repast4py.space import DiscretePoint as dpt
+
+...
+
 class Model:
 
     ...
@@ -438,6 +493,8 @@ class Model:
     def move(self, agent, x, y): #<1>
         self.space.move(agent, cpt(x, y)) #<2>
         self.grid.move(agent, dpt(int(math.floor(x)), int(math.floor(y)))) #<3>
+
+    ...    
 ----
 <1> When the `move` method is called, the agent calling the method passes the `x` and `y` location on the `space` projection it is moving to.
 <2> A `repast4py.space` method that places the agent at the given continuous point `cpt(x, y)` on the continuous `space` projection
