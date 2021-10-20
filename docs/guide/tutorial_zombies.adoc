@@ -716,71 +716,120 @@ class Model:
 
 One of the benefits of implementing Repast4py with the Python language is the numerous scientific libraries available that can be utilized in conjunction with our Repast models. Thus far, we have demonstrated the use of a few different Python libraries, including:
 
-* MPI4py
-* Networkx
-* Numpy
+* MPI4py (#TODO - add link to part of documentation where it is used#)
+* Networkx (#TODO - add link to part of documentation where it is used#)
+* Numpy (#TODO - add link to part of documentation where it is used#)
 * #TODO - Any other ones to point out?#
 
-For the Zombies model, we utilize an additional Python library, known as `Numba`. 
+:cpp: C++
 
-One of the drawbacks of the Python--an _interpreted_ language--is that code runs slower than other languages, specifically, _compiled_ languages such as `C++`. However, 
+For the Zombies model, we utilize an additional Python library, known as `Numba`. One of the drawbacks of the Python--an _interpreted_ language--is that code runs slower than other languages, specifically, _compiled_ languages, such as {cpp} Fortunately, there are tools that exist that can allow us to take advantage of both the ease-of-use of interpreted languages such as Python, but the speed and efficiency of compiled languages such as {cpp}. One of these tools that has been developed for Python is the `Numba` library. 
 
-"This depends on what your code looks like, if your code is numerically orientated (does a lot of math), uses NumPy a lot and/or has a lot of loops, then Numba is often a good choice"
+Numba is a _just-in-time_ compiler for Python. It takes small portions of Python code, compiles the subset of code (usually in the form of function blocks), and caches the code so it does not need to be compiled again during the runtime of the program. It is particularly useful for portions of code that are numerically oriented and/or have a lot of loops (i.e. repeated "math" and basic computational processes). 
 
-- Numba compiles the function for the given argument types before it will actually run the function 
-- However, this function is then cached, and thus, does not need to be compiled again during the runtime
-- "Numba reads the Python bytecode for a decorated function and combines this with information about the types of the input arguments to the function. It analyzes and optimizes your code, and finally uses the LLVM compiler library to generate a machine code version of your function, tailored to your CPU capabilities. This compiled version is then used every time your function is called."
+TIP: The `Numba` library provides a useful https://numba.readthedocs.io/en/stable/user/5minguide.html["5 minute guide to Numba"] overview on their package's webpage. We encourage you to take a look at that page for more information regarding how and why such a package would be useful to implement in your model.   
+
+TIP: If you are using a lot of `Numpy` arrays and functions embedded in loops in your code, functions within your code are likely to benefit from a library such as `Numba`.  
+
+For the Zombies model, we are able to implement Numba to speed up the process of finding our neighborhood of grid locations that our agents must query when looking for humans or zombies. We describe the process of utilizing this package throughout the rest of this section.
 
 ==== The Grid Neighbor Finder class
 
-Every agent at every tick much search their neighborhood of grid locations to determine which grid location has the most humans or the least zombies. Because this neighborhood of grid locations is dependent on each agent's current location, the neighborhood must be computed every timestep for every agent. As the grid neighborhood can be represented as a set of arrays of integers, ... 
+Every agent at every tick much search their neighborhood of grid locations to determine which grid location has the most humans or the least zombies. Because this neighborhood of grid locations is dependent on each agent's current location, the neighborhood must be computed _every_ tick for _every_ agent. For our example model instance (described below in <<Running the simulation>>), we run a simulation with `50 ticks` and `8400 agents`. Thus, for this one simulation, we must find this neighborhood of grid locations over `400,000` times. Even just a small computational savings we obtain for the numerical procedures we must repeat this number of times can significantly improve the performance of our simulation.
 
-Before we utilize a Numba XX, we must first must declare the data types of our variables (this step is different than if we were to just keep this as a general Python numerical process as data type checking is only done when the code is run).
+We implement our `GridNghFinder` as a `class`. In order to utilize Numba for our `GridNghFinder`class, we must first must declare the data types of the arguements passed to our class. When querying the neighborhood of locations, we use our `grid` projection, which allows us to represent our neighborhood as a set of integer arrays (i.e. a set of 9, `1 x 1` 2-dimensional arrays of integers). Thus, we will pass the list of values that we need to find this neighborhood. The values we pass are defined in the following:
 
 [source,python,numbered]
 ----
-spec = [
-    ('m', int32[:]),
-    ('n', int32[:]),
-    ('mo', int32[:]),
-    ('no', int32[:]),
-    ('xmin', int32),
-    ('ymin', int32),
-    ('ymax', int32),
-    ('xmax', int32)
+import numba #<1>
+from numba import int32, int64 #<2>
+
+...
+
+spec = [  #<3>
+    ('m', int32[:]), #<4>
+    ('n', int32[:]), #<5>
+    ('mo', int32[:]), #<6>
+    ('no', int32[:]), #<7>
+    ('xmin', int32), #<8>
+    ('ymin', int32), #<9>
+    ('ymax', int32), #<10>
+    ('xmax', int32) #<11>
 ]
 ----
+<1> #TODO#
+<2> #TODO#
+<3> #TODO#
+<4> #TODO#
+<5> #TODO#
+<6> #TODO#
+<7> #TODO#
+<8> #TODO#
+<9> #TODO#
+<10> #TODO#
+<11> #TODO#
+
+NOTE: As data type checking in Python is only done when the code is run, the process of declaring the data types for a function's arguments a priori is different than if we were to keep the function strictly as a Python function. 
+
+Our `GridNghFinder` class is then defined as follows:
 
 [source,python,numbered]
 ----
-@jitclass(spec)
+import numba 
+from numba.experimental import jitclass #<1>
+
+...
+
+@jitclass(spec) #<2>
 class GridNghFinder:
 
-    def __init__(self, xmin, ymin, xmax, ymax):
-        self.m = np.array([-1, 0, 1, -1, 1, -1, 0, 1], dtype=np.int32)
-        self.n = np.array([1, 1, 1, 0, 0, -1, -1, -1], dtype=np.int32)
-        self.mo = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.int32)
-        self.no = np.array([1, 1, 1, 0, 0, 0, -1, -1, -1], dtype=np.int32)
-        self.xmin = xmin
-        self.ymin = ymin
-        self.xmax = xmax
-        self.ymax = ymax
+    def __init__(self, xmin, ymin, xmax, ymax): #<3>
+        self.m = np.array([-1, 0, 1, -1, 1, -1, 0, 1], dtype=np.int32) #<4>
+        self.n = np.array([1, 1, 1, 0, 0, -1, -1, -1], dtype=np.int32) #<5>
+        self.mo = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.int32) #<6>
+        self.no = np.array([1, 1, 1, 0, 0, 0, -1, -1, -1], dtype=np.int32) #<7>
+        self.xmin = xmin #<8>
+        self.ymin = ymin #<9>
+        self.xmax = xmax #<10>
+        self.ymax = ymax #<11>
 
-    def find(self, x, y):
-        xs = self.mo + x
-        ys = self.no + y
+    def find(self, x, y): #<12>
+        xs = self.mo + x #<13>
+        ys = self.no + y #<14>
 
-        xd = (xs >= self.xmin) & (xs < self.xmax)
-        xs = xs[xd]
-        ys = ys[xd]
+        xd = (xs >= self.xmin) & (xs < self.xmax) #<15>
+        xs = xs[xd] #<16>
+        ys = ys[xd] #<17>
 
-        yd = (ys >= self.ymin) & (ys < self.ymax)
-        xs = xs[yd]
-        ys = ys[yd]
+        yd = (ys >= self.ymin) & (ys < self.ymax) #<18>
+        xs = xs[yd] #<19>
+        ys = ys[yd] #<20>
 
-        return np.stack((xs, ys, np.zeros(len(ys), dtype=np.int32)), axis=-1)
+        return np.stack((xs, ys, np.zeros(len(ys), dtype=np.int32)), axis=-1) #<21>
 ----
+<1> #TODO#
+<2> #TODO#
+<3> #TODO#
+<4> #TODO#
+<5> #TODO#
+<6> #TODO#
+<7> #TODO#
+<8> #TODO#
+<9> #TODO#
+<10> #TODO#
+<11> #TODO#
+<12> #TODO#
+<13> #TODO#
+<14> #TODO#
+<15> #TODO#
+<16> #TODO#
+<17> #TODO#
+<18> #TODO#
+<19> #TODO#
+<20> #TODO#
+<21> #TODO# 
 
+(## Maybe add in an example of the input and output for the class here?##)
 
 === Running the simulation
 An accompanying `YAML` file is where the parameters of the simulation instance of our model are set. For this tutorial's specific instance of the Zombie model, our parameters are set in `zombie_model.yaml` as the following:
