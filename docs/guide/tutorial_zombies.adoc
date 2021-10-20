@@ -712,11 +712,30 @@ class Model:
         self.runner.execute()
 ----
 
-=== Additional functionality 
+=== Additional Python Functionality - The numba Package
+
+One of the benefits of implementing Repast4py with the Python language is the numerous scientific libraries available that can be utilized in conjunction with our Repast models. Thus far, we have demonstrated the use of a few different Python libraries, including:
+
+* MPI4py
+* Networkx
+* Numpy
+* #TODO - Any other ones to point out?#
+
+For the Zombies model, we utilize an additional Python library, known as `Numba`. 
+
+One of the drawbacks of the Python--an _interpreted_ language--is that code runs slower than other languages, specifically, _compiled_ languages such as `C++`. However, 
+
+"This depends on what your code looks like, if your code is numerically orientated (does a lot of math), uses NumPy a lot and/or has a lot of loops, then Numba is often a good choice"
+
+- Numba compiles the function for the given argument types before it will actually run the function 
+- However, this function is then cached, and thus, does not need to be compiled again during the runtime
+- "Numba reads the Python bytecode for a decorated function and combines this with information about the types of the input arguments to the function. It analyzes and optimizes your code, and finally uses the LLVM compiler library to generate a machine code version of your function, tailored to your CPU capabilities. This compiled version is then used every time your function is called."
 
 ==== The Grid Neighbor Finder class
 
-Setting the variable type:
+Every agent at every tick much search their neighborhood of grid locations to determine which grid location has the most humans or the least zombies. Because this neighborhood of grid locations is dependent on each agent's current location, the neighborhood must be computed every timestep for every agent. As the grid neighborhood can be represented as a set of arrays of integers, ... 
+
+Before we utilize a Numba XX, we must first must declare the data types of our variables (this step is different than if we were to just keep this as a general Python numerical process as data type checking is only done when the code is run).
 
 [source,python,numbered]
 ----
@@ -746,15 +765,10 @@ class GridNghFinder:
         self.ymin = ymin
         self.xmax = xmax
         self.ymax = ymax
-        # self.zs = np.zeros(9, dtype=np.int32)
 
-    def find(self, x, y):  # include_origin=False):
-        # if include_origin:
+    def find(self, x, y):
         xs = self.mo + x
         ys = self.no + y
-        # else:
-        # xs = self.m + x
-        # ys = self.n + y
 
         xd = (xs >= self.xmin) & (xs < self.xmax)
         xs = xs[xd]
@@ -824,74 +838,3 @@ PYTHONPATH=./src mpirun -n 4 python examples/zombies/zombies.py examples/zombies
 
 
 
-
-
-// === More TODOs 
-
-// ==== The Find Min Zombies function
-
-// #What about this method? (We don't use it.)# 
-
-// [source,python,numbered]
-// ----
-// @numba.jit(nopython=True)
-// def find_min_zombies(nghs, grid):
-//     """Given """
-//     minimum = [[], sys.maxsize]
-//     at = dpt(0, 0, 0)
-//     for ngh in nghs:
-//         at._reset_from_array(ngh)
-//         count = 0
-//         for obj in grid.get_agents(at):
-//             if obj.uid[1] == Zombie.TYPE:
-//                 count += 1
-//         if count < minimum[1]:
-//             minimum[0] = [ngh]
-//             minimum[1] = count
-//         elif count == minimum[1]:
-//             minimum[0].append(ngh)
-
-//     return minimum[0][random.default_rng.integers(0, len(minimum[0]))]
-// ----
-
-
-// * This one:
-
-// [source,python,numbered]
-// ----
-// self.ngh_finder = GridNghFinder(0, 0, box.xextent, box.yextent)
-// ----
-
-
-// <4> We instantiate a discrete point to XX... As we iterate over the neighborhood of locations around the Zombie, we will update our `at` variable to be the location of the iterator (#TODO What type of variable is `ngh` such that we must create a discrete point and store it with `at`?#)
-// <5> We initialize a list to store the XX... (#Why do we want this data type as a list?#)
-// <6> (#TODO Where is the `\_reset_from_array` method initialized?#)
-// <7> Initialize our count variable to keep track of the number of `Humans` in the space being searched.
-// <8> Obtains all of the objects at the grid location being searched and iterates over the objects.
-// <9> Checks which objects are `Human`, and increases `count` variable for each `Human` object.
-// <10> Checks if the number of humans at the current location is greater than any of the previous spaces searched. If so, stores the grid location and its number of `Human` agents as the new maximum.
-// <11> If the grid space equals the same count as the current maximum but does not exceed the human count, then it stores this point as a list. (#TODO Mention that we have the first entry in our `maximum` list be a list so that we can store all of the points and select a random from it.#)
-// <12> We select a random space from the set of locations where more than one neighbor grid space contains a maximum number of `Human` agents. (#TODO If there are no maxiumum loations, were does the zombie move?#)
-
-
-//  we will describe in greater detail in Section XX (#TODO#), we use the model class that stores the agent locations on the shared grid to find the location of our `Zombie` agent. We obtain our Zombie agent's location on the grid with the `Model` class `grid.get_location(self)` method (described in Section XX). (#TODO#)
-
-//  <4> We instantiate a discrete point to XX... As we iterate over the neighborhood of locations around the Zombie, we will update our `at` variable to be the location of the iterator (#TODO What type of variable is `ngh` such that we must create a discrete point and store it with `at`?#)'
-
-
-// === The distributed components
-
-
-
-// [source,python,numbered]
-// ----
-// # Do the cross-rank reduction manually and print the result
-// if tick % 10 == 0:
-//     human_count = np.zeros(1, dtype='int64')
-//     zombie_count = np.zeros(1, dtype='int64')
-//     self.comm.Reduce(np.array([self.counts.humans], dtype='int64'), human_count, op=MPI.SUM, root=0)
-//     self.comm.Reduce(np.array([self.counts.zombies], dtype='int64'), zombie_count, op=MPI.SUM, root=0)
-//     if (self.rank == 0):
-//         print("Tick: {}, Human Count: {}, Zombie Count: {}".format(tick, human_count[0], zombie_count[0]),
-//               flush=True)
-// ----
