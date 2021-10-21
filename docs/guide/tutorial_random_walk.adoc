@@ -44,7 +44,7 @@ The Walker class implements our Walker agent, encapsulating its:
 of colocations
 
 As required for all Repast4Py agent implementations, the `Walker` class subclasses
-`repast4py.core.Agent`, passing it the components of the unique agent id tuple.
+{website}/apidoc/source/repast4py.core.html#repast4py.core.Agent[`repast4py.core.Agent`], passing it the components of the unique agent id tuple.
 
 
 [source,python,numbered]

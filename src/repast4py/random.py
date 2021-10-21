@@ -6,7 +6,9 @@
 
 """Random numbers for repast4py. When this module is imported, :data:`repast4py.random.default_rng` is
 created using the current epoch time as the random seed, and :data:`repast4py.random.seed` is
-set to that value.
+set to that value. The default random number generator is a numpy.random.Generator. 
+See that `API documentation <https://numpy.org/doc/stable/reference/random/generator.html>`_
+for more information on the available distributions and sampling functions.
 """
 
 import numpy as np
@@ -14,7 +16,9 @@ import time
 import torch
 
 default_rng: np.random.Generator = None
-"""numpy.random.Generator: repast4py's default random generator created using init
+"""numpy.random.Generator: repast4py's default random generator created using init.
+See the Generator `API documentation <https://numpy.org/doc/stable/reference/random/generator.html>`_
+for more information on the available distributions and sampling functions.
 """
 
 seed: int = None
