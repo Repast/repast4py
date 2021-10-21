@@ -1,8 +1,8 @@
 == Tutorial 3 - The Zombies Model
 
-In <<Tutorial 1 - A Simple Model,Tutorial 1>>, we developed a simple model in which agents walk at random around a 2-dimensional Cartesian grid. The Zombies Model builds on this simple movement implementation, adding an additional agent type and using a Continuous Space. 
+In <<_tutorial_1_a_simple_random_walk_model,Tutorial 1>>, we developed a simple model in which agents walk at random around a 2-dimensional Cartesian grid. The Zombies Model builds on this simple movement implementation, adding an additional agent type and using a Continuous Space. 
 
-*This text assumes you have already read the _Repast4Py Users Guide_ up through <<_tutorial_1_a_simple_random_walk_model, Tutorial 1>>.*
+*This text assumes you have already read the _Repast4Py Users Guide_ up through <<_tutorial_1_a_simple_random_walk_model,Tutorial 1>>.*
 
 In the Zombies model, human agents are pursued by zombie agents, and once caught become zombies themselves. Each timestep, the following occurs:
 
@@ -10,9 +10,9 @@ In the Zombies model, human agents are pursued by zombie agents, and once caught
   .. Query their immediate neighborhood to determine the adjacent grid location with
 the most number of Humans
   .. Move towards that location, assuming any Humans are found
-  .. Infect the Humans at that location, assuming any Humans are found
+  .. Infect the Humans at that location, also assuming any Humans are found
 . All the Humans:
-  .. Become a Zombie, if infected for more than 9 timesteps, else
+  .. Become a Zombie, after being infected for more than 9 timesteps, else
   .. Query their immediate neighborhood to determine the adjacent grid location with
 the fewest number of Zombies
   .. Move to that location at twice the speed of a Zombie.
@@ -23,7 +23,7 @@ and for more information on getting started with the examples.
 The code consists of the following components:
 
 * Two agent classes: a <<The Zombie Agent, Zombie class>> that implements the behavior of the zombie agents, and a <<The Human Agent, Human class>> that implements the state and behavior of the human agents.
-* <<Restoring the agents, A restore function>> that creates both Zombie and Human agents when they are moved from one MPI rank to another.
+* <<Restoring the Agents, A restore function>> that creates both Zombie and Human agents when they are moved from one MPI rank to another.
 * A <<The Model class, Model class>> responsible for initializing and managing the simulation and
 simulation components, including:
 ** the model's <<Scheduling Events and Creating the Context, context>>
@@ -40,9 +40,9 @@ allows the simulation to be run from the command line.
 
 The Zombies model implements two agent classes: a `Zombie` and a `Human`. The `Zombie's` behavior
 is to pursue humans across a two dimensional Cartesian space and infect them. The `Human's` behavior
-is to flee from Zombies. Humans contain a boolean (`infected`) field indicating whether or not they are infected, and a integer (`infected_duration`) field tracking the duration of the infection. When that
+is to flee from Zombies. Humans contain a boolean (`infected`) field indicating whether or not they are infected, and an integer (`infected_duration`) field tracking the duration of the infection. When that
 value reaches 10, that `Human` is replaced with a `Zombie`. The methods that implement infection, and 
-the transition from `Human` to `Zombie` are described in <<The Zombie step() method,the Zombie step method>>, the <<The Human step() method,the Human step method>>, and <<Step,the Model class scheduled step method>>. 
+the transition from `Human` to `Zombie` are described in <<The Zombie step() Method,the Zombie step method>>, the <<The Human step() Method,the Human step method>>, and <<Step,the Model class scheduled step method>>. 
 
 Both agents inhabit two two-dimensional projections:
 a {website}/apidoc/source/repast4py.space.html#repast4py.space.SharedGrid[`SharedGrid`] and a
@@ -188,7 +188,7 @@ class Zombie(core.Agent):
         return (self.uid,)
 ----
 
-==== The Human agent
+==== The Human Agent
 
 The human agent state is composed of two variables:
 
