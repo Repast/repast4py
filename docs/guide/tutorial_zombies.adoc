@@ -85,7 +85,7 @@ class Zombie(core.Agent): #<1>
 {website}/apidoc/source/repast4py.core.html#repast4py.core.Agent[`repast4py.core.Agent`] constructor takes the following three arguments: an integer id that uniquely identifies an agent on the process where it was created, a non-negative integer identifying the type of the agent, and the rank on which the agent is created.
 
 ===== The Zombie step() Method
-The zombie agent behavior is implemented in its `step` method. Here, the zombie queries its immediate neighborhood to find the location with the most humans. Assuming some humans are found, the zombie will then move towards that grid location. If multiple grid locations have the maximum number of humans, including when then maximum is 0, the zombie will choose one of those locations at random. 
+The zombie agent behavior is implemented in its `step` method. Here, the zombie queries its immediate neighborhood to find the location with the most humans. Assuming some humans are found, the zombie will then move towards that grid location. If multiple grid locations have the maximum number of humans, including when the maximum is 0, the zombie will choose one of those locations at random. 
 
 NOTE: Each zombie agent is characterized solely by its behavior. That is, the zombie agent does not have an internal state, and is only described by its unique agent tuple id.
 
