@@ -36,6 +36,11 @@ numpy and the the https://numba.pydata.org[Numba] Python package to accelerate t
 * The standard `if __name__ == "__main__"` block in which input parameters are parsed and
 allows the simulation to be run from the command line.
 
+NOTE: The Model class instance `model` is a global variable defined as an attribute of the
+zombies module itself. Consequenly, it is available to all the code in `zombies.py` as just
+`model`, that is, you will see it referenced as `model` rather than `self.model` or as a 
+function argument.  
+
 === The Agent Classes
 
 The Zombies model implements two agent classes: a `Zombie` and a `Human`. The zombie's behavior
