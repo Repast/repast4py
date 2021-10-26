@@ -19,35 +19,12 @@ from repast4py.space import BorderType, OccupancyType
 
 model = None
 
-
-@numba.jit(nopython=True)
-def find_min_zombies(nghs, grid):
-    """Given """
-    minimum = [[], sys.maxsize]
-    at = dpt(0, 0, 0)
-    for ngh in nghs:
-        at._reset_from_array(ngh)
-        count = 0
-        for obj in grid.get_agents(at):
-            if obj.uid[1] == Zombie.TYPE:
-                count += 1
-        if count < minimum[1]:
-            minimum[0] = [ngh]
-            minimum[1] = count
-        elif count == minimum[1]:
-            minimum[0].append(ngh)
-
-    return minimum[0][random.default_rng.integers(0, len(minimum[0]))]
-
-
 @numba.jit((int64[:], int64[:]), nopython=True)
 def is_equal(a1, a2):
     return a1[0] == a2[0] and a1[1] == a2[1]
 
 
 spec = [
-    ('m', int32[:]),
-    ('n', int32[:]),
     ('mo', int32[:]),
     ('no', int32[:]),
     ('xmin', int32),
@@ -61,29 +38,22 @@ spec = [
 class GridNghFinder:
 
     def __init__(self, xmin, ymin, xmax, ymax):
-        self.m = np.array([-1, 0, 1, -1, 1, -1, 0, 1], dtype=np.int32)
-        self.n = np.array([1, 1, 1, 0, 0, -1, -1, -1], dtype=np.int32)
         self.mo = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1], dtype=np.int32)
         self.no = np.array([1, 1, 1, 0, 0, 0, -1, -1, -1], dtype=np.int32)
         self.xmin = xmin
         self.ymin = ymin
         self.xmax = xmax
         self.ymax = ymax
-        # self.zs = np.zeros(9, dtype=np.int32)
 
-    def find(self, x, y):  # include_origin=False):
-        # if include_origin:
+    def find(self, x, y):
         xs = self.mo + x
         ys = self.no + y
-        # else:
-        # xs = self.m + x
-        # ys = self.n + y
 
-        xd = (xs >= self.xmin) & (xs < self.xmax)
+        xd = (xs >= self.xmin) & (xs <= self.xmax)
         xs = xs[xd]
         ys = ys[xd]
 
-        yd = (ys >= self.ymin) & (ys < self.ymax)
+        yd = (ys >= self.ymin) & (ys <= self.ymax)
         xs = xs[yd]
         ys = ys[yd]
 
@@ -279,9 +249,8 @@ class Model:
 
         self.counts = Counts()
         loggers = logging.create_loggers(self.counts, op=MPI.SUM, rank=self.rank)
-        self.data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, params['counts_file'])
+        self.data_set = logging.ReducingDataSet(loggers, self.comm, params['counts_file'])
 
-        local_bounds = self.space.get_local_bounds()
         world_size = comm.Get_size()
 
         total_human_count = params['human.count']
@@ -289,6 +258,7 @@ class Model:
         if self.rank < total_human_count % world_size:
             pp_human_count += 1
 
+        local_bounds = self.space.get_local_bounds()
         for i in range(pp_human_count):
             h = Human(i, self.rank)
             self.context.add(h)
@@ -360,9 +330,9 @@ class Model:
 
     def log_counts(self, tick):
         # Get the current number of zombies and humans and log
-        counts = self.context.size([Human.TYPE, Zombie.TYPE])
-        self.counts.humans = counts[Human.TYPE]
-        self.counts.zombies = counts[Zombie.TYPE]
+        num_agents = self.context.size([Human.TYPE, Zombie.TYPE])
+        self.counts.humans = num_agents[Human.TYPE]
+        self.counts.zombies = num_agents[Zombie.TYPE]
         self.data_set.log(tick)
 
         # Do the cross-rank reduction manually and print the result
