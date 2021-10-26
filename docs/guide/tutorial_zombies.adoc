@@ -30,18 +30,18 @@ simulation components, including:
 ** <<Implementing Spatial Projections, Continuous Space and Discrete Grid>> projections, 
 ** <<Scheduled methods, Scheduled Events>>, and
 ** <<Logging,Logging>>
-* A <<_the_grid_neighbor_finder, GridNghFinder>> class for quickly computing neighboring grid locations using
+* A <<The Grid Neighborhood Finder, GridNghFinder>> class for quickly computing neighboring grid locations using
 numpy and the the https://numba.pydata.org[Numba] Python package to accelerate the computation
 * The standard `run` function that creates and starts the simulation.
 * The standard `if __name__ == "__main__"` block in which input parameters are parsed and
 allows the simulation to be run from the command line.
 
 NOTE: The Model class instance `model` is a global variable defined as an attribute of the
-zombies module itself. Consequenly, it is available to all the code in `zombies.py` as just
+zombies module itself. Consequently, it is available to all the code in `zombies.py` as just
 `model`, that is, you will see it referenced as `model` rather than `self.model` or as a 
 function argument. The Model class contains references to the discrete grid and continuous space
 projections as well as the grid neighborhood finder. These are used by the agents
-in the implemenation of their behavior. By making `model` a global variable, our
+in the implementation of their behavior. By making `model` a global variable, our
 agents can conveniently access these required components.
 
 
@@ -66,7 +66,7 @@ grid unit at a time, the human and zombie agents move in fractions of a grid uni
 0.25 for zombies, and 0.5 grid units for humans. In this way, the humans are twice as fast as
 the zombies. When a human or zombie moves in the continuous space, a method in the
 `Model` class updates its location in the grid space. These spatial aspects are described in
-detail in the <<Implementing Spatial Projections>> subsection.
+detail in the <<Implementing Spatial Projections, Implementing Spatial Projections>> subsection.
  
 ==== The Zombie Agent
 
@@ -99,7 +99,7 @@ The zombie agent behavior is implemented in its `step` method. Here, the zombie 
 NOTE: Each zombie agent is characterized solely by its behavior. That is, the zombie agent does not have an internal state, and is only described by its unique agent tuple id.
 
 NOTE: The 8 member neighborhood of grid cells surrounding an agent's 2D grid location is called its Moore neighborhood. Given a grid location, its 8 neighbors and the current location are computed using the
-<<The Grid Neighbor Finder, GrdNghFinder>>.
+<<The Grid Neighborhood Finder, GrdNghFinder>>.
 
 [source,python,numbered]
 ----
