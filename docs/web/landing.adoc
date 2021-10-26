@@ -1,6 +1,6 @@
 :fn-r4py: footnote:[Collier, N. T., Ozik, J., & Tatara, E. R. (2020). Experiences in Developing a Distributed Agent-based Modeling Toolkit with Python. 2020 IEEE/ACM 9th Workshop on Python for High-Performance and Scientific Computing (PyHPC), 1–12. https://doi.org/10.1109/PyHPC51966.2020.00006]
 
-= image:Repast4PyLogo_avenir_light_100h.png[]
+= image:Repast4PyLogo_avenir_light_300h.png[width=400]
 :icons: font
 :website: http://repast.github.io
 :xrefstyle: full
@@ -12,11 +12,8 @@
 Repast for Python (Repast4Py) is the newest member of the https://repast.github.io[Repast Suite] of free and open source agent-based modeling and simulation software.
 It builds on https://repast.github.io/repast_hpc.html[Repast HPC], and provides the ability to build large, distributed agent-based models (ABMs) that span multiple processing cores. 
 Distributed ABMs enable the development of complex systems models that capture the scale and relevant details of many problems of societal importance. Where Repast HPC is implemented in C++ and is more HPC expert focused, Repast4Py is a Python package and is designed to provide an easier on-ramp for researchers from diverse scientific communities to apply large-scale distributed ABM methods. 
-Repast4Py is released under the BSD-3 open source license, and leverages Numba, NumPy, and PyTorch packages, and the Python C-API to create a scalable modeling system that can exploit the largest HPC resources and emerging computing architectures. See our paper on Repast4Py for additional information about the design and implementation.{wj}{fn-r4py}
-
-image:Repast4PyLogo_avenir_light_300h.png[]
-
-image:Repast4PyLogo_avenir_light_500h.png[]
+Repast4Py is released under the BSD-3 open source license, and leverages https://numba.pydata.org[Numba], https://numpy.org[NumPy], and https://pytorch.org[PyTorch] packages, and the Python C API 
+to create a scalable modeling system that can exploit the largest HPC resources and emerging computing architectures. See our paper on Repast4Py for additional information about the design and implementation.{wj}{fn-r4py}
 
 === Requirements
 
@@ -61,8 +58,11 @@ env CC=mpicxx pip install repast4py
 * https://github.com/Repast/repast4py[GitHub Repository]
 
 
-In addition to filing issues on GitHub, support is also available via Stack Overflow. 
+In addition to filing issues on GitHub, support is also available via
+https://stackoverflow.com/questions/tagged/repast4py[Stack Overflow]. 
 Please use the `repast4py` tag to ensure that we are notified of your question. 
+Software announcements will be made on the 
+http://lists.sourceforge.net/lists/listinfo/repast-interest[repast-interest] mailing list.
 
 Jonathan Ozik is the Repast project lead. Please contact him through 
 the https://www.anl.gov/staff-directory[Argonne Staff Directory] if you
