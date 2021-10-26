@@ -1,7 +1,7 @@
 = Repast4Py Examples
 :toc2:
 :icons: font
-:website: http://repast.github.io
+:website: https://jozik.github.io/goes_bing
 :xrefstyle: full
 :imagesdir: images
 :source-highlighter: pygments
@@ -9,7 +9,7 @@
 == Getting Started
 
 The example models can be downloaded from 
-https://jozik.github.io/goes_bing/examples/repast4py_example_models.zip[here].
+{website}/examples/repast4py_example_models.zip[here].
 
 Each
 example model resides in its own subdirectory, e.g., `examples/rumor` for the
@@ -54,6 +54,6 @@ include::./rumor/rumor_overview.adoc[]
 === Zombies
 
 *Location*: `examples/zombies` +
-*Key Concepts*: movement, continuous space API, grid API
+*Key Concepts*: movement, neighborhood search, continuous space API, grid API
 
 include::./zombies/zombies_overview.adoc[]

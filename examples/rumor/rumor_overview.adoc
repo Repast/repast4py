@@ -8,4 +8,4 @@ This draw is performed once for each neighbor.
 the collection of rumor spreaders is updated to include those nodes that received the rumor.
 3. The total number of rumor spreaders and the number of new rumor spreaders are logged.
 
-See https://jozik.github.io/goes_bing/guide/user_guide.html#_tutorial_2_the_rumor_network_model[Tutorial 2] in the Repast4Py User's Guide for a complete explanation of the Rumor model.
+See {website}/guide/user_guide.html#_tutorial_2_the_rumor_network_model[Tutorial 2] in the Repast4Py User's Guide for a complete explanation of the Rumor model.
