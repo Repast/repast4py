@@ -62,9 +62,9 @@ env CC=mpicxx pip install repast4py
 
 ### Documentation
 
-* [User's Guide](https://jozik.github.io/goes_bing/guide/user_guide.html)
-* [API Docs](https://jozik.github.io/goes_bing/apidoc/index.html)
-* [Example Models](https://jozik.github.io/goes_bing/examples/examples.html)
+* [User's Guide](https://repast.github.io/repast4py.site/guide/user_guide.html)
+* [API Docs](https://repast.github.io/repast4py.site/apidoc/index.html)
+* [Example Models](https://repast.github.io/repast4py.site/examples/examples.html)
 
 ### Contact and Support
 
