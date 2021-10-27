@@ -142,6 +142,14 @@ CC=mpicxx CXX=mpicxx tox -e py37
 CC=mpicxx CXX=mpicxx tox -e py38
 ```
 
+### Uploading to PyPI (or testpypi)
+
+python3 -m twine upload --repository testpypi dist/*.tar.gz
+
+### Testing from testPyPI
+
+CC=mpicxx pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple repast4py
+
 ## Multi Process Seg Fault Debugging
 
 See https://www.open-mpi.org/faq/?category=debugging#serial-debuggers for using gdb with mpi.
