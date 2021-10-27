@@ -80,4 +80,3 @@ Software announcements will be made on the
 Jonathan Ozik is the Repast project lead. Please contact him through 
 the [Argonne Staff Directory](https://www.anl.gov/staff-directory) if you
 have project-related questions.
-
