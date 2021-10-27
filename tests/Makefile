@@ -1,13 +1,13 @@
-src = distributed_space.cpp spatial_tree_tests.cpp
-test_src = 
+src = geometry.cpp SpatialTree.cpp distributed_space.cpp
+test_src = space_tests.cpp test_main.cpp
 
 CXX = mpicxx
 CXXLD = mpicxx
 
-INCLUDES = -I/home/nick/anaconda3/lib/python3.6/site-packages/numpy/core/include
-INCLUDES += -I/home/nick/anaconda3/include/python3.6m
+INCLUDES = -I/home/nick/anaconda3/lib/python3.8/site-packages/numpy/core/include
+INCLUDES += -I/home/nick/anaconda3/include/python3.8
 
-GTEST_HOME = $(HOME)/sfw/googletest
+GTEST_HOME = $(HOME)/sfw/googletest-1.10.0
 GTEST_LIB = $(GTEST_HOME)/lib/libgtest.a
 TEST_INCLUDES = -I $(GTEST_HOME)/include -I../src/repast4py
 
@@ -22,7 +22,7 @@ OBJECTS += $(subst .cpp,.o, $(addprefix $(BUILD_DIR)/, $(src)))
 TEST_OBJECTS := $(OBJECTS)
 TEST_OBJECTS += $(subst .cpp,.o, $(addprefix $(BUILD_DIR)/, $(test_src)))
 
-VPATH = ../src/repast4py ../test
+VPATH = ../src/repast4py ../tests
 
 CXX_RELEASE_FLAGS = -Wall -O2 -g0 -std=c++11 -MMD -MP
 CXX_DEBUG_FLAGS = -Wall -O0 -g3 -std=c++11 -MMD -MP
@@ -37,7 +37,7 @@ TEST_NAME = unit_tests
 all : tests
 
 tests : $(TEST_DEPS) $(TEST_OBJECTS)
-	$(CXXLD) $(filter-out %.d, $^) $(LIBS) -lpthread $(GTEST_LIB) -o $(TEST_NAME)
+	$(CXXLD) $(filter-out %.d, $^) -L/home/nick/anaconda3/lib -lpython3.8 -o $(TEST_NAME) -pthread $(GTEST_LIB)
 
 
 $(BUILD_DIR)/%.o : %.cpp

@@ -1,3 +1,9 @@
+// Copyright 2021, UChicago Argonne, LLC 
+// All Rights Reserved
+// Software Name: repast4py
+// By: Argonne National Laboratory
+// License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+
 #ifndef R4PY_SRC_GRID_H
 #define R4PY_SRC_GRID_H
 
@@ -21,6 +27,7 @@ using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::wpt;
 using BaseSpace<R4Py_DiscretePoint, AccessorType, BorderType>::name_;
 
 public:
+    using PointType = R4Py_DiscretePoint;
     BaseGrid(const std::string& name, const BoundingBox& bounds);
     ~BaseGrid();
 
@@ -85,6 +92,7 @@ public:
     virtual R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
     virtual const std::string name() const = 0;
+    virtual bool contains(R4Py_Agent* agent) const = 0;
 };
 
 inline IGrid::~IGrid() {}
@@ -106,6 +114,7 @@ public:
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) override;
     R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
     const std::string name() const override;
+    bool contains(R4Py_Agent* agent) const override;
 };
 
 template<typename DelegateType>
@@ -152,11 +161,19 @@ const std::string Grid<DelegateType>::name() const {
     return delegate->name();
 }
 
+template<typename DelegateType>
+bool Grid<DelegateType>::contains(R4Py_Agent* agent) const {
+    return delegate->contains(agent);
+}
+
 
 // typedefs for Discrete Grid with multi occupancy and sticky borders
-using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint>, R4Py_DiscretePoint>;
+using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint, AgentList>, R4Py_DiscretePoint>;
+using DiscreteSOType = SingleOccupancyAccessor<LocationMapType<R4Py_DiscretePoint, R4Py_Agent*>, R4Py_DiscretePoint>;
 using MOSGrid = BaseGrid<DiscreteMOType, GridStickyBorders>;
 using MOPGrid = BaseGrid<DiscreteMOType, GridPeriodicBorders>;
+using SOSGrid = BaseGrid<DiscreteSOType, GridStickyBorders>;
+using SOPGrid = BaseGrid<DiscreteSOType, GridPeriodicBorders>;
 
 template<>
 struct is_periodic<MOSGrid> {
@@ -167,6 +184,17 @@ template<>
 struct is_periodic<MOPGrid> {
     static constexpr bool value {true};
 };
+
+template<>
+struct is_periodic<SOSGrid> {
+    static constexpr bool value {false};
+};
+
+template<>
+struct is_periodic<SOPGrid> {
+    static constexpr bool value {true};
+};
+
 
 struct R4Py_Grid {
     PyObject_HEAD

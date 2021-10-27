@@ -1,0 +1,11 @@
+= Random Walk Example Model
+:icons: font
+:website: http://repast.github.io
+:xrefstyle: full
+:imagesdir: images
+:source-highlighter: pygments
+
+== Overview
+
+include::random_walk_overview.adoc[]
+

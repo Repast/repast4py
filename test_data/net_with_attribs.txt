@@ -1,0 +1,14 @@
+friend_network 0
+1 0 1 {"energy": 23}
+2 0 1 {"energy" : 24}
+3 0 0 {"energy" : 30}
+4 0 2 {"energy" : 31}
+5 0 3 {"energy" : 32}
+6 0 2 {"energy" : 33}
+EDGES
+1 2 {"weight": 0.5}
+3 1 {"weight": 0.75}
+6 5 {"weight": 1.0}
+1 5 {"weight": 0.25}
+2 5 {"weight": 0.0}
+4 2 {"weight": 0.0}

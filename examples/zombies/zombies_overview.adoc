@@ -1,0 +1,20 @@
+
+The Zombies model is a predator-prey type model that illustrates the use of a 
+continous space for movement and a discrete grid for neighborhood searches.
+In the Zombies model, human agents are pursued by zombie agents, and once caught become
+zombies themselves. Each timestep, the following occurs:
+
+. All the Zombies:
+  .. Query their immediate neighborhood to determine the adjacent grid location with
+the most number of Humans
+  .. Move towards that location, assuming any Humans are found
+  .. Infect the Humans at that location, also assuming any Humans are found
+. All the Humans:
+  .. Become a Zombie, after being infected for more than 9 timesteps, else
+  .. Query their immediate neighborhood to determine the adjacent grid location with
+the fewest number of Zombies
+  .. Move to that location at twice the speed of a Zombie.
+
+
+See {website}/guide/user_guide.html#_tutorial_3_the_zombies_model[Tutorial 3] in the Repast4Py User's Guide
+for a complete explanation of the Zombies model.

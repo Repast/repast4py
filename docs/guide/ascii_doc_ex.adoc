@@ -1,0 +1,20 @@
+== ASCIIDoc Examples
+
+
+TIP: In many cases, the default user_path.xml file does not need to be changed at all.
+
+NOTE: The only unique entry in the default user_path.xml file is the model name attribute
+which is the same as the project name.
+
+[source,python,numbered]
+----
+for i in range(pp_human_count):  #<1>
+    h = Human(i, self.rank)
+    self.context.add(h)
+    x = random.default_rng.uniform(local_bounds.xmin, local_bounds.xmin + 
+                                   local_bounds.xextent)
+    y = random.default_rng.uniform(local_bounds.ymin, local_bounds.ymin + 
+                                   local_bounds.yextent)
+    self.move(h, x, y)
+----
+<1> A For loop

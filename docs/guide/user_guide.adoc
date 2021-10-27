@@ -1,0 +1,23 @@
+= Repast for Python (Repast4Py) User Guide
+Version 1.0 October 2021
+:toc2:
+:icons: font
+:numbered:
+:website: https://jozik.github.io/goes_bing
+:xrefstyle: full
+:imagesdir: images
+:source-highlighter: pygments
+
+// Sections need line break between includes
+
+include::motivation.adoc[]
+
+include::overview.adoc[]
+
+include::distributing_agents.adoc[]
+
+include::tutorial_random_walk.adoc[]
+
+include::tutorial_network.adoc[]
+
+include::tutorial_zombies.adoc[]

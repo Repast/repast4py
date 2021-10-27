@@ -1,0 +1,59 @@
+= Repast4Py Examples
+:toc2:
+:icons: font
+:website: https://jozik.github.io/goes_bing
+:xrefstyle: full
+:imagesdir: images
+:source-highlighter: pygments
+
+== Getting Started
+
+The example models can be downloaded from 
+{website}/examples/repast4py_example_models.zip[here].
+
+Each
+example model resides in its own subdirectory, e.g., `examples/rumor` for the
+Rumor Network model. Each subdirectory contains the python source for the model,
+an html file with additional information about the model, and a yaml format
+file containing the input parameters for that model.
+
+To run the model,
+
+[source, bash]
+----
+$ cd examples/<model_dir>
+$ mpirun -n 4 python <model.py> <input_params.yaml>
+----
+
+Replace `<model_dir>`,`<model.py>`, `<input_params.yaml>` with the relevant model directory,
+python file, and yaml input file. For example,
+
+[source, bash]
+----
+$ cd examples/rndwalk
+$ mpirun -n 4 python rndwalk.py random_walk.yaml
+----
+
+== Example Models
+
+// There are currently 3 demonstration models.
+=== Random Walk
+
+*Location*: `examples/rndwalk` +
+*Key Concepts*: movement, grid API
+
+include::./rndwalk/random_walk_overview.adoc[]
+
+=== Rumor Spreading
+
+*Location*: `examples/rumor` +
+*Key Concepts*: networks, network neighbors, network API
+
+include::./rumor/rumor_overview.adoc[]
+
+=== Zombies
+
+*Location*: `examples/zombies` +
+*Key Concepts*: movement, neighborhood search, continuous space API, grid API
+
+include::./zombies/zombies_overview.adoc[]

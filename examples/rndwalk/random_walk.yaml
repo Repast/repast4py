@@ -1,0 +1,7 @@
+random.seed: 42
+stop.at: 50
+walker.count: 1000
+world.width: 2000
+world.height: 2000
+meet_log_file: 'output/meet_log.csv'
+agent_log_file: 'output/agent_log.csv'

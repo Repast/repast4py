@@ -1,3 +1,9 @@
+// Copyright 2021, UChicago Argonne, LLC 
+// All Rights Reserved
+// Software Name: repast4py
+// By: Argonne National Laboratory
+// License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+
 #ifndef R4PY_SRC_CSPACE_H
 #define R4PY_SRC_CSPACE_H
 
@@ -24,6 +30,7 @@ private:
 
 
 public:
+    using PointType = R4Py_ContinuousPoint;
     BaseCSpace(const std::string& name, const BoundingBox& bounds, int tree_threshold);
     ~BaseCSpace();
 
@@ -64,7 +71,7 @@ bool BaseCSpace<AccessorType, BorderType>::remove(R4Py_Agent* agent) {
 template<typename AccessorType, typename BorderType>
 bool BaseCSpace<AccessorType, BorderType>::remove(R4Py_AgentID* aid) {
     auto iter = agent_map.find(aid);
-    if (iter != agent_map.end()) {
+    if (iter != agent_map.end() && iter->second->pt) {
         spatial_tree->removeItem(iter->second);
     }
     return BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>::remove(aid);
@@ -119,6 +126,7 @@ public:
     virtual R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
     virtual void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
     virtual const std::string name() const = 0;
+    virtual bool contains(R4Py_Agent* agent) const = 0;
 };
 
 inline ICSpace::~ICSpace() {}
@@ -141,6 +149,7 @@ public:
     R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
     void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
     const std::string name() const override;
+    bool contains(R4Py_Agent* agent) const override;
 };
 
 template<typename DelegateType>
@@ -192,10 +201,19 @@ const std::string CSpace<DelegateType>::name() const {
     return delegate->name();
 }
 
+template<typename DelegateType>
+bool CSpace<DelegateType>::contains(R4Py_Agent* agent) const {
+    return delegate->contains(agent);
+}
+
 // aliases for  CSpace with multi occupancy and sticky borders
-using ContinuousMOType = MultiOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint>, R4Py_ContinuousPoint>;
+using ContinuousMOType = MultiOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint, AgentList>, R4Py_ContinuousPoint>;
+using ContinuousSOType = SingleOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint, R4Py_Agent*>, R4Py_ContinuousPoint>;
 using MOSCSpace = BaseCSpace<ContinuousMOType, CSStickyBorders>;
 using MOPCSpace = BaseCSpace<ContinuousMOType, CSPeriodicBorders>;
+using SOSCSpace = BaseCSpace<ContinuousSOType, CSStickyBorders>;
+using SOPCSpace = BaseCSpace<ContinuousSOType, CSPeriodicBorders>;
+
 
 template<>
 struct is_periodic<MOSCSpace> {
@@ -204,6 +222,16 @@ struct is_periodic<MOSCSpace> {
 
 template<>
 struct is_periodic<MOPCSpace> {
+    static constexpr bool value {true};
+};
+
+template<>
+struct is_periodic<SOSCSpace> {
+    static constexpr bool value {false};
+};
+
+template<>
+struct is_periodic<SOPCSpace> {
     static constexpr bool value {true};
 };
 

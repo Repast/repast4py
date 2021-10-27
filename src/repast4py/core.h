@@ -1,3 +1,9 @@
+// Copyright 2021, UChicago Argonne, LLC 
+// All Rights Reserved
+// Software Name: repast4py
+// By: Argonne National Laboratory
+// License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+
 #ifndef R4PY_SRC_CORE_H
 #define R4PY_SRC_CORE_H
 
@@ -27,6 +33,7 @@ struct agent_id_comp {
 struct R4Py_Agent {
     PyObject_HEAD
     R4Py_AgentID* aid;
+    unsigned int local_rank;
 };
 
 class AgentIter {

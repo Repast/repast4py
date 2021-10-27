@@ -1,0 +1,10 @@
+= Rumor Spreading Example Model
+:icons: font
+:website: http://repast.github.io
+:xrefstyle: full
+:imagesdir: images
+:source-highlighter: pygments
+
+== Overview
+
+include::rumor_overview.adoc[]

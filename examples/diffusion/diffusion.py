@@ -455,6 +455,6 @@ class Diffuser:
         self.laplacian(rw_value_layer.read_layer.impl.grid, 
                             rw_value_layer.write_layer.impl.grid,
                             rw_value_layer.read_layer.buffer_size)
-        print(rw_value_layer.write_layer.impl.grid)
+        #print(rw_value_layer.write_layer.impl.grid)
         rw_value_layer.write_layer.impl.grid = rw_value_layer.read_layer.impl.grid + 0.1 * rw_value_layer.write_layer.impl.grid
             

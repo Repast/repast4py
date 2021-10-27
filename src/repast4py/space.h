@@ -1,3 +1,9 @@
+// Copyright 2021, UChicago Argonne, LLC 
+// All Rights Reserved
+// Software Name: repast4py
+// By: Argonne National Laboratory
+// License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
+
 #ifndef R4PY_SRC_SPACE_H
 #define R4PY_SRC_SPACE_H
 
@@ -33,15 +39,18 @@ namespace repast4py {
 template<typename PointType>
 using AgentMapType = std::map<R4Py_AgentID*, std::shared_ptr<SpaceItem<PointType>>, agent_id_comp>;
 
-template<typename PointType>
-using LocationMapType = std::map<Point<PointType>, AgentList, PointComp<PointType>>;
+template<typename PointType, typename ValueType>
+using LocationMapType = std::map<Point<PointType>, ValueType, PointComp<PointType>>;
+
+void decref(AgentList& agent_list);
+void decref(R4Py_Agent* agent);
 
 template<typename PointType, typename AccessorType, typename BorderType>
 class BaseSpace {
 
 protected:
     AgentMapType<PointType> agent_map;
-    LocationMapType<PointType> location_map;
+    LocationMapType<PointType, typename AccessorType::ValType> location_map;
     AccessorType accessor;
     BorderType borders;
     Point<PointType> wpt;
@@ -60,6 +69,7 @@ public:
     virtual void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
     virtual PointType* move(R4Py_Agent* agent, PointType* to) = 0;
     const std::string name() const;
+    bool contains(R4Py_Agent* agent) const;
 };
 
 template<typename PointType, typename AccessorType, typename BorderType>
@@ -76,9 +86,7 @@ BaseSpace<PointType, AccessorType, BorderType>::~BaseSpace() {
     }
 
     for (auto kv : location_map) {
-        for (auto iter = kv.second->begin(); iter != kv.second->end(); ++iter)  {
-            Py_DECREF(*iter);
-        }
+        decref(kv.second);
     }
     agent_map.clear();
     location_map.clear();
@@ -135,6 +143,11 @@ PointType* BaseSpace<PointType, AccessorType, BorderType>::getLocation(R4Py_Agen
         return iter->second->pt;
     }
     return nullptr;
+}
+
+template<typename PointType, typename AccessorType, typename BorderType>
+bool BaseSpace<PointType, AccessorType, BorderType>::contains(R4Py_Agent* agent) const {
+    return agent_map.find(agent->aid) != agent_map.end();
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
