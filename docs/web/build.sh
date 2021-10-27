@@ -2,20 +2,20 @@
 
 set -eu
 
-REPO=$HOME/Documents/repos/goes_bing
+REPO=$HOME/Documents/repos/repast4py.site
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 ROOT=$( cd ../../  ; /bin/pwd )
 
-WEBSITE=https://jozik.github.io/goes_bing
+WEBSITE=https://repast.github.io/repast4py.site
 
 # Update the landing page
 echo "Building the landing page"
-asciidoctor -a webite=$WEBSITE landing.adoc -o $REPO/index.html
+asciidoctor -a website=$WEBSITE landing.adoc -o $REPO/index.html
 
 
 echo "Building the user guide"
 mkdir -p $REPO/guide/images
-asciidoctor -a webite=$WEBSITE $THIS/../guide/user_guide.adoc -o $REPO/guide/user_guide.html
+asciidoctor -a website=$WEBSITE $THIS/../guide/user_guide.adoc -o $REPO/guide/user_guide.html
 cp $THIS/../guide/images/* $REPO/guide/images
 
 echo "Building API Docs"
@@ -30,7 +30,7 @@ cp -r _build/html/* $REPO/apidoc/
 echo "Building Examples"
 mkdir -p $REPO/examples
 cd $THIS/../../examples
-asciidoctor -a webite=$WEBSITE examples.adoc
+asciidoctor -a website=$WEBSITE examples.adoc
 cp examples.html $REPO/examples/examples.html
 
 adocs=("examples/rumor/rumor_model.adoc" 
@@ -43,7 +43,7 @@ do
     # pd=$( dirname $path)
     # cd $pd
     # echo $pd
-    asciidoctor -a webite=$WEBSITE $path
+    asciidoctor -a website=$WEBSITE $path
 done
 
 cd $ROOT
