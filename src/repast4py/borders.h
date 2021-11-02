@@ -4,7 +4,7 @@
 // By: Argonne National Laboratory
 // License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
 
-#ifndef SRC_BORDERS_H_
+#ifndef SRC_BORDERS_H
 #define SRC_BORDERS_H
 
 #include "geometry.h"
