@@ -4,7 +4,6 @@ import mpi4py
 import shutil
 import os
 import shlex
-import sys
 
 
 def run_command(exe, args):

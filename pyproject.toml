@@ -2,7 +2,7 @@
 requires = [
     "setuptools>=42",
     "wheel",
-    "numpy>=1.18",
+    "oldest-supported-numpy",
     "mpi4py"
 ]
 build-backend = "setuptools.build_meta"
