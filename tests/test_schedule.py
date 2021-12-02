@@ -27,6 +27,18 @@ class Agent2:
         self.at = schedule.runner().tick()
 
 
+class Agent3:
+
+    def __init__(self, schedule):
+        self.sched = schedule
+        self.ticks = []
+
+    def run(self):
+        self.ticks.append(self.sched.tick)
+        if len(self.ticks) < 3:
+            self.sched.schedule_event(self.sched.tick, self.run)
+
+
 # Run from parent dir: python -m unittest tests.schedule_tests
 class ScheduleTests(unittest.TestCase):
 
@@ -105,6 +117,14 @@ class ScheduleTests(unittest.TestCase):
         runner.schedule_stop(2.0)
         runner.execute()
         self.assertEqual(1.1, a1.at)
+
+    def test_schedule_same_tick(self):
+        sched = schedule.Schedule()
+        a1 = Agent3(sched)
+        sched.schedule_event(1.3, a1.run)
+        sched.execute()
+        self.assertEqual(3, len(a1.ticks))
+        self.assertEqual([1.3, 1.3, 1.3], a1.ticks)
 
 
 if __name__ == "__main__":
