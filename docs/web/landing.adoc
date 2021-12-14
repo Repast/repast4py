@@ -70,4 +70,4 @@ have project-related questions.
 
 === Funding
 
-This material is based upon work supported by the U.S. Department of Energy, Office of Science, under contract number DE-AC02-06CH11357. Repast4Py is being used in multiple projects, including the NIH funded projects R01AI136056, U2CDA050098, R01MD014703, R21MH128116, and is informed by their requirements and continuing development.
+This material is based upon work supported by the U.S. Department of Energy, Office of Science, under contract number DE-AC02-06CH11357. Repast4Py is being used in multiple projects, including the NIH funded projects R01AI136056, U2CDA050098, R01MD014703, R21MH128116, R01AI146917, R01AI158666 and is informed by their requirements and continuing development.
