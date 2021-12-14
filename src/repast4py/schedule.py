@@ -11,8 +11,17 @@ simulation. Users will typically only use the :class:`repast4py.schedule.SharedS
 import heapq
 import itertools
 from typing import Callable, List
+import types
 
 from mpi4py import MPI
+
+
+def _noop_evt():
+    pass
+
+
+def _noop_reschedule(self, queue, sequence_count):
+    pass
 
 
 class ScheduledEvent:
@@ -35,6 +44,10 @@ class ScheduledEvent:
         """
         Implemented by subclasses.
         """
+        pass
+
+    def void(self):
+        """Voids this ScheduledEvent so that it will not execute"""
         pass
 
 
@@ -64,23 +77,33 @@ class RepeatingEvent(ScheduledEvent):
         self.at += self.interval
         heapq.heappush(queue, (self.at, sequence_count, self))
 
+    def void(self):
+        """Voids this ScheduledEvent so that it will not execute"""
+        self.evt = _noop_evt
+        # change the reschedule method on the self instance, so
+        # it will not reschedule
+        self.reschedule = types.MethodType(_noop_reschedule, self)
+
 
 class OneTimeEvent(ScheduledEvent):
     """Scheduled event that executes only once.
 
     Args:
         at: the time of the event.
-        evt: the callable to execute when this event is executed.
-
+         evt: the callable to execute when this event is executed.
     """
 
-    def __init__(self, at: float , evt: Callable):
+    def __init__(self, at: float, evt: Callable):
         super().__init__(at, evt)
 
     def reschedule(self, queue, sequence_count):
         """Null-op as this OneTimeEvent only occurs once.
         """
         pass
+
+    def void(self):
+        """Voids this ScheduledEvent so that it will not execute"""
+        self.evt = _noop_evt
 
 
 class Schedule:
@@ -113,18 +136,21 @@ class Schedule:
             count = next(self.counter)
             heapq.heappush(self.queue, (at, count, evt))
 
-    def schedule_event(self, at: float, evt: Callable):
+    def schedule_event(self, at: float, evt: Callable) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick.
 
         Args:
             at: the time of the event.
             evt: the Callable to execute when the event occurs.
 
+        Returns:
+            The ScheduledEvent instance that was scheduled for execution.
         """
         scheduled_evt = OneTimeEvent(at, evt)
         self._push_event(at, scheduled_evt)
+        return scheduled_evt
 
-    def schedule_repeating_event(self, at: float, interval: float, evt: Callable):
+    def schedule_repeating_event(self, at: float, interval: float, evt: Callable) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick,
         and repeat at the specified interval.
 
@@ -133,16 +159,18 @@ class Schedule:
             interval: the interval at which to repeat event execution.
             evt: the Callable to execute when the event occurs.
 
+        Returns:
+            The ScheduledEvent instance that was scheduled for execution.
         """
         scheduled_evt = RepeatingEvent(at, interval, evt)
         self._push_event(at, scheduled_evt)
+        return scheduled_evt
 
     def next_tick(self) -> float:
         """Gets the tick of the next scheduled event.
 
         Returns:
             float: the tick at which the next scheduled event will occur or -1 if nothing is scheduled.
-
         """
         if len(self.queue) == 0:
             return -1
@@ -192,18 +220,21 @@ class SharedScheduleRunner:
         self.end_evts = []
         self.go = True
 
-    def schedule_event(self, at: float, evt: Callable):
+    def schedule_event(self, at: float, evt: Callable) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick.
 
         Args:
             at: the time of the event.
             evt: the Callable to execute when the event occurs.
 
+        Returns:
+            The ScheduledEvent instance that was scheduled for execution.
         """
-        self.schedule.schedule_event(at, evt)
+        sch_evt = self.schedule.schedule_event(at, evt)
         self.next_tick = self.schedule.next_tick()
+        return sch_evt
 
-    def schedule_repeating_event(self, at: float, interval: float, evt: Callable):
+    def schedule_repeating_event(self, at: float, interval: float, evt: Callable) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick,
         and repeat at the specified interval.
 
@@ -212,27 +243,36 @@ class SharedScheduleRunner:
             interval: the interval at which to repeat event execution.
             evt: the Callable to execute when the event occurs.
 
+        Returns:
+            The ScheduledEvent instance that was scheduled for execution.
         """
-        self.schedule.schedule_repeating_event(at, interval, evt)
+        sch_evt = self.schedule.schedule_repeating_event(at, interval, evt)
         self.next_tick = self.schedule.next_tick()
+        return sch_evt
 
-    def schedule_end_event(self, evt: Callable):
+    def schedule_end_event(self, evt: Callable) -> ScheduledEvent:
         """Schedules the specified event (a Callable) for execution when the schedule terminates and the
         simulation ends.
 
         Args:
             evt: the Callable to execute when simulation ends.
+        Returns:
+            The ScheduledEvent instance that was scheduled to execute at the end.
         """
-        self.end_evts.append(evt)
+        sch_evt = OneTimeEvent(float('inf'), evt)
+        self.end_evts.append(sch_evt)
+        return sch_evt
 
-    def schedule_stop(self, at: float):
+    def schedule_stop(self, at: float) -> ScheduledEvent:
         """Schedules the execution of this schedule to stop at the specified tick.
 
         Args:
             at: the tick at which the schedule will stop.
-
+        Returns:
+            The ScheduledEvent instance that executes the stop event.
         """
-        self.schedule.schedule_event(at, self.stop)
+        sch_evt = self.schedule.schedule_event(at, self.stop)
+        return sch_evt
 
     def stop(self):
         """Stops schedule execution. All events scheduled for the current tick will execute and

@@ -27,6 +27,26 @@ class Agent2:
         self.at = schedule.runner().tick()
 
 
+class Agent3:
+
+    def __init__(self, schedule):
+        self.sched = schedule
+        self.ticks = []
+
+    def run(self):
+        self.ticks.append(self.sched.tick)
+        if len(self.ticks) < 3:
+            self.sched.schedule_event(self.sched.tick, self.run)
+
+
+def gen_reset_stop(evt, runner, new_stop):
+    def f():
+        evt.void()
+        runner.schedule_stop(new_stop)
+
+    return f
+
+
 # Run from parent dir: python -m unittest tests.schedule_tests
 class ScheduleTests(unittest.TestCase):
 
@@ -105,6 +125,65 @@ class ScheduleTests(unittest.TestCase):
         runner.schedule_stop(2.0)
         runner.execute()
         self.assertEqual(1.1, a1.at)
+
+    def test_schedule_same_tick(self):
+        sched = schedule.Schedule()
+        a1 = Agent3(sched)
+        sched.schedule_event(1.3, a1.run)
+        sched.execute()
+        self.assertEqual(3, len(a1.ticks))
+        self.assertEqual([1.3, 1.3, 1.3], a1.ticks)
+
+    def test_void_evt(self):
+        a1 = Agent2()
+
+        from mpi4py import MPI
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+        runner.schedule_event(1.1, a1.run)
+        runner.schedule_stop(2.0)
+        runner.execute()
+        self.assertEqual(1.1, a1.at)
+
+        a1.at = 0
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+        sevt = runner.schedule_event(1.1, a1.run)
+        sevt.void()
+        runner.schedule_stop(2.0)
+        runner.execute()
+        self.assertEqual(0, a1.at)
+
+        a1.at = 0
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+        sevt = runner.schedule_repeating_event(1.1, 1, a1.run)
+        runner.schedule_event(8, sevt.void)
+        runner.schedule_stop(10.0)
+        runner.execute()
+        # if the void correctly stops rescheduling, then
+        # there should be nothing the queue
+        self.assertEqual(0, len(runner.schedule.queue))
+        self.assertEqual(7.1, a1.at)
+
+        a2 = Agent2()
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+        runner.schedule_stop(2.0)
+        eevt = runner.schedule_end_event(a2.run)
+        runner.execute()
+        self.assertEqual(2.0, a2.at)
+
+        a2.at = 0
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+        runner.schedule_stop(2.0)
+        eevt = runner.schedule_end_event(a2.run)
+        eevt.void()
+        runner.execute()
+        self.assertEqual(0.0, a2.at)
+
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+        evt = runner.schedule_stop(2.0)
+        f = gen_reset_stop(evt, runner, 10)
+        runner.schedule_event(1, f)
+        runner.execute()
+        self.assertEqual(runner.tick(), 10)
 
 
 if __name__ == "__main__":
