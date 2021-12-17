@@ -195,6 +195,24 @@ class Schedule:
                     go = next_tick == self.tick
 
 
+def create_arg_evt(evt: Callable, *args, **kwargs) -> Callable:
+    """Creates a new Callable that will call the specified Callable, passing
+    it the specified arguments when it is executed as part of a schedule.
+    The returned Callable can be scheduled using the SharedScheduleRunner's schedule_* methods.
+
+    Args:
+        evt: the Callable to execute
+        args: the positional arguments to pass to the evt Callable
+        kwargs: the keyword arguments to pass to the evt Callable.
+
+    Returns:
+        A new Callable that is compatible with SharedScheduleRunner's schedule_* methods arguments.
+    """
+    def f():
+        evt(*args, **kwargs)
+    return f
+
+
 class SharedScheduleRunner:
     """Encapsulates a dynamic schedule of executable events shared and
     synchronized across processes.
@@ -220,6 +238,7 @@ class SharedScheduleRunner:
         self.end_evts = []
         self.go = True
 
+
     def schedule_event(self, at: float, evt: Callable) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick.
 
@@ -230,6 +249,7 @@ class SharedScheduleRunner:
         Returns:
             The ScheduledEvent instance that was scheduled for execution.
         """
+
         sch_evt = self.schedule.schedule_event(at, evt)
         self.next_tick = self.schedule.next_tick()
         return sch_evt

@@ -1,6 +1,7 @@
 import unittest
 import sys
 import os
+from mpi4py import MPI
 
 try:
     from repast4py import schedule
@@ -22,9 +23,16 @@ class Agent:
 class Agent2:
     def __init__(self):
         self.at = 0
+        self.result = 0.0
 
     def run(self):
         self.at = schedule.runner().tick()
+
+    def op(self, a, b, op='+'):
+        if op == '+':
+            self.result = a + b
+        elif op == '*':
+            self. result = a * b
 
 
 class Agent3:
@@ -184,6 +192,25 @@ class ScheduleTests(unittest.TestCase):
         runner.schedule_event(1, f)
         runner.execute()
         self.assertEqual(runner.tick(), 10)
+
+    def test_evt_args(self):
+        a2 = Agent2()
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+        runner.schedule_stop(2.0)
+        evt = schedule.create_arg_evt(a2.op, 1, 2)
+        # evt2 = runner.create_arg_evt(a2.op, 3, 10, op='*')
+        runner.schedule_event(1, evt)
+        runner.execute()
+        self.assertEqual(3, a2.result)
+
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+        runner.schedule_stop(2.0)
+        evt = schedule.create_arg_evt(a2.op, 3, 10, op='*')
+        runner.schedule_event(1, evt)
+        a2.result = 0
+        runner.execute()
+        self.assertEqual(30, a2.result)
+
 
 
 if __name__ == "__main__":
