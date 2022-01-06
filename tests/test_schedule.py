@@ -5,9 +5,11 @@ from mpi4py import MPI
 
 try:
     from repast4py import schedule
+    from repast4py.schedule import PriorityType
 except ModuleNotFoundError:
     sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
     from repast4py import schedule
+    from repast4py.schedule import PriorityType
 
 
 class Agent:
@@ -15,9 +17,13 @@ class Agent:
     def __init__(self, schedule):
         self.sched = schedule
         self.at = 0
+        self.evts = []
 
     def run(self):
         self.at = self.sched.tick
+
+    def tag(self, val):
+        self.evts.append(val)
 
 
 class Agent2:
@@ -211,6 +217,124 @@ class ScheduleTests(unittest.TestCase):
         runner.execute()
         self.assertEqual(30, a2.result)
 
+    def test_priority(self):
+        for _ in range(100):
+            # Run repeatedly to make sure not random scheduling and only works by chance
+            runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+            a = Agent(runner.schedule)
+            runner.schedule_stop(2.0)
+            evt = schedule.create_arg_evt(a.tag, 'a')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.BY_PRIORITY, priority=1.0)
+            evt = schedule.create_arg_evt(a.tag, 'b')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.BY_PRIORITY, priority=2.0)
+            evt = schedule.create_arg_evt(a.tag, 'c')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.BY_PRIORITY, priority=3.0)
+            runner.execute()
+            self.assertEqual(['a', 'b', 'c'], a.evts)
+
+    def test_priority_repeating(self):
+        for _ in range(100):
+            # Run repeatedly to make sure not random scheduling and only works by chance
+            runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+            a = Agent(runner.schedule)
+            runner.schedule_stop(2.0)
+            evt = schedule.create_arg_evt(a.tag, 'a')
+            runner.schedule_repeating_event(1.0, 0.4, evt, priority_type=PriorityType.BY_PRIORITY, priority=1.0)
+            evt = schedule.create_arg_evt(a.tag, 'b')
+            runner.schedule_repeating_event(1.0, 0.4, evt, priority_type=PriorityType.BY_PRIORITY, priority=2.0)
+            evt = schedule.create_arg_evt(a.tag, 'c')
+            runner.schedule_repeating_event(1.0, 0.4, evt, priority_type=PriorityType.BY_PRIORITY, priority=3.0)
+            runner.execute()
+            self.assertEqual(['a', 'b', 'c'] * 3, a.evts)
+
+    def test_first_last(self):
+        for _ in range(100):
+            # Run repeatedly to make sure not random scheduling and only works by chance
+            runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+            a = Agent(runner.schedule)
+            runner.schedule_stop(2.0)
+            evt = schedule.create_arg_evt(a.tag, 'a')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.BY_PRIORITY, priority=1.0)
+            evt = schedule.create_arg_evt(a.tag, 'b')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.BY_PRIORITY, priority=2.0)
+            evt = schedule.create_arg_evt(a.tag, 'c')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.BY_PRIORITY, priority=3.0)
+
+            for i in range(10):
+                evt = schedule.create_arg_evt(a.tag, i)
+                runner.schedule_event(1.0, evt, priority_type=PriorityType.FIRST)
+
+            for i in range(20, 30):
+                evt = schedule.create_arg_evt(a.tag, i)
+                runner.schedule_event(1.0, evt, priority_type=PriorityType.LAST)
+
+            runner.execute()
+            self.assertEqual([x for x in range(10)] + ['a', 'b', 'c'] + [x for x in range(20, 30)], a.evts)
+
+    def test_random_priority(self):
+        counts = {}
+        for _ in range(500):
+            runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+            a = Agent(runner.schedule)
+            runner.schedule_stop(2.0)
+            evt = schedule.create_arg_evt(a.tag, 'a')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.RANDOM)
+            evt = schedule.create_arg_evt(a.tag, 'b')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.RANDOM)
+            evt = schedule.create_arg_evt(a.tag, 'c')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.RANDOM)
+            runner.execute()
+            k = tuple(a.evts)
+            if k in counts:
+                counts[k] += 1
+            else:
+                counts[k] = 1
+        self.assertTrue(len(counts) > 3)
+
+    def test_mixed(self):
+        d_idxs = set()
+        e_idxs = set()
+        for _ in range(100):
+            # Run repeatedly to make sure not random scheduling and only works by chance
+            runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+            a = Agent(runner.schedule)
+            runner.schedule_stop(2.0)
+            evt = schedule.create_arg_evt(a.tag, 'a')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.BY_PRIORITY, priority=1.0)
+            evt = schedule.create_arg_evt(a.tag, 'b')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.BY_PRIORITY, priority=2.0)
+            evt = schedule.create_arg_evt(a.tag, 'c')
+            runner.schedule_event(1.0, evt, priority_type=PriorityType.BY_PRIORITY, priority=3.0)
+
+            evt = schedule.create_arg_evt(a.tag, 'd')
+            runner.schedule_event(1.0, evt)
+            evt = schedule.create_arg_evt(a.tag, 'e')
+            runner.schedule_event(1.0, evt)
+
+            for i in range(10):
+                evt = schedule.create_arg_evt(a.tag, i)
+                runner.schedule_event(1.0, evt, priority_type=PriorityType.FIRST)
+
+            for i in range(20, 30):
+                evt = schedule.create_arg_evt(a.tag, i)
+                runner.schedule_event(1.0, evt, priority_type=PriorityType.LAST)
+
+            runner.execute()
+            self.assertEqual([x for x in range(10)], a.evts[:10])
+            self.assertEqual([x for x in range(20, 30)], a.evts[-10:])
+            self.assertEqual(25, len(a.evts))
+            mixed = a.evts[10:15]
+            for v in ['a', 'b', 'c', 'd', 'e']:
+                self.assertTrue(v in mixed)
+
+            self.assertTrue(mixed.index('a') < mixed.index('b'))
+            self.assertTrue(mixed.index('b') < mixed.index('c'))
+            d_idxs.add(mixed.index('d'))
+            e_idxs.add(mixed.index('e'))
+
+            # + ['a', 'b', 'c'] + , a.evts)
+        self.assertTrue(len(d_idxs) > 2)
+        self.assertTrue(len(e_idxs) > 2)
 
 
 if __name__ == "__main__":
