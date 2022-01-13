@@ -76,7 +76,7 @@ examples() {
 #     # git push origin main
 # }
 
-while getopts "halupes" option; do
+while getopts "hluae" option; do
    case $option in
         h) # display Help
             help
