@@ -95,7 +95,7 @@ class Model:
         rumored_count = len(self.rumor_spreaders)
         self.counts = RumorCounts(rumored_count, rumored_count)
         loggers = logging.create_loggers(self.counts, op=MPI.SUM, rank=self.rank)
-        self.data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, params['counts_file'])
+        self.data_set = logging.ReducingDataSet(loggers, comm, params['counts_file'])
         self.data_set.log(0)
 
         self.rumor_prob = params['rumor_probability']
