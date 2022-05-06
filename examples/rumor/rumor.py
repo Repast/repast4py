@@ -131,8 +131,8 @@ class Model:
                     new_rumor_spreaders.append(ngh)
 
         self.rumor_spreaders += new_rumor_spreaders
-        self.counts.total_rumor_spreaders = len(self.rumor_spreaders)
         self.counts.new_rumor_spreaders = len(new_rumor_spreaders)
+        self.counts.total_rumor_spreaders += self.counts.new_rumor_spreaders
         self.data_set.log(self.runner.schedule.tick)
 
         self.context.synchronize(restore_agent)
