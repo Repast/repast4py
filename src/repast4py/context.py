@@ -171,8 +171,8 @@ class SharedContext:
         gone out of bounds and entered this rank.
 
         Args:
-            recv_data: a list of lists where the inner list contains tuples of the type: 
-            [(agent id tuple, agent state), optional ghosting data]. 
+            recv_data: a list of lists where the inner list contains tuples of the type:
+            [(agent id tuple, agent state), optional ghosting data].
             ghosts_to_remove: if the received agent is currently a ghost on this rank, then
             it is added to this list for later ghost removal.
             create_agent: a callable that can create an agent from the agent state data.

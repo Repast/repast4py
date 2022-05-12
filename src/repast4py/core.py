@@ -23,8 +23,8 @@ except ImportError:
 class GhostAgent:
     """A non-local agent copied from another rank.
 
-    GhostAgent is used by the AgentManager to track and manage ghosts agents on 
-    a rank. 
+    GhostAgent is used by the AgentManager to track and manage ghosts agents on
+    a rank.
 
     **This is class is internal to the repast4py implementation and is NOT for users.**
 

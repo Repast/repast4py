@@ -382,7 +382,7 @@ class TabularLogger:
             The following will log the value of the tick, person_id variables, and 12, and 24
             as a row in the tabular data.
 
-            >>> logger.log_item(tick, person_id, 12, 24)
+            >>> logger.log_row(tick, person_id, 12, 24)
         """
         self._rows.append(args)
 
