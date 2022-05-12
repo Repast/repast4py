@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <map>
+#include <limits>
 
 #include "geometry.h"
 #include "space_types.h"
