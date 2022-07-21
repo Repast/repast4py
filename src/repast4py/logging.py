@@ -11,6 +11,7 @@ repast4py simulation to a file.
 import numpy as np
 from mpi4py import MPI
 import os
+import warnings
 
 from typing import List, Dict, Type
 import csv
@@ -249,6 +250,9 @@ def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str]=N
                 ds_name = f.name if names[f.name] is None else names[f.name]
                 source = DCDataSource(data_class, f.name, ds_name)
                 loggers.append(ReducingDataLogger(source, op, rank))
+
+        if len(loggers) == 0:
+            raise ValueError('Unable to create a loggers: names dictionary keys do not match any dataclass fields.')
 
     return loggers
 

@@ -29,6 +29,11 @@ class DSLoggingTests(unittest.TestCase):
             counts.c = (i + 0.2) * rank
             data_set.log(float(i))
 
+    def test_create_logging_raise(self):
+        c = Counts()
+        rank = MPI.COMM_WORLD.Get_rank()
+        self.assertRaises(ValueError, lambda: logging.create_loggers(c, names={'d': 'D'}, op=MPI.SUM, rank=rank))
+
     def test_logging1(self):
         c = Counts()
         rank = MPI.COMM_WORLD.Get_rank()
