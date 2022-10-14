@@ -2179,9 +2179,6 @@ static PyObject* SharedCSpace_getOOBData(PyObject* self, PyObject* args) {
     std::shared_ptr<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>> oob = ((R4Py_SharedCSpace*)self)->space->getOOBData();
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
     obj_iter->iter = new ValueIter<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>>(oob);
-    // not completely sure why this is necessary but without it
-    // the iterator is decrefed out of existence after first call to __iter__
-    Py_INCREF(obj_iter);
     return (PyObject*)obj_iter;
 }
 
