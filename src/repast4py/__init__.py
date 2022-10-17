@@ -4,6 +4,4 @@
 # By: Argonne National Laboratory
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
 
-from . import core
-
-__version__ = '1.0.0.beta1'
+__version__ = '1.0.5.beta1'

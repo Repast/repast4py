@@ -921,9 +921,6 @@ static PyObject* Grid_getAgents(PyObject* self, PyObject* args) {
     std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_Grid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
     agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
-    // not completely sure why this is necessary but without it
-    // the iterator is decrefed out of existence after first call to __iter__
-    Py_INCREF(agent_iter);
     return (PyObject*)agent_iter;
 }
 
@@ -1275,9 +1272,6 @@ static PyObject* SharedGrid_getAgents(PyObject* self, PyObject* args) {
     std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
     agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
-    // not completely sure why this is necessary but without it
-    // the iterator is decrefed out of existence after first call to __iter__
-    Py_INCREF(agent_iter);
     return (PyObject*)agent_iter;
 }
 
@@ -1309,9 +1303,6 @@ static PyObject* SharedGrid_getOOBData(PyObject* self, PyObject* args) {
     std::shared_ptr<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>> oob = ((R4Py_SharedGrid*)self)->grid->getOOBData();
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
     obj_iter->iter = new ValueIter<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>>(oob);
-    // not completely sure why this is necessary but without it
-    // the iterator is decrefed out of existence after first call to __iter__
-    Py_INCREF(obj_iter);
     return (PyObject*)obj_iter;
 }
 
@@ -1319,7 +1310,6 @@ static PyObject* SharedGrid_getBufferData(PyObject* self, PyObject* args) {
     std::shared_ptr<std::vector<CTNeighbor>> nghs = ((R4Py_SharedGrid*)self)->grid->getNeighborData();
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
     obj_iter->iter = new SequenceIter<std::vector<CTNeighbor>, GetBufferInfo>(nghs);
-    Py_INCREF(obj_iter);
     return (PyObject*)obj_iter; 
 }
 
@@ -1742,9 +1732,6 @@ static PyObject* CSpace_getAgents(PyObject* self, PyObject* args) {
     std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_CSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
     agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
-    // not completely sure why this is necessary but without it
-    // the iterator is decrefed out of existence after first call to __iter__
-    Py_INCREF(agent_iter);
     return (PyObject*)agent_iter;
 }
 
@@ -1767,9 +1754,6 @@ static PyObject* CSpace_getAgentsWithin(PyObject* self, PyObject* args) {
     ((R4Py_CSpace*)self)->space->getAgentsWithin(box, agents);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
     agent_iter->iter = new TAgentIter<std::vector<R4Py_Agent*>>(agents);
-    // not completely sure why this is necessary but without it
-    // the iterator is decrefed out of existence after first call to __iter__
-    Py_INCREF(agent_iter);
     return (PyObject*)agent_iter;
 }
 
@@ -2164,9 +2148,6 @@ static PyObject* SharedCSpace_getAgents(PyObject* self, PyObject* args) {
     std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
     agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
-    // not completely sure why this is necessary but without it
-    // the iterator is decrefed out of existence after first call to __iter__
-    Py_INCREF(agent_iter);
     return (PyObject*)agent_iter;
 }
 
@@ -2198,9 +2179,6 @@ static PyObject* SharedCSpace_getOOBData(PyObject* self, PyObject* args) {
     std::shared_ptr<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>> oob = ((R4Py_SharedCSpace*)self)->space->getOOBData();
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
     obj_iter->iter = new ValueIter<std::map<R4Py_AgentID*, PyObject*, agent_id_comp>>(oob);
-    // not completely sure why this is necessary but without it
-    // the iterator is decrefed out of existence after first call to __iter__
-    Py_INCREF(obj_iter);
     return (PyObject*)obj_iter;
 }
 
@@ -2208,7 +2186,6 @@ static PyObject* SharedCSpace_getBufferData(PyObject* self, PyObject* args) {
     std::shared_ptr<std::vector<CTNeighbor>> nghs = ((R4Py_SharedCSpace*)self)->space->getNeighborData();
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
     obj_iter->iter = new SequenceIter<std::vector<CTNeighbor>, GetBufferInfo>(nghs);
-    Py_INCREF(obj_iter);
     return (PyObject*)obj_iter; 
 }
 
@@ -2251,9 +2228,6 @@ static PyObject* SharedCSpace_getAgentsWithin(PyObject* self, PyObject* args) {
     ((R4Py_SharedCSpace*)self)->space->getAgentsWithin(box, agents);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
     agent_iter->iter = new TAgentIter<std::vector<R4Py_Agent*>>(agents);
-    // not completely sure why this is necessary but without it
-    // the iterator is decrefed out of existence after first call to __iter__
-    Py_INCREF(agent_iter);
     return (PyObject*)agent_iter;
 }
 
@@ -2637,7 +2611,6 @@ static PyObject* CartesianTopology_computeBufferData(PyObject* self, PyObject* a
 
     R4Py_PyObjectIter* obj_iter = (R4Py_PyObjectIter*)R4Py_PyObjectIterType.tp_new(&R4Py_PyObjectIterType, NULL, NULL);
     obj_iter->iter = new SequenceIter<std::vector<CTNeighbor>, GetBufferInfo>(nghs);
-    Py_INCREF(obj_iter);
     return (PyObject*)obj_iter; 
 }
 

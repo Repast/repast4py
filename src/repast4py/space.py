@@ -8,6 +8,9 @@ from typing import Callable, List, Tuple
 import mpi4py
 import numpy as np
 
+from ._core import Agent
+from .core import AgentManager
+
 from ._space import DiscretePoint, ContinuousPoint
 from ._space import SharedGrid as _SharedGrid
 from ._space import SharedContinuousSpace as _SharedContinuousSpace
@@ -17,10 +20,6 @@ from ._space import GridStickyBorders, GridPeriodicBorders
 from ._space import CartesianTopology, Grid, ContinuousSpace
 
 from .geometry import BoundingBox, get_num_dims
-
-from .core import AgentManager, Agent
-
-from collections import namedtuple
 
 
 class BorderType:
