@@ -48,7 +48,7 @@ env CC=mpicxx pip install repast4py
 
 NOTE: If you see an error message about a missing `python.h` header file when
 installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
-a python dev package using your OS's pacakge manager. For example, assuming
+a python dev package using your OS's package manager. For example, assuming
 Python 3.8, `sudo apt install python3.8-dev` will work for Ubuntu.
 
 === Documentation
