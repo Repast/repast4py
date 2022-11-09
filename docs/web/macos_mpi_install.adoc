@@ -8,7 +8,7 @@
 
 Repast4Py requires that a working MPI implementation be
 installed. On macOS, the MPICH MPI implementation can be installed using the https://brew.sh[Homebrew] package manager, or compiled from source. In either case, first 
-install macOS' Xcode command line tools, if necessary, by running the following in a terminal window.
+install the macOS Xcode command line tools, if necessary, by running the following in a terminal window.
 
 [source,zsh]
 ----
@@ -43,9 +43,7 @@ InstalledDir: /Library/Developer/CommandLineTools/usr/bin
 
 NOTE: The version information might differ.
 
-=== Source
-
-To compile the MPICH source, 
+=== Compile MPICH from Source
 
 Once the command line tool installation is complete, download the mpich source from https://www.mpich.org/downloads[here], any recent stable version will work. The source then needs to be unarchived, configured, and compiled in a terminal window.
 
@@ -79,8 +77,8 @@ terminal window.
 % mpicc --version
 ----
 
-If the wrappers are not found, you will see an error like `zsh: command not found: mpicc`, and will need to add the wrappers' location to the `PATH` environment variable. If you installed via Homebrew, this will be `/opt/homebrew/bin`. If you installed from source, this will be the install directory specified
-in the `prefix` argument plus `\bin` (e.g., `$HOME/sfw/mpich-4.0.3/bin`).
+If the wrappers are not found, you will see an error like `zsh: command not found: mpicc`, and you will need to add the wrapper location to the `PATH` environment variable. If you installed via Homebrew, this will be `/opt/homebrew/bin`. If you installed from source, this will be the install directory specified
+in the `prefix` argument plus `/bin` (e.g., `$HOME/sfw/mpich-4.0.3/bin`).
 
 [source,zsh]
 ----
