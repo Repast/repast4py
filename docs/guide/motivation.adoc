@@ -26,6 +26,8 @@ under Ubuntu 20.04 (and thus WSL), the mpich MPI implementation can be installed
 $ sudo apt install mpich
 ----
 
+Installation instructions for MPI on macOS can be found {website}/macos_mpi_install.html[here].
+
 A typical campus cluster, or HPC resource will have MPI and mpi4py installed.
 Check the resource's documentation on available software for more details.
 

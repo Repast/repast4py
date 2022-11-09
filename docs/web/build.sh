@@ -24,6 +24,8 @@ landing_page() {
     # Update the landing page
     echo "Building landing page"
     asciidoctor -a website=$WEBSITE landing.adoc -o $REPO/index.html
+    asciidoctor -a website=$WEBSITE macos_mpi_install.adoc -o $REPO/macos_mpi_install.html
+
 }
 
 user_guide() {
