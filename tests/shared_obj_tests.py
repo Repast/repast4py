@@ -1190,6 +1190,20 @@ class SharedContextTests1(unittest.TestCase):
             self.assertEqual(1, counts[1])
             self.assertEqual(1, counts[0])
 
+    # tests context.contains_type
+    def test_has_type(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            context = ctx.SharedContext(comm)
+            self.assertFalse(context.contains_type(0))
+            a = core.Agent(0, 0, 0)
+            context.add(a)
+            self.assertTrue(context.contains_type(0))
+            context.remove(a)
+            self.assertFalse(context.contains_type(0))
+
     # tests context.agents()
     def test_get_agents(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
@@ -1942,7 +1956,7 @@ class SharedContextTests2(unittest.TestCase):
 def get_random_pts(box):
     x = random.default_rng.uniform(box.xmin, box.xmin + box.xextent)
     y = random.default_rng.uniform(box.ymin, box.ymin + box.yextent)
-    return(CPt(x, y), DPt(math.floor(x), math.floor(y)))
+    return (CPt(x, y), DPt(math.floor(x), math.floor(y)))
 
 
 class TempAgent(core.Agent):

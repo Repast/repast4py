@@ -260,7 +260,7 @@ class SharedContext:
         for vl in self.value_layers:
             vl._synch_ghosts()
 
-    def synchronize(self, restore_agent: Callable, sync_ghosts: bool=True):
+    def synchronize(self, restore_agent: Callable, sync_ghosts: bool = True):
         """Synchronizes the model state across processes by moving agents, filling
         projection buffers with ghosts, updating ghosted state and so forth.
 
@@ -307,7 +307,19 @@ class SharedContext:
                     if pid not in self.bounded_projs:
                         proj._synch_ghosts(self._agent_manager, restore_agent)
 
-    def agents(self, agent_type: int=None, count: int=None, shuffle: bool=False):
+    def contains_type(self, agent_type: int) -> bool:
+        """Get whether or not this SharedContexts contains any agents of the specified type
+
+        Args:
+            agent_type: the agent type id
+
+        Returns:
+            True if this SharedContext does contains agents of the specified type,
+            otherwise False.
+        """
+        return True if agent_type in self._agents_by_type and len(self._agents_by_type[agent_type]) > 0 else False
+
+    def agents(self, agent_type: int = None, count: int = None, shuffle: bool = False):
         """Gets the agents in this SharedContext, optionally of the specified type, count or shuffled.
 
         Args:
@@ -375,7 +387,7 @@ class SharedContext:
 
         return self._agent_manager.get_ghost(agent_id, incr=0)
 
-    def size(self, agent_type_ids: List[int]=None) -> dict:
+    def size(self, agent_type_ids: List[int] = None) -> dict:
         """Gets the number of local agents in this SharedContext, optionally by type.
 
         Args:
