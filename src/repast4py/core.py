@@ -74,7 +74,7 @@ class AgentManager:
 
     """
 
-    def __init__(self, rank: int , world_size: int):
+    def __init__(self, rank: int, world_size: int):
         self._local_agents = collections.OrderedDict()
         # key: agent uid, val: GhostedAgent
         self._ghosted_agents = {}
@@ -259,7 +259,7 @@ class AgentManager:
         """
         del self._ghost_agents[agent_id]
 
-    def add_ghost(self, ghosted_rank: int, agent: Agent, incr: int=1):
+    def add_ghost(self, ghosted_rank: int, agent: Agent, incr: int = 1):
         """Adds the specified agent to the ghost collection from
         the specified rank.
 
@@ -283,7 +283,7 @@ class AgentManager:
             gh.ref_count += 1
             projection.add(gh.agent)
 
-    def get_ghost(self, agent_uid: Tuple, incr: int=1) -> Agent:
+    def get_ghost(self, agent_uid: Tuple, incr: int = 1) -> Agent:
         """Gets the agent with the specified id from the collection
         of ghost agents, or None if the agent does not exist in the
         ghost agent collection. If the agent exists, its projection

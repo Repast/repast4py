@@ -6,7 +6,7 @@
 
 """Random numbers for repast4py. When this module is imported, :data:`repast4py.random.default_rng` is
 created using the current epoch time as the random seed, and :data:`repast4py.random.seed` is
-set to that value. The default random number generator is a numpy.random.Generator. 
+set to that value. The default random number generator is a numpy.random.Generator.
 See that `API documentation <https://numpy.org/doc/stable/reference/random/generator.html>`_
 for more information on the available distributions and sampling functions.
 """
@@ -25,7 +25,7 @@ seed: int = None
 """The current random seed used by :data:`repast4py.random.default_rng`"""
 
 
-def init(rng_seed: int=None):
+def init(rng_seed: int = None):
     """Initializes the default random number generator using the specified seed.
 
     Args:

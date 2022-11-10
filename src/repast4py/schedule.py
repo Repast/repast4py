@@ -84,8 +84,8 @@ class RepeatingEvent(ScheduledEvent):
             Otherwise, this value is ignored. Lower values have a higher priority and will
             execute before those with a higher value.
     """
-    def __init__(self, at: float, interval: float, evt: Callable, priority_type: PriorityType=PriorityType.RANDOM,
-                 priority: float=float('nan')):
+    def __init__(self, at: float, interval: float, evt: Callable, priority_type: PriorityType = PriorityType.RANDOM,
+                 priority: float = float('nan')):
         super().__init__(at, evt, priority_type, priority)
         self.interval = interval
 
@@ -124,8 +124,8 @@ class OneTimeEvent(ScheduledEvent):
             execute before those with a higher value.
     """
 
-    def __init__(self, at: float, evt: Callable, priority_type: PriorityType=PriorityType.RANDOM,
-                 priority: float=float('nan')):
+    def __init__(self, at: float, evt: Callable, priority_type: PriorityType = PriorityType.RANDOM,
+                 priority: float = float('nan')):
         super().__init__(at, evt, priority_type, priority)
 
     def reschedule(self, queue):
@@ -284,8 +284,8 @@ class Schedule:
             else:
                 heapq.heappush(self.queue, (at, count, evt))
 
-    def schedule_event(self, at: float, evt: Callable, priority_type: PriorityType=PriorityType.RANDOM,
-                       priority: float=float('nan')) -> ScheduledEvent:
+    def schedule_event(self, at: float, evt: Callable, priority_type: PriorityType = PriorityType.RANDOM,
+                       priority: float = float('nan')) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with
         the specified priority. By default, events are schduled with a random priority type.
 
@@ -326,8 +326,8 @@ class Schedule:
         return scheduled_evt
 
     def schedule_repeating_event(self, at: float, interval: float, evt: Callable,
-                                 priority_type: PriorityType=PriorityType.RANDOM,
-                                 priority: float=float('nan')) -> ScheduledEvent:
+                                 priority_type: PriorityType = PriorityType.RANDOM,
+                                 priority: float = float('nan')) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with the specified
         priority, and to repeat at the specified interval. By default, events are schduled with
         a random priority type.
@@ -448,9 +448,9 @@ class SharedScheduleRunner:
         self.end_evts = []
         self.go = True
 
-    def schedule_event(self, at: float, evt: Callable, 
-                       priority_type: PriorityType=PriorityType.RANDOM,
-                       priority: float=float('nan')) -> ScheduledEvent:
+    def schedule_event(self, at: float, evt: Callable,
+                       priority_type: PriorityType = PriorityType.RANDOM,
+                       priority: float = float('nan')) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with
         the specified priority. By default, events are schduled with a random priority type.
 
@@ -492,8 +492,8 @@ class SharedScheduleRunner:
         return sch_evt
 
     def schedule_repeating_event(self, at: float, interval: float, evt: Callable,
-                                 priority_type: PriorityType=PriorityType.RANDOM,
-                                 priority: float=float('nan')) -> ScheduledEvent:
+                                 priority_type: PriorityType = PriorityType.RANDOM,
+                                 priority: float = float('nan')) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with the specified
         priority, and to repeat at the specified interval. By default, events are schduled with
         a random priority type.

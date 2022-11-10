@@ -635,7 +635,7 @@ class UndirectedSharedNetwork(SharedNetwork):
             self._add_edge_key(u_agent, v_agent)
             self.graph.add_edge(u_agent, v_agent, **kwattr)
 
-    def _edges(self, agent: Agent, data: bool=False):
+    def _edges(self, agent: Agent, data: bool = False):
         """Gets an iterator over the incoming and outgoing edges for the specifed agent.
 
         Args:
@@ -775,7 +775,7 @@ class DirectedSharedNetwork(SharedNetwork):
         else:
             self.graph.add_edge(u_agent, v_agent, **kwattr)
 
-    def _edges(self, agent: Agent, data: bool=False):
+    def _edges(self, agent: Agent, data: bool = False):
         """Gets an iterator over the incoming and outgoing edges for the specifed agent.
 
         Args:
