@@ -216,7 +216,7 @@ class SharedNetwork:
         for edge, ghost_idx in self.edges_to_remove.items():
             ghost = edge[ghost_idx]
             sync_edges[ghost.local_rank].append((edge[0].uid, edge[1].uid))
-            agent_manager.untag_as_ghosted(ghost.local_rank, edge[not(ghost_idx)].uid)
+            agent_manager.untag_as_ghosted(ghost.local_rank, edge[not (ghost_idx)].uid)
 
         self.edges_to_remove.clear()
         to_remove = self.comm.alltoall(sync_edges)
