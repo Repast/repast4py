@@ -187,7 +187,7 @@ class ScheduleGroup:
 
     def sort(self):
         # sort according to the order of insertion
-        # so we have a stable starting point for randomization
+        # so we have a predictable starting point for randomization
         self.random.sort(key=lambda evt: evt.order_idx)
         self.prioritized.sort(key=lambda evt: evt.order_idx)
         # first and last order_idx determines execution order
@@ -287,7 +287,7 @@ class Schedule:
     def schedule_event(self, at: float, evt: Callable, priority_type: PriorityType = PriorityType.RANDOM,
                        priority: float = float('nan')) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with
-        the specified priority. By default, events are schduled with a random priority type.
+        the specified priority. By default, events are scheduled with a random priority type.
 
         An event's priority_type and priority determines when it will execute
         with respect to other events scheduled for the same tick. The priority types are:
@@ -329,7 +329,7 @@ class Schedule:
                                  priority_type: PriorityType = PriorityType.RANDOM,
                                  priority: float = float('nan')) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with the specified
-        priority, and to repeat at the specified interval. By default, events are schduled with
+        priority, and to repeat at the specified interval. By default, events are scheduled with
         a random priority type.
 
         An event's priority_type and priority determines when it will execute
@@ -452,7 +452,7 @@ class SharedScheduleRunner:
                        priority_type: PriorityType = PriorityType.RANDOM,
                        priority: float = float('nan')) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with
-        the specified priority. By default, events are schduled with a random priority type.
+        the specified priority. By default, events are scheduled with a random priority type.
 
         An event's priority_type and priority determines when it will execute
         with respect to other events scheduled for the same tick. The priority types are:
@@ -495,7 +495,7 @@ class SharedScheduleRunner:
                                  priority_type: PriorityType = PriorityType.RANDOM,
                                  priority: float = float('nan')) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with the specified
-        priority, and to repeat at the specified interval. By default, events are schduled with
+        priority, and to repeat at the specified interval. By default, events are scheduled with
         a random priority type.
 
         An event's priority_type and priority determines when it will execute
