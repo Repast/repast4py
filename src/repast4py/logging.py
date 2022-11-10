@@ -11,9 +11,8 @@ repast4py simulation to a file.
 import numpy as np
 from mpi4py import MPI
 import os
-import warnings
 
-from typing import List, Dict, Type
+from typing import List, Dict
 import csv
 
 try:
@@ -151,7 +150,7 @@ class DCDataSource:
     from a dataclass field.
     """
 
-    def __init__(self, data_class: dataclass, field_name: str, ds_name: str=None):
+    def __init__(self, data_class: dataclass, field_name: str, ds_name: str = None):
         """The constructor creates a DCDataSource that will log the specified field of the
         specified dataclass. By default, the field name will be used as the data source
         name, but an optional data source name can be supplied. The data source
@@ -211,7 +210,7 @@ class DCDataSource:
         return self._dtype
 
 
-def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str]=None) -> List[ReducingDataLogger]:
+def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str] = None) -> List[ReducingDataLogger]:
     """Creates ReducingDataLogger-s from the fields in a :py:obj:`dataclasses.dataclass`, optionally
     constraining the loggers to log only from specified fields. By default the
     names argument is None and all the dataclass fields will be logged.
@@ -252,7 +251,7 @@ def create_loggers(data_class: dataclass, op, rank: int, names: Dict[str, str]=N
                 loggers.append(ReducingDataLogger(source, op, rank))
 
         if len(loggers) == 0:
-            raise ValueError('Unable to create a loggers: names dictionary keys do not match any dataclass fields.')
+            raise ValueError('Unable to create any loggers: names dictionary keys do not match any dataclass fields.')
 
     return loggers
 
@@ -265,7 +264,7 @@ class ReducingDataSet:
     """
 
     def __init__(self, data_loggers: List[ReducingDataLogger], comm: MPI.Comm,
-                 fpath: str, delimiter: str=',', buffer_size: int=1000):
+                 fpath: str, delimiter: str = ',', buffer_size: int = 1000):
         """The constructor creates a ReducingDataSet whose columns are produced from
         the specified data loggers which are reduced across the specified
         communicator. The data_loggers can be created using the :func:`repast4py.logging.create_loggers`
@@ -355,7 +354,7 @@ class TabularLogger:
         headers: the header values for each column
         delimiter: the seperator to use to seperate the column values
     """
-    def __init__(self, comm: MPI.Comm, fpath: str, headers: List[str], delimiter: str=','):
+    def __init__(self, comm: MPI.Comm, fpath: str, headers: List[str], delimiter: str = ','):
         self._delimiter = delimiter
         self._comm = comm
         self._rank = comm.Get_rank()
