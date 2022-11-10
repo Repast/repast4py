@@ -14,7 +14,7 @@ help() {
     echo "If no option is specified, then all the documentation is built."
     echo
     echo "Options:"
-    echo "  l   build the landing page"
+    echo "  l   build the landing page and macos mpi doc"
     echo "  u   build the user guide"
     echo "  a   build the API documentation"
     echo "  e   build the examples"
@@ -22,7 +22,7 @@ help() {
 
 landing_page() {
     # Update the landing page
-    echo "Building landing page"
+    echo "Building landing page and macos mpi doc"
     asciidoctor -a website=$WEBSITE landing.adoc -o $REPO/index.html
     asciidoctor -a website=$WEBSITE macos_mpi_install.adoc -o $REPO/macos_mpi_install.html
 
