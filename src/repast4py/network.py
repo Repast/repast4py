@@ -216,7 +216,7 @@ class SharedNetwork:
         for edge, ghost_idx in self.edges_to_remove.items():
             ghost = edge[ghost_idx]
             sync_edges[ghost.local_rank].append((edge[0].uid, edge[1].uid))
-            agent_manager.untag_as_ghosted(ghost.local_rank, edge[not(ghost_idx)].uid)
+            agent_manager.untag_as_ghosted(ghost.local_rank, edge[not (ghost_idx)].uid)
 
         self.edges_to_remove.clear()
         to_remove = self.comm.alltoall(sync_edges)
@@ -635,7 +635,7 @@ class UndirectedSharedNetwork(SharedNetwork):
             self._add_edge_key(u_agent, v_agent)
             self.graph.add_edge(u_agent, v_agent, **kwattr)
 
-    def _edges(self, agent: Agent, data: bool=False):
+    def _edges(self, agent: Agent, data: bool = False):
         """Gets an iterator over the incoming and outgoing edges for the specifed agent.
 
         Args:
@@ -775,7 +775,7 @@ class DirectedSharedNetwork(SharedNetwork):
         else:
             self.graph.add_edge(u_agent, v_agent, **kwattr)
 
-    def _edges(self, agent: Agent, data: bool=False):
+    def _edges(self, agent: Agent, data: bool = False):
         """Gets an iterator over the incoming and outgoing edges for the specifed agent.
 
         Args:

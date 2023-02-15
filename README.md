@@ -46,6 +46,8 @@ under Ubuntu 20.04 (and thus WSL), the mpich MPI implementation can be installed
 $ sudo apt install mpich
 ```
 
+Installation instructions for MPI on macOS can be found [here](https://repast.github.io/repast4py.site/macos_mpi_install.html).
+
 A typical campus cluster, or HPC resource will have MPI and mpi4py installed. 
 Check the resource's documentation on available software for more details.
 
@@ -59,6 +61,11 @@ to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation
 ```
 env CC=mpicxx pip install repast4py
 ```
+
+__NOTE__: If you see an error message about a missing `python.h` header file when
+installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
+a python dev package using your OS's package manager. For example, assuming
+Python 3.8, `sudo apt install python3.8-dev` will work for Ubuntu.
 
 ### Documentation
 

@@ -1,5 +1,5 @@
 = Repast for Python (Repast4Py) User Guide
-Version 1.0 October 2021
+Version 2.0 February 2023
 :toc2:
 :icons: font
 :numbered:

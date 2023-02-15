@@ -7,7 +7,7 @@
 import sys
 from collections import namedtuple
 import numpy as np
-from numba import jit, int64
+from numba import jit
 # from numba.core.types import NamedTuple
 
 
@@ -93,7 +93,7 @@ def find_1d_nghs_sticky(pt: np.array, min_max: np.array):
 
 
 @jit(nopython=True)
-def find_2d_nghs_sticky(pt: np.array, min_max: np.array, pytorch_order: bool=False):
+def find_2d_nghs_sticky(pt: np.array, min_max: np.array, pytorch_order: bool = False):
     """Finds the neighboring 2D points of the specifed point within
     the min_max inclusive range, using "sticky" semantics.
     See :class:`repast4py.space.BorderType` and

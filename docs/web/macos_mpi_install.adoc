@@ -1,0 +1,125 @@
+:icons: font
+:website: http://repast.github.io
+:xrefstyle: full
+:imagesdir: ./images
+:source-highlighter: pygments
+
+== MPI on macOS
+
+Repast4Py requires that a working MPI implementation be
+installed. On macOS, the MPICH MPI implementation can be installed using the https://brew.sh[Homebrew] package manager, or compiled from source. In either case, first 
+install the macOS Xcode command line tools, if necessary, by running the following in a terminal window.
+
+[source,zsh]
+----
+xcode-select -install
+----
+
+This will start a dialog for the tools installation. 
+
+=== Homebrew
+
+To install MPICH using the homebrew package manager, first install
+Homebrew by going to the https://brew.sh[Homebrew] site, and
+follow the installation instructions. Once Homebrew is installed, install MPICH
+by running the following in a terminal window.
+
+[source,zsh]
+----
+% /opt/homebrew/bin/brew install mpich
+----
+
+Check if the install was successful with by running one of the MPICH MPI compiler
+wrappers.
+
+[source,zsh]
+----
+ % /opt/homebrew/bin/mpicxx --version  
+Apple clang version 14.0.0 (clang-1400.0.29.102)
+Target: arm64-apple-darwin21.6.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+----
+
+NOTE: The version information might differ.
+
+=== Compile MPICH from Source
+
+Once the command line tool installation is complete, download the mpich source from https://www.mpich.org/downloads[here], any recent stable version will work. The source then needs to be unarchived, configured, and compiled in a terminal window.
+
+[source,zsh]
+----
+# cd to wherever the mpich tar ball was downloaded (e.g, ~/Downloads)
+% cd ~/Downloads
+# Replace mpich-4.0.3.tar.gz with the downloaded version 
+% tar xf mpich-4.0.3.tar.gz 
+% cd mpich-4.0.3
+# Replace $HOME/sfw/mpich-4.0.3 with where you want to install mpich
+% ./configure --disable-fortran --prefix=$HOME/sfw/mpich-4.0.3
+# Compile and install the source
+% make install
+----
+
+NOTE: The compilation will take a few minutes or more, depending on your 
+machine.
+
+=== Testing the MPI Installation
+
+Once MPICH is installed, we can test the MPI installation by installing the `mpi4py` Python package
+which requires a MPI installation, and is itself a Repast4Py requirement.
+As part of its installation `mpi4py` needs to be able to find the MPI
+compilation wrappers installed as part of MPI implementation.
+To determine if the wrappers can be found, run the following in a 
+terminal window.
+
+[source,zsh]
+----
+% mpicc --version
+----
+
+If the wrappers are not found, you will see an error like `zsh: command not found: mpicc`, and you will need to add the wrapper location to the `PATH` environment variable. If you installed via Homebrew, this will be `/opt/homebrew/bin`. If you installed from source, this will be the install directory specified
+in the `prefix` argument plus `/bin` (e.g., `$HOME/sfw/mpich-4.0.3/bin`).
+
+[source,zsh]
+----
+# Replace X with `opt/homebrew` for Hombrew or wherever you installed mpich
+# for source
+% export PATH=X/bin:$PATH
+% mpicc --version
+Apple clang version 14.0.0 (clang-1400.0.29.102)
+Target: arm64-apple-darwin21.6.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+----
+
+In the same terminal window, install and test `mpi4py` by importing it.
+
+[source,zsh]
+----
+% pip3 install mpi4py
+Collecting mpi4py
+...
+% python3
+Python 3.9.6 (default, Aug  5 2022, 15:21:02) 
+[Clang 14.0.0 (clang-1400.0.29.102)] on darwin
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from mpi4py import MPI
+----
+
+Assuming the `mpi4py` install is successful, install Repast4Py and
+test it with an import.
+
+[source,zsh]
+----
+% CC=mpicxx pip3 install repast4py
+Collecting repast4py
+...
+% python3
+Python 3.9.6 (default, Aug  5 2022, 15:21:02) 
+[Clang 14.0.0 (clang-1400.0.29.102)] on darwin
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from repast4py import space
+----
+
+NOTE: The MPI compilation wrappers also need to be on the `PATH` for
+the repast4py install.

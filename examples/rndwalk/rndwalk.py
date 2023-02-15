@@ -125,7 +125,7 @@ class Model:
         loggers = logging.create_loggers(self.meet_log, op=MPI.SUM, names={'total_meets': 'total'}, rank=rank)
         loggers += logging.create_loggers(self.meet_log, op=MPI.MIN, names={'min_meets': 'min'}, rank=rank)
         loggers += logging.create_loggers(self.meet_log, op=MPI.MAX, names={'max_meets': 'max'}, rank=rank)
-        self.data_set = logging.ReducingDataSet(loggers, MPI.COMM_WORLD, params['meet_log_file'])
+        self.data_set = logging.ReducingDataSet(loggers, comm, params['meet_log_file'])
 
         # count the initial colocations at time 0 and log
         for walker in self.context.agents():

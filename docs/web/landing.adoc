@@ -17,7 +17,7 @@ to create a scalable modeling system that can exploit the largest HPC resources 
 
 === Requirements
 
-Repast4Py requires Python 3.7+
+Repast4Py is compatible with Python 3.7-10.
 
 Repast4Py can run on Linux, macOS and Windows provided there is a working MPI implementation
 installed and mpi4py is supported. Repast4Py is developed and tested on Linux. We recommend
@@ -32,6 +32,8 @@ under Ubuntu 20.04 (and thus WSL), the mpich MPI implementation can be installed
 $ sudo apt install mpich
 ----
 
+Installation instructions for MPI on macOS can be found link:./macos_mpi_install.html[here].
+
 A typical campus cluster, or HPC resource will have MPI and mpi4py installed.
 Check the resource's documentation on available software for more details.
 
@@ -45,6 +47,11 @@ to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation
 ----
 env CC=mpicxx pip install repast4py
 ----
+
+NOTE: If you see an error message about a missing `python.h` header file when
+installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
+a python dev package using your OS's package manager. For example, assuming
+Python 3.8, `sudo apt install python3.8-dev` will work for Ubuntu.
 
 === Documentation
 
@@ -68,3 +75,6 @@ Jonathan Ozik is the Repast project lead. Please contact him through
 the https://www.anl.gov/staff-directory[Argonne Staff Directory] if you
 have project-related questions.
 
+=== Funding
+
+This material is based upon work supported by the U.S. Department of Energy, Office of Science, under contract number DE-AC02-06CH11357. Repast4Py is being used in multiple projects, including the NIH funded projects R01AI136056, U2CDA050098, R01MD014703, R21MH128116, R01AI146917, R01AI158666 and is informed by their requirements and continuing development.

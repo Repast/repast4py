@@ -315,8 +315,8 @@ def step(self):
                 new_rumor_spreaders.append(ngh)
 
     self.rumor_spreaders += new_rumor_spreaders    <3>
-    self.counts.total_rumor_spreaders = len(self.rumor_spreaders)    <4>
-    self.counts.new_rumor_spreaders = len(new_rumor_spreaders)    <5>
+    self.counts.new_rumor_spreaders = len(new_rumor_spreaders)    <4>
+    self.counts.total_rumor_spreaders += self.counts.new_rumor_spreaders <5>
     self.data_set.log(self.runner.schedule.tick)    <6>
 
     self.context.synchronize(restore_agent)    <7>
@@ -328,8 +328,8 @@ has not yet received a rumor, is local to the current rank, and the draw against
 the probability of a rumor spreading is successful, then set the neighbor's `received_rumor` 
 attribute to True, and add it to the list of new rumor spreaders. 
 <3> Add the new rumor spreaders to the list of current rumor spreaders
-<4> Set the total number of rumor spreaders on the `self.counts` log
-<5> Set the new number of rumor spreaders on the `self.counts` log
+<4> Set the new number of rumor spreaders on the `self.counts` log
+<5> Set the total number of rumor spreaders on the `self.counts` log
 <6> Log the `self.count` values for the current tick
 <7> Synchronize the model state across all ranks. This will update all
 the ghost agent states, calling `RumorAgent.update` on the ghost agents.

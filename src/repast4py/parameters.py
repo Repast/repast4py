@@ -12,7 +12,8 @@ import json
 import argparse
 from typing import Dict
 
-from repast4py import random
+from . import random
+from . import util
 
 
 params = {}
@@ -44,7 +45,7 @@ def create_args_parser():
     return parser
 
 
-def init_params(parameters_file: str, parameters: str) -> Dict:
+def init_params(parameters_file: str, parameters: str, dump_file: str = None) -> Dict:
     """Initializes the :attr:`repast4py.parameters.params` dictionary with
     the model input parameters.
 
@@ -56,7 +57,8 @@ def init_params(parameters_file: str, parameters: str) -> Dict:
 
     Args:
         parameters_file: yaml format file containing model parameters as key value pairs.
-        parameters: json map format string that overrides those in the file
+        parameters: json map format string that overrides those in the file.
+        dump_file: optional file name to dump the resolved parameters to.
     Returns:
         A dictionary containing the final model parameters.
     """
@@ -68,5 +70,10 @@ def init_params(parameters_file: str, parameters: str) -> Dict:
 
     if 'random.seed' in params:
         random.init(params['random.seed'])
+
+    if dump_file is not None:
+        fname = util.find_free_filename(dump_file)
+        with open(fname, 'w') as f_out:
+            yaml.dump(params, f_out, indent=2, Dumper=yaml.SafeDumper)
 
     return params
