@@ -16,7 +16,7 @@ class Agent:
 
     def __init__(self, schedule):
         self.sched = schedule
-        self.at = 0
+        self.at = -1.0
         self.evts = []
 
     def run(self):
@@ -64,6 +64,27 @@ def gen_reset_stop(evt, runner, new_stop):
 # Run from parent dir: python -m unittest tests.schedule_tests
 class ScheduleTests(unittest.TestCase):
 
+    def test_schedule_0(self):
+        sched = schedule.Schedule()
+        a1 = Agent(sched)
+
+        sched.schedule_event(0, a1.run)
+        sched.execute()
+        self.assertEqual(0, a1.at)
+        sched.execute()
+        self.assertEqual(0, a1.at)
+
+        sched = schedule.Schedule()
+        a1 = Agent(sched)
+
+        sched.schedule_repeating_event(0, 1, a1.run)
+        sched.execute()
+        self.assertEqual(0, a1.at)
+        sched.execute()
+        self.assertEqual(1, a1.at)
+        sched.execute()
+        self.assertEqual(2, a1.at)
+
     def test_schedule_at(self):
         sched = schedule.Schedule()
         a1 = Agent(sched)
@@ -77,7 +98,7 @@ class ScheduleTests(unittest.TestCase):
         sched.execute()
         self.assertEqual(1.3, a1.at)
         self.assertEqual(1.3, a2.at)
-        self.assertEqual(0, a3.at)
+        self.assertEqual(-1, a3.at)
 
         sched.execute()
         self.assertEqual(1.3, a1.at)
@@ -102,7 +123,7 @@ class ScheduleTests(unittest.TestCase):
         sched.execute()
         self.assertEqual(1, a1.at)
         self.assertEqual(1, a2.at)
-        self.assertEqual(0, a3.at)
+        self.assertEqual(-1, a3.at)
 
         sched.execute()
         self.assertEqual(1, a1.at)
