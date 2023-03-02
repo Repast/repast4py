@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'repast4py'
-copyright = '2021, UChicago Argonne, LLC'
+copyright = '2023, UChicago Argonne, LLC'
 author = 'Nick Collier, Jonathan Ozik, Eric Tatara, Sara Rimer'
 
 

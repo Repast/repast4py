@@ -264,7 +264,8 @@ class Schedule:
 
     def __init__(self):
         self.queue = []
-        self.tick = 0
+        # 0 is first valid tick
+        self.tick = -0.000000000000000000000000000000000000001
         self.counter = itertools.count()
         self.executing_group = ScheduleGroup()
 
