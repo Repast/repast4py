@@ -236,7 +236,7 @@ class SharedContext:
         for updates in recv_data:
             for update in updates:
                 ghost = self._agent_manager._ghost_agents[update[0]]
-                ghost.agent.update(update[1])
+                ghost.agent.update(*update[1:])
 
     def _pre_synch_ghosts(self):
         """Calls _pre_synch_ghosts on all "ghostable" projections
