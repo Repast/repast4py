@@ -2102,6 +2102,36 @@ class SharedContextTests3(unittest.TestCase):
                 self.assertIsNotNone(a)
                 self.assertEqual((3, 0, 7), a.uid)
 
+    # def test_duplicate_requested(self):
+    #     new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
+    #     comm = MPI.COMM_WORLD.Create_group(new_group)
+
+    #     if comm != MPI.COMM_NULL:
+    #         rank = comm.Get_rank()
+    #         context = ctx.SharedContext(comm)
+    #         agents = [EAgent(x, 0, rank, x) for x in range(10)]
+    #         for a in agents:
+    #             context.add(a)
+    #             self.assertEqual(rank, a.local_rank)
+
+    #         requests = []
+    #         if rank == 0:
+    #             requests.append(((1, 0, 1), 1))
+    #             requests.append(((1, 0, 2), 2))
+    #             requests.append(((2, 0, 1), 1))
+
+    #         ghosts = context.request_agents(requests, create_agent)
+    #         self.assertEqual(3, len(ghosts))
+
+    #         requests = []
+    #         if rank == 0:
+    #             requests.append(((1, 0, 1), 1))
+    #             requests.append(((1, 0, 2), 2))
+    #             requests.append(((2, 0, 1), 1))
+
+    #         ghosts = context.request_agents(requests, create_agent)
+    #         self.assertEqual(0, len(ghosts))
+
     def test_requested(self):
         # 4 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
