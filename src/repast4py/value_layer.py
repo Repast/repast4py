@@ -528,6 +528,8 @@ class SharedValueLayer(ValueLayer):
 
         if comm.Get_size() > 1:
             self._init_sync_data(nd, topo, buffer_size)
+            comm.Barrier()
+            self._synch_ghosts()
 
     def _init_value(self, init_value, nd: int):
         if init_value != 'random':
@@ -846,6 +848,7 @@ class SharedValueLayer(ValueLayer):
 
             if len(slice_data) > 0:
                 recv_buf_data.append(slice_data)
+
 
         self.recv_data = ((recv_buf, (recv_counts, recv_displs)), recv_buf_data)
 
