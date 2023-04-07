@@ -1099,10 +1099,33 @@ class EAgent(core.Agent):
         self.energy = data
 
 
+class EAgent2(core.Agent):
+
+    def __init__(self, id, agent_type, rank, energy):
+        super().__init__(id=id, type=agent_type, rank=rank)
+        self.energy = energy
+        self.restored = False
+        self.food = id
+
+    def save(self):
+        return (self.uid, self.energy, self.food)
+
+    def update(self, energy, food):
+        # update
+        self.energy = energy
+        self.food = food
+
+
 def create_agent(agent_data):
     # agent_data: [aid_tuple, energy]
     uid = agent_data[0]
     return EAgent(uid[0], uid[1], uid[2], agent_data[1])
+
+
+def create_agent2(agent_data):
+    # agent_data: [aid_tuple, energy]
+    uid = agent_data[0]
+    return EAgent2(uid[0], uid[1], uid[2], agent_data[1])
 
 
 class SharedContextTests1(unittest.TestCase):
@@ -2102,6 +2125,36 @@ class SharedContextTests3(unittest.TestCase):
                 self.assertIsNotNone(a)
                 self.assertEqual((3, 0, 7), a.uid)
 
+    # def test_duplicate_requested(self):
+    #     new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
+    #     comm = MPI.COMM_WORLD.Create_group(new_group)
+
+    #     if comm != MPI.COMM_NULL:
+    #         rank = comm.Get_rank()
+    #         context = ctx.SharedContext(comm)
+    #         agents = [EAgent(x, 0, rank, x) for x in range(10)]
+    #         for a in agents:
+    #             context.add(a)
+    #             self.assertEqual(rank, a.local_rank)
+
+    #         requests = []
+    #         if rank == 0:
+    #             requests.append(((1, 0, 1), 1))
+    #             requests.append(((1, 0, 2), 2))
+    #             requests.append(((2, 0, 1), 1))
+
+    #         ghosts = context.request_agents(requests, create_agent)
+    #         self.assertEqual(3, len(ghosts))
+
+    #         requests = []
+    #         if rank == 0:
+    #             requests.append(((1, 0, 1), 1))
+    #             requests.append(((1, 0, 2), 2))
+    #             requests.append(((2, 0, 1), 1))
+
+    #         ghosts = context.request_agents(requests, create_agent)
+    #         self.assertEqual(0, len(ghosts))
+
     def test_requested(self):
         # 4 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
@@ -2205,6 +2258,50 @@ class SharedContextTests3(unittest.TestCase):
                 self.assertEqual(2, len(ghosted2.ghost_ranks))
                 self.assertTrue(0 in ghosted2.ghost_ranks)
                 self.assertTrue(3 in ghosted2.ghost_ranks)
+
+    def test_requested_synch_multi_arg(self):
+        """ * Request Agents
+            * Update Agent state on local rank
+            * Synch
+            * Test that state propagates to ghosts
+        """
+        # 4 rank comm
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+            context = ctx.SharedContext(comm)
+            agents = [EAgent2(x, 0, rank, x) for x in range(10)]
+            for a in agents:
+                context.add(a)
+                self.assertEqual(rank, a.local_rank)
+
+            requests = []
+            if rank == 0:
+                requests.append(((1, 0, 1), 1))
+                requests.append(((1, 0, 2), 2))
+                requests.append(((2, 0, 1), 1))
+
+            context.request_agents(requests, create_agent2)
+
+            if rank == 1:
+                context.agent((1, 0, 1)).energy = -1
+                context.agent((1, 0, 1)).food = 42
+            elif rank == 2:
+                context.agent((1, 0, 2)).energy = -10
+                context.agent((1, 0, 2)).food = 1004
+
+            context.synchronize(create_agent)
+
+            if rank == 0:
+                other = context.ghost_agent((1, 0, 1))
+                self.assertEqual(-1, other.energy)
+                self.assertEqual(42, other.food)
+
+                other = context.ghost_agent((1, 0, 2))
+                self.assertEqual(-10, other.energy)
+                self.assertEqual(1004, other.food)
 
     def test_requested_synch(self):
         """ * Request Agents

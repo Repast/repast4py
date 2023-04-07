@@ -209,7 +209,7 @@ class SharedValueLayerTests(unittest.TestCase):
                 # here, rather than in the vl code as previous.
                 grid = vl.grid[xs[0]: xs[1]]
                 self.assertFalse(torch.any(torch.ne(grid, exp_val)), msg=f'{rank}: {exp_val} {xs} {grid}')
-            
+
             # TEST: Update local area, synch, borders should have changed
             vl.grid[x1: x2] = rank + 101.1
             vl._synch_ghosts()
@@ -765,3 +765,54 @@ class SharedValueLayerTests(unittest.TestCase):
                 self.assertEqual(3, vl.get(dpt(39, 60)))
                 self.assertEqual(3, vl.get(dpt(39, 119)))
                 self.assertEqual(1, vl.get(dpt(41, 119)))
+
+    def test_auto_synch_2x2_periodic(self):
+        # tests that default initial value is propogated to buffers
+        # as part of initialization
+        torch.set_printoptions(linewidth=140)
+        new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+            bounds = BoundingBox(xmin=0, xextent=40, ymin=0, yextent=120, zmin=0, zextent=0)
+            vl = SharedValueLayer(comm, bounds, BorderType.Periodic, 2, rank)
+            self.assertEqual(2, vl.buffer_size)
+            grid = vl.grid[:, :]
+            self.assertEqual(grid.shape[0], vl.buffered_bounds.yextent)
+            self.assertEqual(grid.shape[1], vl.buffered_bounds.xextent)
+
+            # offsets for slice
+            lb = vl.local_bounds
+            y1 = lb.ymin + vl.impl.pt_translation[1]
+            y2 = lb.ymin + lb.yextent + vl.impl.pt_translation[1]
+            x1 = lb.xmin + vl.impl.pt_translation[0]
+            x2 = lb.xmin + lb.xextent + vl.impl.pt_translation[0]
+            grid = vl.grid[y1: y2, x1: x2]
+
+            self.assertFalse(torch.any(torch.ne(grid, rank)))
+
+            if rank == 0:
+                self.assertEqual(0, vl.get(dpt(0, 0)))
+                self.assertEqual(0, vl.get(dpt(0, 59)))
+                self.assertEqual(0, vl.get(dpt(19, 0)))
+                self.assertEqual(0, vl.get(dpt(19, 59)))
+                self.assertEqual(3, vl.get(dpt(21, 61)))
+            elif rank == 1:
+                self.assertEqual(1, vl.get(dpt(0, 60)))
+                self.assertEqual(1, vl.get(dpt(0, 119)))
+                self.assertEqual(1, vl.get(dpt(19, 60)))
+                self.assertEqual(1, vl.get(dpt(19, 119)))
+            elif rank == 2:
+                self.assertEqual(2, vl.get(dpt(20, 0)))
+                self.assertEqual(2, vl.get(dpt(20, 59)))
+                self.assertEqual(2, vl.get(dpt(39, 0)))
+                self.assertEqual(2, vl.get(dpt(39, 59)))
+                self.assertEqual(0, vl.get(dpt(41, 59)))
+            elif rank == 3:
+                self.assertEqual(3, vl.get(dpt(20, 60)))
+                self.assertEqual(3, vl.get(dpt(20, 119)))
+                self.assertEqual(3, vl.get(dpt(39, 60)))
+                self.assertEqual(3, vl.get(dpt(39, 119)))
+                self.assertEqual(1, vl.get(dpt(41, 119)))
+
+            
