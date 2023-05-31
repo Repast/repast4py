@@ -11,8 +11,6 @@ to create a scalable modeling system that can exploit the largest HPC resources 
 
 === Requirements
 
-Repast4Py is compatible with Python 3.7-10.
-
 Repast4Py can run on Linux, macOS and Windows provided there is a working MPI implementation
 installed and mpi4py is supported. Repast4Py is developed and tested on Linux. We recommend
 that Windows users use the Windows Subsystem for Linux (WSL). Installation instructions for
