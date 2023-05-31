@@ -849,7 +849,6 @@ class SharedValueLayer(ValueLayer):
             if len(slice_data) > 0:
                 recv_buf_data.append(slice_data)
 
-
         self.recv_data = ((recv_buf, (recv_counts, recv_displs)), recv_buf_data)
 
     def _init_sync_data_3d(self, topo, buffer_size):

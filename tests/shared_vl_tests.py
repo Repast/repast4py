@@ -814,5 +814,3 @@ class SharedValueLayerTests(unittest.TestCase):
                 self.assertEqual(3, vl.get(dpt(39, 60)))
                 self.assertEqual(3, vl.get(dpt(39, 119)))
                 self.assertEqual(1, vl.get(dpt(41, 119)))
-
-            

@@ -144,7 +144,9 @@ CC=mpicxx CXX=mpicxx tox -e py38
 
 ### Uploading to PyPI (or testpypi)
 
-python3 -m twine upload --repository testpypi dist/*.tar.gz
+This uses ~/.pypirc for API token authentication
+
+python3 -m twine upload --repository repast4py dist/*.tar.gz
 
 ### Testing from testPyPI
 
