@@ -1308,6 +1308,22 @@ class InitNetworkTests(unittest.TestCase):
 
     long_message = True
 
+    def testNghs(self):
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        context = ctx.SharedContext(comm)
+
+        fpath = './test_data/simple_net.txt'
+        read_network(fpath, context, construct_agent, restore_agent)
+        g = context.get_projection("network")
+        self.assertTrue(g.is_directed)
+
+        if rank == 0:
+            ss = [n.uid for n in g.graph.successors(context.agent((1, 0, 0)))]
+            self.assertEqual(2, len(ss))
+            self.assertTrue((3, 0, 2) in ss)
+            self.assertTrue((2, 0, 1) in ss)
+
     def testInitWithAttributes(self):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -1593,3 +1609,4 @@ class InitNetworkTests(unittest.TestCase):
                         self.assertEqual(i, ranks[nid])
             except ModuleNotFoundError:
                 print("Ignoring nxmetis test")
+
