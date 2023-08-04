@@ -1,6 +1,7 @@
 import unittest
 import sys
 import os
+import math
 from mpi4py import MPI
 
 try:
@@ -59,6 +60,10 @@ def gen_reset_stop(evt, runner, new_stop):
         runner.schedule_stop(new_stop)
 
     return f
+
+
+def noop():
+    pass
 
 
 # Run from parent dir: python -m unittest tests.schedule_tests
@@ -356,6 +361,32 @@ class ScheduleTests(unittest.TestCase):
             # + ['a', 'b', 'c'] + , a.evts)
         self.assertTrue(len(d_idxs) > 2)
         self.assertTrue(len(e_idxs) > 2)
+
+    def test_metadata(self):
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+
+        evt = runner.schedule_event(1.0, noop, metadata={'evt': 'noop'})
+        self.assertEqual(evt.at, 1.0)
+        self.assertEqual(0, evt.order_idx)
+        self.assertEqual(PriorityType.RANDOM, evt.priority_type)
+        self.assertTrue(math.isnan(evt.priority))
+        self.assertEqual({'evt': 'noop', '__type': schedule.EvtType.ONE_TIME}, evt.metadata)
+
+        evt = runner.schedule_repeating_event(1.0, 12.5, noop, metadata={'evt': 'noop'})
+        self.assertEqual(evt.at, 1.0)
+        self.assertEqual(12.5, evt.interval)
+        self.assertEqual(1, evt.order_idx)
+        self.assertEqual(PriorityType.RANDOM, evt.priority_type)
+        self.assertTrue(math.isnan(evt.priority))
+        self.assertEqual({'evt': 'noop', '__type': schedule.EvtType.REPEATING}, evt.metadata)
+
+        evt = runner.schedule_stop(10.0)
+        self.assertEqual(evt.at, 10.0)
+        self.assertEqual(2, evt.order_idx)
+        self.assertEqual({'__type': schedule.EvtType.STOP}, evt.metadata)
+
+        evt = runner.schedule_end_event(noop, metadata={'evt': 'noop'})
+        self.assertEqual({'__type': schedule.EvtType.END, 'evt': 'noop'}, evt.metadata)
 
 
 if __name__ == "__main__":
