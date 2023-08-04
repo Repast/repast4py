@@ -10,7 +10,7 @@ simulation. Users will typically only use the :class:`repast4py.schedule.SharedS
 
 import heapq
 import itertools
-from typing import Callable, List
+from typing import Callable, List, Dict
 import types
 from enum import IntEnum
 
@@ -35,6 +35,13 @@ class PriorityType(IntEnum):
     BY_PRIORITY = 3
 
 
+class EvtType(IntEnum):
+    STOP = 0
+    REPEATING = 1
+    ONE_TIME = 2
+    END = 3
+
+
 class ScheduledEvent:
     """A callable base class for all scheduled events. Calling
     instances of this class will execute the Callable evt.
@@ -48,13 +55,17 @@ class ScheduledEvent:
             value is used to order all the events assigned a BY_PRIORITY priority type.
             Otherwise, this value is ignored. Lower values have a higher priority and will
             execute before those with a higher value.
+        metadata: arbitrary data that can be associated with the event, useful to recreate the
+            event from a checkpoint.
     """
-    def __init__(self, at: float, evt: Callable, priority_type: PriorityType, priority: float):
+    def __init__(self, at: float, evt: Callable, priority_type: PriorityType, priority: float,
+                 metadata: Dict):
         self.evt = evt
         self.at = at
         self.order_idx = 0
         self.priority_type = priority_type
         self.priority = priority
+        self.metadata = metadata
 
     def __call__(self):
         self.evt()
@@ -83,10 +94,14 @@ class RepeatingEvent(ScheduledEvent):
             value is used to order all the events assigned a BY_PRIORITY priority type.
             Otherwise, this value is ignored. Lower values have a higher priority and will
             execute before those with a higher value.
+        metadata: arbitrary data that can be associated with the event, useful to recreate the
+            event from a checkpoint.
     """
     def __init__(self, at: float, interval: float, evt: Callable, priority_type: PriorityType = PriorityType.RANDOM,
-                 priority: float = float('nan')):
-        super().__init__(at, evt, priority_type, priority)
+                 priority: float = float('nan'), metadata: Dict = {}):
+        _metadata = {'__type': EvtType.REPEATING}
+        _metadata.update(metadata)
+        super().__init__(at, evt, priority_type, priority, _metadata)
         self.interval = interval
 
     def reschedule(self, queue: List):
@@ -122,11 +137,15 @@ class OneTimeEvent(ScheduledEvent):
             value is used to order all the events assigned a BY_PRIORITY priority type.
             Otherwise, this value is ignored. Lower values have a higher priority and will
             execute before those with a higher value.
+        metadata: arbitrary data that can be associated with the event, useful to recreate the
+            event from a checkpoint.
     """
 
     def __init__(self, at: float, evt: Callable, priority_type: PriorityType = PriorityType.RANDOM,
-                 priority: float = float('nan')):
-        super().__init__(at, evt, priority_type, priority)
+                 priority: float = float('nan'), metadata: Dict = {}):
+        _metadata = {'__type': EvtType.ONE_TIME}
+        _metadata.update(metadata)
+        super().__init__(at, evt, priority_type, priority, _metadata)
 
     def reschedule(self, queue):
         """Null-op as this OneTimeEvent only occurs once.
@@ -286,7 +305,7 @@ class Schedule:
                 heapq.heappush(self.queue, (at, count, evt))
 
     def schedule_event(self, at: float, evt: Callable, priority_type: PriorityType = PriorityType.RANDOM,
-                       priority: float = float('nan')) -> ScheduledEvent:
+                       priority: float = float('nan'), metadata: Dict = {}) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with
         the specified priority. By default, events are scheduled with a random priority type.
 
@@ -318,17 +337,19 @@ class Schedule:
                 value is used to order all the events assigned a BY_PRIORITY priority type.
                 Otherwise, this value is ignored. Lower values have a higher priority and will
                 execute before those with a higher value.
+            metadata: arbitrary data that can be associated with the event, useful to recreate the
+                event from a checkpoint.
 
         Returns:
             The ScheduledEvent instance that was scheduled for execution.
         """
-        scheduled_evt = OneTimeEvent(at, evt, priority_type, priority)
+        scheduled_evt = OneTimeEvent(at, evt, priority_type, priority, metadata)
         self._push_event(at, scheduled_evt)
         return scheduled_evt
 
     def schedule_repeating_event(self, at: float, interval: float, evt: Callable,
                                  priority_type: PriorityType = PriorityType.RANDOM,
-                                 priority: float = float('nan')) -> ScheduledEvent:
+                                 priority: float = float('nan'), metadata: Dict = {}) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with the specified
         priority, and to repeat at the specified interval. By default, events are scheduled with
         a random priority type.
@@ -362,11 +383,13 @@ class Schedule:
                 value is used to order all the events assigned a BY_PRIORITY priority type.
                 Otherwise, this value is ignored. Lower values have a higher priority and will
                 execute before those with a higher value.
+            metadata: arbitrary data that can be associated with the event, useful to recreate the
+                event from a checkpoint.
 
         Returns:
             The ScheduledEvent instance that was scheduled for execution.
         """
-        scheduled_evt = RepeatingEvent(at, interval, evt, priority_type, priority)
+        scheduled_evt = RepeatingEvent(at, interval, evt, priority_type, priority, metadata)
         self._push_event(at, scheduled_evt)
         return scheduled_evt
 
@@ -451,7 +474,7 @@ class SharedScheduleRunner:
 
     def schedule_event(self, at: float, evt: Callable,
                        priority_type: PriorityType = PriorityType.RANDOM,
-                       priority: float = float('nan')) -> ScheduledEvent:
+                       priority: float = float('nan'), metadata: Dict = {}) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with
         the specified priority. By default, events are scheduled with a random priority type.
 
@@ -483,18 +506,20 @@ class SharedScheduleRunner:
                 value is used to order all the events assigned a BY_PRIORITY priority type.
                 Otherwise, this value is ignored. Lower values have a higher priority and will
                 execute before those with a higher value.
+            metadata: arbitrary data that can be associated with the event, useful to recreate the
+                event from a checkpoint.
 
         Returns:
             The ScheduledEvent instance that was scheduled for execution.
         """
 
-        sch_evt = self.schedule.schedule_event(at, evt, priority_type, priority)
+        sch_evt = self.schedule.schedule_event(at, evt, priority_type, priority, metadata)
         self.next_tick = self.schedule.next_tick()
         return sch_evt
 
     def schedule_repeating_event(self, at: float, interval: float, evt: Callable,
                                  priority_type: PriorityType = PriorityType.RANDOM,
-                                 priority: float = float('nan')) -> ScheduledEvent:
+                                 priority: float = float('nan'), metadata: Dict = {}) -> ScheduledEvent:
         """Schedules the specified event to execute at the specified tick with the specified
         priority, and to repeat at the specified interval. By default, events are scheduled with
         a random priority type.
@@ -528,24 +553,31 @@ class SharedScheduleRunner:
                 value is used to order all the events assigned a BY_PRIORITY priority type.
                 Otherwise, this value is ignored. Lower values have a higher priority and will
                 execute before those with a higher value.
+            metadata: arbitrary data that can be associated with the event, useful to recreate the
+                event from a checkpoint.
 
         Returns:
             The ScheduledEvent instance that was scheduled for execution.
         """
-        sch_evt = self.schedule.schedule_repeating_event(at, interval, evt, priority_type, priority)
+        sch_evt = self.schedule.schedule_repeating_event(at, interval, evt, priority_type, priority,
+                                                         metadata)
         self.next_tick = self.schedule.next_tick()
         return sch_evt
 
-    def schedule_end_event(self, evt: Callable) -> ScheduledEvent:
+    def schedule_end_event(self, evt: Callable, metadata: Dict = {}) -> ScheduledEvent:
         """Schedules the specified event (a Callable) for execution when the schedule terminates and the
         simulation ends.
 
         Args:
             evt: the Callable to execute when simulation ends.
+            metadata: arbitrary data that can be associated with the event, useful to recreate the
+                event from a checkpoint.
         Returns:
             The ScheduledEvent instance that was scheduled to execute at the end.
         """
-        sch_evt = OneTimeEvent(float('inf'), evt, )
+        _metadata = {'__type': EvtType.END}
+        _metadata.update(metadata)
+        sch_evt = OneTimeEvent(float('inf'), evt, metadata=_metadata)
         self.end_evts.append(sch_evt)
         return sch_evt
 
@@ -557,7 +589,7 @@ class SharedScheduleRunner:
         Returns:
             The ScheduledEvent instance that executes the stop event.
         """
-        sch_evt = self.schedule.schedule_event(at, self.stop)
+        sch_evt = self.schedule.schedule_event(at, self.stop, metadata={'__type': EvtType.STOP})
         return sch_evt
 
     def stop(self):
