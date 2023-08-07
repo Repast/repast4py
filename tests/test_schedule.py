@@ -5,11 +5,12 @@ import math
 from mpi4py import MPI
 
 try:
-    from repast4py import schedule
+    # allows us to reload schedule to check runner() runtime error
+    import repast4py.schedule as schedule
     from repast4py.schedule import PriorityType
 except ModuleNotFoundError:
     sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
-    from repast4py import schedule
+    import repast4py.schedule as schedule
     from repast4py.schedule import PriorityType
 
 
@@ -146,6 +147,11 @@ class ScheduleTests(unittest.TestCase):
         self.assertEqual(2, a3.at)
 
     def test_default_schedule(self):
+        if 'repast4py.schedule' in sys.modules:
+            # reload if necessary to reset schedule.__runner
+            import importlib
+            importlib.reload(schedule)
+
         self.assertRaises(RuntimeError, lambda: schedule.runner())
 
         a1 = Agent2()
