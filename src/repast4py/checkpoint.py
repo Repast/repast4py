@@ -71,17 +71,21 @@ def save_schedule(checkpoint: Checkpoint):
     ss['evts'] = evts
 
 
-def _schedule_evt(runner, evt_data: EvtData, evt: Callable):
+def _schedule_evt(runner: schedule.SharedScheduleRunner, evt_type: schedule.EvtType, evt_data: EvtData, 
+                  evt: Callable):
     # next(schedule.counter) in _push_event should now return
     # the serialized order_idx
     runner.schedule.counter = iter((evt_data.order_idx,))
-    evt_type = evt_data.metadata['__type']
     if evt_type == schedule.EvtType.ONE_TIME:
         runner.schedule_event(evt_data.at, evt, priority_type=evt_data.priority_type,
                               priority=evt_data.priority, metadata=evt_data.metadata)
     elif evt_type == schedule.EvtType.REPEATING:
         runner.schedule_repeating_event(evt_data.at, evt_data.interval, evt, priority_type=evt_data.priority_type,
                                         priority=evt_data.priority, metadata=evt_data.metadata)
+    elif evt_type == schedule.EvtType.STOP:
+        runner.schedule_stop(evt_data.at)
+    elif evt_type == schedule.EvtType.END:
+        runner.schedule_end_event(evt, metadata=evt_data.metadata)
 
 
 def restore_schedule(checkpoint: Checkpoint, evt_creator: Callable, comm: MPI.Intracomm):
@@ -97,8 +101,12 @@ def restore_schedule(checkpoint: Checkpoint, evt_creator: Callable, comm: MPI.In
     runner.schedule.tick = schedule_state['tick']
 
     for evt_data in schedule_state['evts']:
-        evt = evt_creator(evt_data.metadata)
-        _schedule_evt(runner, evt_data, evt)
+        evt_type = evt_data.metadata['__type']
+        evt = None
+        if evt_type != schedule.EvtType.STOP:
+            evt = evt_creator(evt_data.metadata)
+        _schedule_evt(runner, evt_type, evt_data, evt)
+
     runner.schedule.counter = schedule_state['counter']
 
     return runner

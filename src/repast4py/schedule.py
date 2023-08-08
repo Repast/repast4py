@@ -656,7 +656,6 @@ def runner() -> SharedScheduleRunner:
         SharedScheduleRunner: The default SharedScheduledRunner instance that can be used to
         schedule events.
     """
-
     if not __runner:
         raise RuntimeError('Schedule runner must be initialized with schedule.init_schedule_runner before being used')
     return __runner
