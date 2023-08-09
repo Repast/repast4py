@@ -500,3 +500,47 @@ class CheckpointTests(unittest.TestCase):
         self.assertEqual(expected[0], a1.val)
         self.assertEqual(expected[1], a2.val)
         self.assertEqual(expected[2], a3.val)
+
+    def test_voided(self):
+        "Test voided events are not serialized"
+        random.init(42)
+        runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+
+        a1 = EAgent(1, 1, 0)
+        evt = runner.schedule_repeating_event(1.0, 1.0, a1.update, priority_type=PriorityType.BY_PRIORITY, priority=1,
+                                              metadata={'name': 'a1'})
+        a2 = EAgent(2, 1, 0)
+        runner.schedule_repeating_event(1.0, 1.0, a2.update, metadata={'name': 'a2'})
+        runner.schedule_stop(12.1)
+
+        def end_evt():
+            pass
+        e_evt = runner.schedule_end_event(evt=end_evt, metadata={'name': 'end'})
+
+        runner.schedule.execute()
+        runner.schedule.execute()
+        evt.void()
+        e_evt.void()
+
+        a1_expected = list(a1.val)
+
+        # checkpoint a voided evt
+        ckp = checkpoint.Checkpoint()
+        checkpoint.save_random(ckp)
+        checkpoint.save_schedule(ckp)
+
+        def restorer(data):
+            if data['name'] == 'a1':
+                self.fail()
+            elif data['name'] == 'a2':
+                return a2.update
+            elif data['name'] == 'end':
+                self.fail()
+
+        checkpoint.restore_random(ckp)
+        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        self.assertEqual(2.0, runner.tick())
+
+        runner.execute()
+        self.assertEqual(3, len(a1.val))
+        self.assertEqual(a1_expected, a1.val)
