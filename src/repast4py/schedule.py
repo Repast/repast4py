@@ -40,6 +40,7 @@ class EvtType(IntEnum):
     REPEATING = 1
     ONE_TIME = 2
     END = 3
+    VOID = 4
 
 
 class ScheduledEvent:
@@ -123,6 +124,7 @@ class RepeatingEvent(ScheduledEvent):
         # change the reschedule method on the self instance, so
         # it will not reschedule
         self.reschedule = types.MethodType(_noop_reschedule, self)
+        self.metadata['__type'] = EvtType.VOID
 
 
 class OneTimeEvent(ScheduledEvent):
@@ -155,6 +157,7 @@ class OneTimeEvent(ScheduledEvent):
     def void(self):
         """Voids this ScheduledEvent so that it will not execute"""
         self.evt = _noop_evt
+        self.metadata['__type'] = EvtType.VOID
 
 
 class ScheduleGroup:

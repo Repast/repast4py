@@ -65,13 +65,13 @@ def save_schedule(checkpoint: Checkpoint):
     ss = checkpoint.schedule_state
     ss['counter'] = runner.schedule.counter
     ss['tick'] = runner.schedule.tick
-    evts = [to_evt_data(evt) for evt in runner.end_evts]
+    evts = [to_evt_data(evt) for evt in runner.end_evts if evt.metadata['__type'] != schedule.EvtType.VOID]
     # item: (at, count, evt) tuple
-    evts += [to_evt_data(item[2]) for item in runner.schedule.queue]
+    evts += [to_evt_data(item[2]) for item in runner.schedule.queue if item[2].metadata['__type'] != schedule.EvtType.VOID]
     ss['evts'] = evts
 
 
-def _schedule_evt(runner: schedule.SharedScheduleRunner, evt_type: schedule.EvtType, evt_data: EvtData, 
+def _schedule_evt(runner: schedule.SharedScheduleRunner, evt_type: schedule.EvtType, evt_data: EvtData,
                   evt: Callable):
     # next(schedule.counter) in _push_event should now return
     # the serialized order_idx
