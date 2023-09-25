@@ -6,6 +6,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <iostream>
 
 #define R4PY_CORE_MODULE
 #include "coremodule.h"
@@ -19,6 +20,7 @@ using namespace repast4py;
 
 //////////// R4Py_AgentIter
 static void AgentIter_dealloc(R4Py_AgentIter* self) {
+    // std::cout << "dealloc" << std::endl;
     delete self->iter;
     Py_TYPE(self)->tp_free((PyObject*)self);
 }

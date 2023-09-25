@@ -1544,6 +1544,71 @@ class SharedContextTests1(unittest.TestCase):
                 pt = space.DiscretePoint(9, 15)
                 self.assertIsNone(grid.get_agent(pt))
 
+    def test_buffer_0(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
+                                    occupancy=OccupancyType.Multiple, buffer_size=0, comm=comm)
+
+            context = ctx.SharedContext(comm)
+            context.add_projection(grid)
+
+            if rank == 0:
+                a01 = EAgent(1, 0, rank, 1)
+                a02 = EAgent(2, 0, rank, 2)
+                a03 = EAgent(3, 0, rank, 3)
+                context.add(a01)
+                context.add(a02)
+                context.add(a03)
+
+                pt = space.DiscretePoint(8, 20)
+                grid.move(a01, pt)
+                pt = space.DiscretePoint(9, 15)
+                grid.move(a02, pt)
+                pt = space.DiscretePoint(9, 15)
+                grid.move(a03, pt)
+
+            if rank == 1:
+                a11 = EAgent(1, 0, rank, 11)
+                a12 = EAgent(2, 0, rank, 12)
+                a13 = EAgent(3, 0, rank, 13)
+
+                context.add(a11)
+                context.add(a12)
+                context.add(a13)
+
+                pt = space.DiscretePoint(10, 20)
+                grid.move(a11, pt)
+                pt = space.DiscretePoint(11, 15)
+                grid.move(a12, pt)
+                pt = space.DiscretePoint(15, 15)
+                grid.move(a13, pt)
+
+            grid._pre_synch_ghosts(context._agent_manager)
+            self.assertEqual(0, len(context._agent_manager._ghost_agents))
+            context.synchronize(create_agent, False)
+            grid._synch_ghosts(context._agent_manager, create_agent)
+
+            if rank == 0:
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
+
+            if rank == 1:
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
+
+            grid._pre_synch_ghosts(context._agent_manager)
+            grid._synch_ghosts(context._agent_manager, create_agent)
+
+            if rank == 1:
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
+
     def test_buffer_3x3(self):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -1880,6 +1945,82 @@ class SharedContextTests2(unittest.TestCase):
                 # nothing at 9, 15 now
                 pt = space.ContinuousPoint(9, 15)
                 self.assertIsNone(grid.get_agent(pt))
+
+    def test_buffer_0(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create_group(new_group)
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky,
+                                      occupancy=OccupancyType.Multiple, buffer_size=0, comm=comm,
+                                      tree_threshold=100)
+
+            context = ctx.SharedContext(comm)
+            context.add_projection(grid)
+
+            if rank == 0:
+                a01 = EAgent(1, 0, rank, 1)
+                a02 = EAgent(2, 0, rank, 2)
+                a03 = EAgent(3, 0, rank, 3)
+                context.add(a01)
+                context.add(a02)
+                context.add(a03)
+
+                pt = space.ContinuousPoint(8, 20)
+                grid.move(a01, pt)
+                pt = space.ContinuousPoint(9, 15)
+                grid.move(a02, pt)
+                pt = space.ContinuousPoint(9, 15)
+                grid.move(a03, pt)
+
+            if rank == 1:
+                a11 = EAgent(1, 0, rank, 11)
+                a12 = EAgent(2, 0, rank, 12)
+                a13 = EAgent(3, 0, rank, 13)
+
+                context.add(a11)
+                context.add(a12)
+                context.add(a13)
+
+                pt = space.ContinuousPoint(10, 20)
+                grid.move(a11, pt)
+                pt = space.ContinuousPoint(11, 15)
+                grid.move(a12, pt)
+                pt = space.ContinuousPoint(15, 15)
+                grid.move(a13, pt)
+
+            context.synchronize(create_agent)
+
+            if rank == 0:
+                pt = space.ContinuousPoint(10, 20)
+                agent = grid.get_agent(pt)
+                self.assertIsNone(agent)
+
+                pt = space.ContinuousPoint(11, 15)
+                agent = grid.get_agent(pt)
+                self.assertIsNone(agent)
+
+                self.assertEqual(3, len(context._agent_manager._local_agents))
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+
+            if rank == 1:
+                pt = space.ContinuousPoint(8, 20)
+                agent = grid.get_agent(pt)
+                self.assertIsNone(agent)
+
+                pt = space.ContinuousPoint(9, 15)
+                agent = grid.get_agent(pt)
+                self.assertIsNone(agent)
+
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+
+            grid._pre_synch_ghosts(context._agent_manager)
+            grid._synch_ghosts(context._agent_manager, create_agent)
+
+            self.assertEqual(0, len(context._agent_manager._ghost_agents))
 
     def test_buffer_3x3(self):
         comm = MPI.COMM_WORLD
