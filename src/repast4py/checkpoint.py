@@ -12,10 +12,14 @@ from typing import Union, List, Dict, Callable
 from dataclasses import dataclass, field
 from os import PathLike
 import pickle
+import warnings
 from mpi4py import MPI
 
 from . import random
 from . import schedule
+
+
+IGNORE_EVT = 0
 
 
 @dataclass
@@ -105,7 +109,10 @@ def restore_schedule(checkpoint: Checkpoint, evt_creator: Callable, comm: MPI.In
         evt = None
         if evt_type != schedule.EvtType.STOP:
             evt = evt_creator(evt_data.metadata)
-        _schedule_evt(runner, evt_type, evt_data, evt)
+            if evt is None:
+                warnings.warn(f"No callable evt returned for {evt_data.metadata}")
+        if evt != IGNORE_EVT:
+            _schedule_evt(runner, evt_type, evt_data, evt)
 
     runner.schedule.counter = schedule_state['counter']
 
