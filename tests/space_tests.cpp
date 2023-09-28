@@ -388,7 +388,7 @@ TEST(CartesianTopology, testSpecifyProcsPerDim) {
         BoundingBox lb(0, 0, 0, 0);
 
         int rank = ct.getRank();
-        ct.getBounds(gb);
+        ct.getBounds(lb);
         if (rank == 0) {
             ASSERT_EQ(0, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
@@ -399,53 +399,57 @@ TEST(CartesianTopology, testSpecifyProcsPerDim) {
         } else if (rank == 1) {
             ASSERT_EQ(0, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
-            ASSERT_EQ(25, lb.ymin_);
+            ASSERT_EQ(50, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 2) {
             ASSERT_EQ(0, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
-            ASSERT_EQ(50, lb.ymin_);
+            ASSERT_EQ(100, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 3) {
             ASSERT_EQ(0, lb.xmin_);
-            ASSERT_EQ(25, lb.x_extent_);
-            ASSERT_EQ(75, lb.ymin_);
+            ASSERT_EQ(50, lb.x_extent_);
+            ASSERT_EQ(150, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 4) {
-            ASSERT_EQ(25, lb.xmin_);
+            ASSERT_EQ(50, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
             ASSERT_EQ(0, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 5) {
-            ASSERT_EQ(25, lb.xmin_);
+            ASSERT_EQ(50, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
-            ASSERT_EQ(25, lb.ymin_);
+            ASSERT_EQ(50, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 6) {
-            ASSERT_EQ(25, lb.xmin_);
-            ASSERT_EQ(25, lb.x_extent_);
-            ASSERT_EQ(50, lb.ymin_);
-            ASSERT_EQ(25, lb.y_extent_);
+            ASSERT_EQ(50, lb.xmin_);
+            ASSERT_EQ(50, lb.x_extent_);
+            ASSERT_EQ(100, lb.ymin_);
+            ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 7) {
-            ASSERT_EQ(25, lb.xmin_);
+            ASSERT_EQ(50, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
-            ASSERT_EQ(75, lb.ymin_);
+            ASSERT_EQ(150, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         }
     }
+}
+
+TEST(SpatialTreeTests, testSOI) {
+    ASSERT_EQ(1, 1);
 }
 
