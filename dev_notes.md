@@ -43,9 +43,10 @@ There are also some C++ unitests. C++ tests can be compiled with the Makefile in
 Copy the Makefile to a `Release` or `Debug` directory at the top level, and edit it as necessary.
 The  makefile target 'tests' will compile a `unit_tests` executable. Run the tests with:
 
-`mpirun -n 9 ./unit_tests --gtest_filter=CartesianTopology.*`
-`./unit_tests --gtest_filter=SpatialTreeTests.*`
-
+```
+mpirun -n 9 ./unit_tests --gtest_filter=CartesianTopology.*
+./unit_tests --gtest_filter=SpatialTreeTests.*
+```
 
 ## Requirements
 
