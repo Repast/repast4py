@@ -47,9 +47,11 @@ BaseCSpace<AccessorType, BorderType>::BaseCSpace(const std::string& name, const 
     if (bounds.num_dims == 1) {
         // TODO 
     } else if (bounds.num_dims == 2) {
-        spatial_tree = std::unique_ptr<CPSpatialTree>(new CPSpatialTreeImpl<SpatialTree<Box2D, R4Py_ContinuousPoint>>(tree_threshold, bounds));
+        spatial_tree = std::unique_ptr<CPSpatialTree>(new CPSpatialTreeImpl<SpatialTree<Box2D, R4Py_ContinuousPoint,
+            AccessorType>>(tree_threshold, bounds));
     } else if (bounds.num_dims == 3) {
-        spatial_tree = std::unique_ptr<CPSpatialTree>(new CPSpatialTreeImpl<SpatialTree<Box3D, R4Py_ContinuousPoint>>(tree_threshold, bounds));
+        spatial_tree = std::unique_ptr<CPSpatialTree>(new CPSpatialTreeImpl<SpatialTree<Box3D, R4Py_ContinuousPoint,
+            AccessorType>>(tree_threshold, bounds));
     }
 }
 

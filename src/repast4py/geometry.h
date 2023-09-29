@@ -86,6 +86,28 @@ struct PointComp {
     }
 };
 
+
+template<typename PointType>
+struct PtrPointComp {
+    using coord_type  = typename TypeSelector<PointType>::type;
+
+    bool operator()(const PointType* p1, const PointType* p2) {
+        coord_type* p1_data = (coord_type*)PyArray_DATA(p1->coords);
+        coord_type* p2_data = (coord_type*)PyArray_DATA(p2->coords);
+        if (p1_data[0] != p2_data[0]) return p1_data[0] < p2_data[0];
+        if (p1_data[1] != p2_data[1]) return p1_data[1] < p2_data[1];
+        return p1_data[2] < p2_data[2];
+    }
+
+    bool operator()(const PointType* p1, const PointType* p2) const {
+        coord_type* p1_data = (coord_type*)PyArray_DATA(p1->coords);
+        coord_type* p2_data = (coord_type*)PyArray_DATA(p2->coords);
+        if (p1_data[0] != p2_data[0]) return p1_data[0] < p2_data[0];
+        if (p1_data[1] != p2_data[1]) return p1_data[1] < p2_data[1];
+        return p1_data[2] < p2_data[2];
+    }
+};
+
 struct BoundingBox {
     using coord_type  = typename TypeSelector<R4Py_DiscretePoint>::type;
     coord_type xmin_, xmax_;
@@ -111,8 +133,6 @@ struct BoundingBox {
 
 
 std::ostream& operator<<(std::ostream& os, const BoundingBox& box); 
-
-
 
 }
 
