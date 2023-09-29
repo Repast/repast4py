@@ -123,7 +123,7 @@ public:
     virtual bool remove(R4Py_Agent* agent) = 0;
     virtual bool remove(R4Py_AgentID* aid) = 0;
     virtual R4Py_Agent* getAgentAt(R4Py_ContinuousPoint* pt) = 0;
-    virtual AgentList getAgentsAt(R4Py_ContinuousPoint* pt) = 0;
+    virtual AgentListPtr getAgentsAt(R4Py_ContinuousPoint* pt) = 0;
     virtual R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
     virtual void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
@@ -146,7 +146,7 @@ public:
     bool remove(R4Py_Agent* agent) override;
     bool remove(R4Py_AgentID* aid) override;
     R4Py_Agent* getAgentAt(R4Py_ContinuousPoint* pt) override;
-    AgentList getAgentsAt(R4Py_ContinuousPoint* pt) override;
+    AgentListPtr getAgentsAt(R4Py_ContinuousPoint* pt) override;
     R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) override;
     R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
     void getAgentsWithin(const BoundingBox& box, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) override;
@@ -179,7 +179,7 @@ R4Py_Agent* CSpace<DelegateType>::getAgentAt(R4Py_ContinuousPoint* pt) {
 }
 
 template<typename DelegateType>
-AgentList CSpace<DelegateType>::getAgentsAt(R4Py_ContinuousPoint* pt) {
+AgentListPtr CSpace<DelegateType>::getAgentsAt(R4Py_ContinuousPoint* pt) {
     return delegate->getAgentsAt(pt);
 }
 
@@ -209,7 +209,7 @@ bool CSpace<DelegateType>::contains(R4Py_Agent* agent) const {
 }
 
 // aliases for  CSpace with multi occupancy and sticky borders
-using ContinuousMOType = MultiOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint, AgentList>, R4Py_ContinuousPoint>;
+using ContinuousMOType = MultiOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint, AgentListPtr>, R4Py_ContinuousPoint>;
 using ContinuousSOType = SingleOccupancyAccessor<LocationMapType<R4Py_ContinuousPoint, R4Py_Agent*>, R4Py_ContinuousPoint>;
 using MOSCSpace = BaseCSpace<ContinuousMOType, CSStickyBorders>;
 using MOPCSpace = BaseCSpace<ContinuousMOType, CSPeriodicBorders>;

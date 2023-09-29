@@ -918,9 +918,9 @@ static PyObject* Grid_getAgents(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_Grid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
+    AgentListPtr list = ((R4Py_Grid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
-    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    agent_iter->iter = new TAgentIter<AgentList>(list);
     return (PyObject*)agent_iter;
 }
 
@@ -1269,9 +1269,9 @@ static PyObject* SharedGrid_getAgents(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
+    AgentListPtr list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
-    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    agent_iter->iter = new TAgentIter<AgentList>(list);
     return (PyObject*)agent_iter;
 }
 
@@ -1285,7 +1285,7 @@ static PyObject* SharedGrid_getNumAgents(PyObject* self, PyObject* args, PyObjec
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
+    AgentListPtr list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
     if (agent_type == -1) {
         return PyLong_FromLong(list->size());
     } else {
@@ -1729,9 +1729,9 @@ static PyObject* CSpace_getAgents(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_CSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
+    AgentListPtr list = ((R4Py_CSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
-    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    agent_iter->iter = new TAgentIter<AgentList>(list);
     return (PyObject*)agent_iter;
 }
 
@@ -2145,9 +2145,9 @@ static PyObject* SharedCSpace_getAgents(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
+    AgentListPtr list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
-    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    agent_iter->iter = new TAgentIter<AgentList>(list);
     return (PyObject*)agent_iter;
 }
 
@@ -2161,7 +2161,7 @@ static PyObject* SharedCSpace_getNumAgents(PyObject* self, PyObject* args, PyObj
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
+    AgentListPtr list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
     if (agent_type == -1) {
         return PyLong_FromLong(list->size());
     } else {

@@ -136,7 +136,7 @@ struct TreeItemSelector {
 template<typename PointType, typename ValueType>
 using _LocationMapType = std::map<Point<PointType>, ValueType, PointComp<PointType>>;
 
-using _ContinuousMOType = MultiOccupancyAccessor<_LocationMapType<R4Py_ContinuousPoint, AgentList>, R4Py_ContinuousPoint>;
+using _ContinuousMOType = MultiOccupancyAccessor<_LocationMapType<R4Py_ContinuousPoint, AgentListPtr>, R4Py_ContinuousPoint>;
 using _ContinuousSOType = SingleOccupancyAccessor<_LocationMapType<R4Py_ContinuousPoint, R4Py_Agent*>, R4Py_ContinuousPoint>;
 
 template<>

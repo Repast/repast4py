@@ -8,7 +8,7 @@
 
 namespace repast4py {
 
-void decref(AgentList& agent_list) {
+void decref(AgentListPtr& agent_list) {
     for (auto iter = agent_list->begin(); iter != agent_list->end(); ++iter)  {
         Py_DECREF(*iter);
     }

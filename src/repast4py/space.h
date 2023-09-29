@@ -42,7 +42,7 @@ using AgentMapType = std::map<R4Py_AgentID*, std::shared_ptr<SpaceItem<PointType
 template<typename PointType, typename ValueType>
 using LocationMapType = std::map<Point<PointType>, ValueType, PointComp<PointType>>;
 
-void decref(AgentList& agent_list);
+void decref(AgentListPtr& agent_list);
 void decref(R4Py_Agent* agent);
 
 template<typename PointType, typename AccessorType, typename BorderType>
@@ -64,7 +64,7 @@ public:
     virtual bool remove(R4Py_Agent* agent);
     virtual bool remove(R4Py_AgentID* aid);
     R4Py_Agent* getAgentAt(PointType* pt);
-    AgentList getAgentsAt(PointType* pt);
+    AgentListPtr getAgentsAt(PointType* pt);
     PointType* getLocation(R4Py_Agent* agent);
     virtual void getAgentsWithin(const BoundingBox& bounds, std::shared_ptr<std::vector<R4Py_Agent*>>& agents) = 0;
     virtual PointType* move(R4Py_Agent* agent, PointType* to) = 0;
@@ -131,7 +131,7 @@ R4Py_Agent* BaseSpace<PointType, AccessorType, BorderType>::getAgentAt(PointType
 }
 
 template<typename PointType, typename AccessorType, typename BorderType>
-AgentList BaseSpace<PointType, AccessorType, BorderType>::getAgentsAt(PointType* pt) {
+AgentListPtr BaseSpace<PointType, AccessorType, BorderType>::getAgentsAt(PointType* pt) {
     extract_coords(pt, wpt);
     return accessor.getAll(location_map, wpt);
 }
