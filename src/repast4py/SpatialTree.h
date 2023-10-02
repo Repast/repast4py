@@ -53,7 +53,7 @@ void MOItems<PointType>::add(std::shared_ptr<SpaceItem<PointType>>& item) {
     items[item->agent->aid] = item;
     auto iter = point_counts.find(item->pt);
     if (iter == point_counts.end()) {
-        sum += 1;
+        ++sum;
         point_counts.emplace(item->pt, 1);
     } else {
         ++(iter->second);
@@ -64,10 +64,10 @@ template<typename PointType>
 bool MOItems<PointType>::remove(std::shared_ptr<SpaceItem<PointType>>& item) {
     if  (items.erase(item->agent->aid) == 1) {
         size_t val = --point_counts[item->pt];
-        if (val == 0) point_counts.erase(item->pt);
-        sum = std::accumulate(point_counts.begin(), point_counts.end(), 0, 
-                              [] (size_t value, const typename std::map<PointType*, size_t>::value_type& p)
-                                  { return value + p.second; });
+        if (val == 0) {
+            point_counts.erase(item->pt);
+            --sum;
+        }
         return true;
     } else {
         return false;
