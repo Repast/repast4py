@@ -103,7 +103,7 @@ public:
     bool remove(R4Py_Agent* agent);
     bool remove(R4Py_AgentID* aid);
     R4Py_Agent* getAgentAt(PointType* pt);
-    AgentList getAgentsAt(PointType* pt);
+    AgentListPtr getAgentsAt(PointType* pt);
     PointType* getLocation(R4Py_Agent* agent);
     PointType* move(R4Py_Agent* agent, PointType* to);
     std::shared_ptr<AIDPyObjMapT> getOOBData();
@@ -186,7 +186,7 @@ R4Py_Agent* DistributedCartesianSpace<BaseSpaceType>::getAgentAt(PointType* pt) 
 }
 
 template<typename BaseSpaceType>
-AgentList DistributedCartesianSpace<BaseSpaceType>::getAgentsAt(PointType* pt) {
+AgentListPtr DistributedCartesianSpace<BaseSpaceType>::getAgentsAt(PointType* pt) {
     return base_space->getAgentsAt(pt);
 }
 
@@ -266,7 +266,7 @@ public:
     virtual bool remove(R4Py_Agent* agent) = 0;
     virtual bool remove(R4Py_AgentID* aid) = 0;
     virtual R4Py_Agent* getAgentAt(R4Py_DiscretePoint* pt) = 0;
-    virtual AgentList getAgentsAt(R4Py_DiscretePoint* pt) = 0;
+    virtual AgentListPtr getAgentsAt(R4Py_DiscretePoint* pt) = 0;
     virtual R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
     virtual std::shared_ptr<AIDPyObjMapT> getOOBData() = 0;
@@ -295,7 +295,7 @@ public:
     bool remove(R4Py_Agent* agent) override;
     bool remove(R4Py_AgentID* aid) override;
     R4Py_Agent* getAgentAt(R4Py_DiscretePoint* pt) override;
-    AgentList getAgentsAt(R4Py_DiscretePoint* pt) override;
+    AgentListPtr getAgentsAt(R4Py_DiscretePoint* pt) override;
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) override;
     R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
     std::shared_ptr<AIDPyObjMapT> getOOBData() override;
@@ -337,7 +337,7 @@ R4Py_Agent* SharedGrid<DelegateType>::getAgentAt(R4Py_DiscretePoint* pt) {
 }
 
 template<typename DelegateType>
-AgentList SharedGrid<DelegateType>::getAgentsAt(R4Py_DiscretePoint* pt) {
+AgentListPtr SharedGrid<DelegateType>::getAgentsAt(R4Py_DiscretePoint* pt) {
     return delegate->getAgentsAt(pt);
 }
 
@@ -398,7 +398,7 @@ public:
     virtual bool remove(R4Py_Agent* agent) = 0;
     virtual bool remove(R4Py_AgentID* aid) = 0;
     virtual R4Py_Agent* getAgentAt(R4Py_ContinuousPoint* pt) = 0;
-    virtual AgentList getAgentsAt(R4Py_ContinuousPoint* pt) = 0;
+    virtual AgentListPtr getAgentsAt(R4Py_ContinuousPoint* pt) = 0;
     virtual R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) = 0;
     virtual std::shared_ptr<AIDPyObjMapT> getOOBData() = 0;
@@ -427,7 +427,7 @@ public:
     bool remove(R4Py_Agent* agent) override;
     bool remove(R4Py_AgentID* aid) override;
     R4Py_Agent* getAgentAt(R4Py_ContinuousPoint* pt) override;
-    AgentList getAgentsAt(R4Py_ContinuousPoint* pt) override;
+    AgentListPtr getAgentsAt(R4Py_ContinuousPoint* pt) override;
     R4Py_ContinuousPoint* getLocation(R4Py_Agent* agent) override;
     R4Py_ContinuousPoint* move(R4Py_Agent* agent, R4Py_ContinuousPoint* to) override;
     std::shared_ptr<AIDPyObjMapT> getOOBData() override;
@@ -473,7 +473,7 @@ R4Py_Agent* SharedContinuousSpace<DelegateType>::getAgentAt(R4Py_ContinuousPoint
 }
 
 template<typename DelegateType>
-AgentList SharedContinuousSpace<DelegateType>::getAgentsAt(R4Py_ContinuousPoint* pt) {
+AgentListPtr SharedContinuousSpace<DelegateType>::getAgentsAt(R4Py_ContinuousPoint* pt) {
     return delegate->getAgentsAt(pt);
 }
 

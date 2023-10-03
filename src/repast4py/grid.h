@@ -88,7 +88,7 @@ public:
     virtual bool remove(R4Py_Agent* agent) = 0;
     virtual bool remove(R4Py_AgentID* aid) = 0;
     virtual R4Py_Agent* getAgentAt(R4Py_DiscretePoint* pt) = 0;
-    virtual AgentList getAgentsAt(R4Py_DiscretePoint* pt) = 0;
+    virtual AgentListPtr getAgentsAt(R4Py_DiscretePoint* pt) = 0;
     virtual R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) = 0;
     virtual R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) = 0;
     virtual const std::string name() const = 0;
@@ -110,7 +110,7 @@ public:
     bool remove(R4Py_Agent* agent) override;
     bool remove(R4Py_AgentID* aid) override;
     R4Py_Agent* getAgentAt(R4Py_DiscretePoint* pt) override;
-    AgentList getAgentsAt(R4Py_DiscretePoint* pt) override;
+    AgentListPtr getAgentsAt(R4Py_DiscretePoint* pt) override;
     R4Py_DiscretePoint* getLocation(R4Py_Agent* agent) override;
     R4Py_DiscretePoint* move(R4Py_Agent* agent, R4Py_DiscretePoint* to) override;
     const std::string name() const override;
@@ -142,7 +142,7 @@ R4Py_Agent* Grid<DelegateType>::getAgentAt(R4Py_DiscretePoint* pt) {
 }
 
 template<typename DelegateType>
-AgentList Grid<DelegateType>::getAgentsAt(R4Py_DiscretePoint* pt) {
+AgentListPtr Grid<DelegateType>::getAgentsAt(R4Py_DiscretePoint* pt) {
     return delegate->getAgentsAt(pt);
 }
 
@@ -168,7 +168,7 @@ bool Grid<DelegateType>::contains(R4Py_Agent* agent) const {
 
 
 // typedefs for Discrete Grid with multi occupancy and sticky borders
-using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint, AgentList>, R4Py_DiscretePoint>;
+using DiscreteMOType = MultiOccupancyAccessor<LocationMapType<R4Py_DiscretePoint, AgentListPtr>, R4Py_DiscretePoint>;
 using DiscreteSOType = SingleOccupancyAccessor<LocationMapType<R4Py_DiscretePoint, R4Py_Agent*>, R4Py_DiscretePoint>;
 using MOSGrid = BaseGrid<DiscreteMOType, GridStickyBorders>;
 using MOPGrid = BaseGrid<DiscreteMOType, GridPeriodicBorders>;

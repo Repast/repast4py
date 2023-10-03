@@ -79,7 +79,6 @@ std::ostream& operator<<(std::ostream& os, const BoundingBox& box) {
     return os;
 }
 
-
 BoundingBox::BoundingBox(coord_type xmin, coord_type x_extent, coord_type ymin, coord_type y_extent,
             coord_type zmin, coord_type z_extent) : xmin_{xmin}, xmax_{xmin + x_extent}, ymin_{ymin},
             ymax_{ymin + y_extent}, zmin_{zmin}, zmax_{zmin + z_extent}, x_extent_{x_extent}, y_extent_{y_extent},
@@ -187,6 +186,8 @@ bool BoundingBox::contains(const Point<R4Py_ContinuousPoint>& pt) const {
 
     return x_contains && y_contains && z_contains;
 }
+
+
 
 
 }
