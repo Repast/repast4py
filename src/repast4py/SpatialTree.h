@@ -54,6 +54,7 @@ void MOItems<PointType>::add(std::shared_ptr<SpaceItem<PointType>>& item) {
     auto iter = point_counts.find(item->pt);
     if (iter == point_counts.end()) {
         ++sum;
+        Py_INCREF(item->pt);
         point_counts.emplace(item->pt, 1);
     } else {
         ++(iter->second);
@@ -63,9 +64,12 @@ void MOItems<PointType>::add(std::shared_ptr<SpaceItem<PointType>>& item) {
 template<typename PointType>
 bool MOItems<PointType>::remove(std::shared_ptr<SpaceItem<PointType>>& item) {
     if  (items.erase(item->agent->aid) == 1) {
-        size_t val = --point_counts[item->pt];
-        if (val == 0) {
-            point_counts.erase(item->pt);
+        auto kv = point_counts.find(item->pt);
+        --(kv->second);
+        // size_t val = --point_counts[item->pt];
+        if (kv->second == 0) {
+            Py_DECREF(kv->first);
+            point_counts.erase(kv);
             --sum;
         }
         return true;
