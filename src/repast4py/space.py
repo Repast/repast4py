@@ -292,11 +292,11 @@ class SharedCSpace(_SharedContinuousSpace):
        name: the name of the space.
        bounds: the global dimensions of the space.
        borders: the border semantics - :attr:`BorderType.Sticky` or :attr:`BorderType.Periodic`.
-       occupancy: the type of occupancy in each cell - :attr:`OccupancyType.Single` or :attr:`OccupancyType.Multiple`.
+       occupancy: the type of occupancy in each point - :attr:`OccupancyType.Single` or :attr:`OccupancyType.Multiple`.
        buffer_size: the size of this SharedCSpace's buffered area. This single value is used for all dimensions.
        comm: the communicator containing all the ranks over which this SharedCSpace is shared.
-       tree_threshold: the space's tree cell maximum number of unique points. When this number is reached,
-            the cell splits and the points are redistributed amnog the cells children.
+       tree_threshold: the maximum number of unique points in a node of the space's spatial index tree.
+           When this number is reached, the node splits and the points are redistributed among the node's children.
 
     """
 
