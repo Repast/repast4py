@@ -127,8 +127,17 @@ agent `A1` can _see_ and interact with agents `C3` and `B2`.
 
 TIP: Be sure to specify a buffer size appropriate for agent behavior. For example, if an agent can see 3 units away and take some action based on what it perceives, then the buffer size should be at least 3, ensuring that an agent can properly see beyond the borders of its own local area.
 
+
 Agents can, of course, move around grids and continuous spaces. When an agent moves beyond the borders of its local subsection then it is moved from that rank to the rank of the new subsection to which it has moved. For example, if in <<img-grid-buffer>>, agent `D4` moves from grid coordinate 4,4 to 4,2 then it will be moved during Repast4Py's synchronization phase to process 2 where it becomes local
 to that process. Cross-process movement and synchronization will be discussed more in the next sections.
+
+TIP: When working with Repast4Py's https://repast.github.io/repast4py.site/apidoc/source/repast4py.space.html#repast4py.space.SharedCSpace[continuous space] (an N-dimensional cartesian space where agents can occupy locations defined by a continuous floating point coordinate), use the `tree_threshold` parameter to tune
+the speed of the search for agents within the buffered area. This search occurs whenever the buffer is refreshed
+during synchronization. The continuous space uses a https://en.wikipedia.org/wiki/Quadtree[tree] (quad or oct depending on the number of dimensions) to efficiently determine which agents are within the buffered region.
+Each node in the tree represents an area of the continuous space and contains the point locations of agents within that area. A spatial query, such as that used to find agents in the buffered region, first determines which nodes of the
+tree intersect the queried area, and then which points / agents in those nodes intersect the queried area. In this way,
+the buffer's spatial query does not have to iterate through all the occupied points in a continuous space, a potentially time
+consuming operation, when updating the buffer areas. The `tree_threshold` parameter specifies the maximum number of unique points in a spatial index tree node. When this number is reached, the node splits and the points are redistributed among the node's children. When specifing a `tree_threshold`, the intention is to lower the number of points / agents that need to be evaluated in a spatial query while balancing that against the overhead it takes to split the tree nodes. A value of 100 is probably a reasonable starting point, but experimenting with different values is encouraged.
 
 
 
