@@ -468,47 +468,27 @@ static void SetUpTestSuite() {
         FAIL();
     }
 
-    core = PyImport_ImportModule("repast4py.core");
-    if (core == nullptr) {
-        Py_DECREF(space);
-        FAIL();
-    }
-
     cpt_class = PyObject_GetAttrString(space, "ContinuousPoint");
-    agent_class = PyObject_GetAttrString(space, "Agent");
 }
 
 static void TearDownTestSuite() {
     Py_XDECREF(space);
-    Py_XDECREF(core);
     Py_XDECREF(cpt_class);
-    Py_XDECREF(agent_class);
     Py_Finalize();
 }
 
-static std::shared_ptr<SpaceItem<R4Py_ContinuousPoint>> create_item(float x, float y, int id) {
+static R4Py_ContinuousPoint* create_pt(float x, float y, int id) {
     PyObject* arg_list = Py_BuildValue("dd", x, y);
     R4Py_ContinuousPoint* pt = (R4Py_ContinuousPoint*)PyObject_CallObject(cpt_class, arg_list);
     Py_DECREF(arg_list);
 
-    arg_list = Py_BuildValue("iii", id, 0, 0);
-    R4Py_Agent* agent = (R4Py_Agent*)PyObject_CallObject(agent_class, arg_list);
-    Py_DECREF(arg_list);
-
-    auto ptr = std::make_shared<SpaceItem<R4Py_ContinuousPoint>>();
-    ptr->agent = agent;
-    ptr->pt = pt;
-
-    return ptr;
+    return pt;
 }
 
 };
 
 PyObject* SpatialTreeTests::space = nullptr;
-PyObject* SpatialTreeTests::core = nullptr;
 PyObject* SpatialTreeTests::cpt_class = nullptr;
-PyObject* SpatialTreeTests::agent_class = nullptr;
-
 
 TEST_F(SpatialTreeTests, testSOI) {
     
@@ -516,11 +496,11 @@ TEST_F(SpatialTreeTests, testSOI) {
     SOItems<R4Py_ContinuousPoint> soi;
     ASSERT_EQ(0, soi.size());
 
-    auto s1 = create_item(1, 1, 0);
+    auto s1 = create_pt(1, 1, 0);
     soi.add(s1);
     ASSERT_EQ(1, soi.size());
 
-    auto s2 = create_item(1, 10, 1);
+    auto s2 = create_pt(1, 10, 1);
     soi.add(s2);
     ASSERT_EQ(2, soi.size());
 
@@ -545,15 +525,15 @@ TEST_F(SpatialTreeTests, testMOI) {
     MOItems<R4Py_ContinuousPoint> moi;
     ASSERT_EQ(0, moi.size());
 
-    auto s1 = create_item(1, 1, 0);
+    auto s1 = create_pt(1, 1, 0);
     moi.add(s1);
     ASSERT_EQ(1, moi.size());
 
-    auto s2 = create_item(1, 10, 1);
+    auto s2 = create_pt(1, 10, 1);
     moi.add(s2);
     ASSERT_EQ(2, moi.size());
 
-    auto s3 = create_item(1, 10, 2);
+    auto s3 = create_pt(1, 10, 2);
     moi.add(s3);
     // still 2 -- we are counting the points
     ASSERT_EQ(2, moi.size());

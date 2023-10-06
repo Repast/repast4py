@@ -44,14 +44,18 @@ template<typename AccessorType, typename BorderType>
 BaseCSpace<AccessorType, BorderType>::BaseCSpace(const std::string& name, const BoundingBox& bounds, int tree_threshold) : 
     BaseSpace<R4Py_ContinuousPoint, AccessorType, BorderType>(name, bounds), spatial_tree{} {
 
+    //using Tree2DType = CPSpatialTreeImpl<SpatialTree<Box2D, R4Py_ContinuousPoint, AccessorType>>;
+    // using Tree3DType = CPSpatialTreeImpl<SpatialTree<Box3D, R4Py_ContinuousPoint, AccessorType>>;
+
     if (bounds.num_dims == 1) {
         // TODO 
     } else if (bounds.num_dims == 2) {
         spatial_tree = std::unique_ptr<CPSpatialTree>(new CPSpatialTreeImpl<SpatialTree<Box2D, R4Py_ContinuousPoint,
-            AccessorType>>(tree_threshold, bounds));
+            AccessorType>>(tree_threshold, bounds, &location_map));
     } else if (bounds.num_dims == 3) {
         spatial_tree = std::unique_ptr<CPSpatialTree>(new CPSpatialTreeImpl<SpatialTree<Box3D, R4Py_ContinuousPoint,
-            AccessorType>>(tree_threshold, bounds));
+           AccessorType>>(tree_threshold, bounds, &location_map));
+        
     }
 }
 
