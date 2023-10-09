@@ -1378,7 +1378,61 @@ class SharedContextTests1(unittest.TestCase):
             a1 = context.agent((1, 0, 0))
             self.assertIsNotNone(a1)
 
+    def test_far_move_cs(self):
+        box = geometry.BoundingBox(xmin=0, xextent=120, ymin=0, yextent=120, zmin=0, zextent=0)
+        grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky,
+                                  occupancy=OccupancyType.Multiple, buffer_size=2, 
+                                  tree_threshold=10, comm=MPI.COMM_WORLD)
 
+        context = ctx.SharedContext(MPI.COMM_WORLD)
+        context.add_projection(grid)
+        rank = MPI.COMM_WORLD.Get_rank()
+
+        if rank == 0:
+            a1 = EAgent(1, 0, rank, 12)
+            context.add(a1)
+            pt = space.ContinuousPoint(12, 5)
+            grid.move(a1, pt)
+
+        elif rank == 8:
+            a2 = EAgent(2, 0, rank, 12)
+            context.add(a2)
+            pt = space.ContinuousPoint(84, 90)
+            grid.move(a2, pt)
+
+        context.synchronize(create_agent)
+
+        if rank == 0:
+            a1 = context.agent((1, 0, 0))
+            # well oob into rank 8
+            pt = space.ContinuousPoint(82, 91)
+            grid.move(a1, pt)
+
+        if rank == 8:
+            a2 = context.agent((2, 0, 8))
+            pt = space.ContinuousPoint(12, 5)
+            grid.move(a2, pt)
+
+        context.synchronize(create_agent)
+
+        if rank == 0:
+            a1 = context.agent((1, 0, 0))
+            self.assertIsNone(a1)
+            a1 = context.agent((2, 0, 8))
+            self.assertIsNotNone(a1)
+
+        if rank == 8:
+            a1 = context.agent((1, 0, 0))
+            self.assertIsNotNone(a1)
+
+        # test the decreffing when object is oob, then not
+        if rank == 8:
+            a1 = context.agent((1, 0, 0))
+            for _ in range(10):
+                pt = space.ContinuousPoint(12, 5)
+                grid.move(a1, pt)
+                pt = space.ContinuousPoint(82, 91)
+                grid.move(a1, pt)
 
     # tests context synchronization in 2D 2 rank
     # adds agents moves them oob in a grid and

@@ -10,6 +10,7 @@
 #define PY_SSIZE_T_CLEAN
 
 #include <vector>
+#include <set>
 #include <memory>
 
 #include "mpi.h"
@@ -89,11 +90,10 @@ private:
     unsigned int buffer_size_;
     MPI_Comm cart_comm;
     std::shared_ptr<std::vector<CTNeighbor>> nghs;
-    std::map<int, BoundingBox> all_bounds;
+    std::vector<std::pair<BoundingBox, int>> all_bounds;
     int rank;
 
     void getAllBounds(MPI_Comm comm);
-    void addToOutOfBounds(R4Py_Agent* agent, typename DistributedCartesianSpace<BaseSpaceType>::PointType* pt, int rank);
 
 public:
     using PointType = typename BaseSpaceType::PointType;
@@ -185,26 +185,30 @@ void DistributedCartesianSpace<BaseSpaceType>::getAllBounds(MPI_Comm comm) {
     MPI_Datatype dtype = MPIType_Selector<BoundingBox::coord_type>::type;
     MPI_Allgather(&box[0], 6, dtype, all_bb, 6, dtype, comm);
 
-    for (int i = 0; i < comm_size; ++i) {
-        int idx = 6 * i;
-        BoundingBox::coord_type x_min = all_bb[idx];
-        BoundingBox::coord_type x_extent = all_bb[idx + 1];
-        BoundingBox::coord_type y_min = all_bb[idx + 2];
-        BoundingBox::coord_type y_extent = all_bb[idx + 3];
-        BoundingBox::coord_type z_min = all_bb[idx + 4];
-        BoundingBox::coord_type z_extent = all_bb[idx + 5];
+    std::set<int> ngh_ranks;
+    for (auto& ngh : (*nghs)) {
+        all_bounds.emplace(all_bounds.end(), ngh.local_bounds, ngh.rank);
+        ngh_ranks.emplace(ngh.rank);
+    }
 
-        BoundingBox box(x_min, x_extent, y_min, y_extent, z_min, z_extent);
-        all_bounds.emplace(i, box);
+    int rank;
+    MPI_Comm_rank(comm, &rank);
+
+    for (int i = 0; i < comm_size; ++i) {
+        if (i != rank && ngh_ranks.find(i) == ngh_ranks.end()) {
+            int idx = 6 * i;
+            BoundingBox::coord_type x_min = all_bb[idx];
+            BoundingBox::coord_type x_extent = all_bb[idx + 1];
+            BoundingBox::coord_type y_min = all_bb[idx + 2];
+            BoundingBox::coord_type y_extent = all_bb[idx + 3];
+            BoundingBox::coord_type z_min = all_bb[idx + 4];
+            BoundingBox::coord_type z_extent = all_bb[idx + 5];
+
+            BoundingBox box(x_min, x_extent, y_min, y_extent, z_min, z_extent);
+            all_bounds.emplace(all_bounds.end(), box, i);
+        }
     }
     delete[] all_bb;
-
-    // erase own rank
-    all_bounds.erase(rank);
-    // erase neighbors as we have those in nghs
-    for (auto& ngh : (*nghs)) {
-        all_bounds.erase(ngh.rank);
-    }
 }
 
 template<typename BaseSpaceType>
@@ -249,18 +253,6 @@ void DistributedCartesianSpace<BaseSpaceType>::getAgentsWithin(const BoundingBox
 }
 
 template<typename BaseSpaceType>
-void DistributedCartesianSpace<BaseSpaceType>::addToOutOfBounds(R4Py_Agent* agent, typename DistributedCartesianSpace<BaseSpaceType>::PointType* pt, 
-    int rank)
-{
-    PyObject* aid_tuple = agent->aid->as_tuple;
-    Py_INCREF(aid_tuple);
-    PyArrayObject* pt_array = pt->coords;
-    Py_INCREF(pt_array);
-    PyObject* obj = Py_BuildValue("(O, I, O)", aid_tuple, rank, pt_array);
-    (*out_of_bounds_agents)[agent->aid] = obj;
-}
-
-template<typename BaseSpaceType>
 typename DistributedCartesianSpace<BaseSpaceType>::PointType* DistributedCartesianSpace<BaseSpaceType>::move(R4Py_Agent* agent, PointType* to) {
    
     PointType* pt = base_space->move(agent, to);
@@ -268,24 +260,24 @@ typename DistributedCartesianSpace<BaseSpaceType>::PointType* DistributedCartesi
     // space is already occupied
     if (pt) {
         if (local_bounds.contains(pt)) {
-            out_of_bounds_agents->erase(agent->aid);
+            auto iter = out_of_bounds_agents->find(agent->aid);
+            if (iter != out_of_bounds_agents->end()) {
+                Py_DECREF(PyTuple_GET_ITEM(iter->second, 0));
+                Py_DECREF(PyTuple_GET_ITEM(iter->second, 2));
+                Py_DECREF(iter->second);
+                out_of_bounds_agents->erase(iter);
+            }
         } else {
             // what neighbor now contains the agent
-            bool added = false;
-            for (auto& ngh : (*nghs)) {
-                if (ngh.local_bounds.contains(pt)) {
-                    addToOutOfBounds(agent, pt, ngh.rank);
-                    added = true;
+            for (auto& box_rank: all_bounds) {
+                if (box_rank.first.contains(pt)) {
+                    PyObject* aid_tuple = agent->aid->as_tuple;
+                    Py_INCREF(aid_tuple);
+                    PyArrayObject* pt_array = pt->coords;
+                    Py_INCREF(pt_array);
+                    PyObject* obj = Py_BuildValue("(O, I, O)", aid_tuple, box_rank.second, pt_array);
+                    (*out_of_bounds_agents)[agent->aid] = obj;
                     break;
-                }
-            }
-
-            if (!added) {
-                for (auto& kv: all_bounds) {
-                    if (kv.second.contains(pt)) {
-                        addToOutOfBounds(agent, pt, kv.first);
-                        break;
-                    }
                 }
             }
         }
@@ -305,6 +297,12 @@ std::shared_ptr<std::vector<CTNeighbor>> DistributedCartesianSpace<BaseSpaceType
 
 template<typename BaseSpaceType>
 void DistributedCartesianSpace<BaseSpaceType>::clearOOBData() {
+    for (auto& kv: (*out_of_bounds_agents)) {
+        // Note: key wasn't inc'reffed
+        Py_DECREF(PyTuple_GET_ITEM(kv.second, 0));
+        Py_DECREF(PyTuple_GET_ITEM(kv.second, 2));
+        Py_DECREF(kv.second);
+    }
     out_of_bounds_agents->clear();
 }
 
