@@ -11,6 +11,12 @@
 
 namespace repast4py {
 
+template<>
+MPI_Datatype MPIType_Selector<double>::type = MPI_DOUBLE;
+template<>
+MPI_Datatype MPIType_Selector<long>::type = MPI_LONG;
+
+
 void compute_buffer_bounds(CTNeighbor& ngh, int offsets[], int num_dims, BoundingBox& local_bounds, 
     unsigned int buffer_size) 
 {

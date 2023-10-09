@@ -89,7 +89,11 @@ private:
     unsigned int buffer_size_;
     MPI_Comm cart_comm;
     std::shared_ptr<std::vector<CTNeighbor>> nghs;
+    std::map<int, BoundingBox> all_bounds;
     int rank;
+
+    void getAllBounds(MPI_Comm comm);
+    void addToOutOfBounds(R4Py_Agent* agent, typename DistributedCartesianSpace<BaseSpaceType>::PointType* pt, int rank);
 
 public:
     using PointType = typename BaseSpaceType::PointType;
@@ -120,7 +124,8 @@ template<typename BaseSpaceType>
 DistributedCartesianSpace<BaseSpaceType>::DistributedCartesianSpace(const std::string& name, const BoundingBox& bounds, 
         unsigned int buffer_size, MPI_Comm comm) : base_space {std::unique_ptr<BaseSpaceType>(new BaseSpaceType(name, bounds))}, 
         local_bounds{0, 0, 0, 0}, out_of_bounds_agents{std::make_shared<AIDPyObjMapT>()}, 
-        buffer_size_{buffer_size}, cart_comm{}, nghs{std::make_shared<std::vector<CTNeighbor>>()}, rank{-1}
+        buffer_size_{buffer_size}, cart_comm{}, nghs{std::make_shared<std::vector<CTNeighbor>>()}, all_bounds{},
+        rank{-1}
 {
     int dims = 1;
     if (bounds.y_extent_ > 0) ++dims;
@@ -133,13 +138,15 @@ DistributedCartesianSpace<BaseSpaceType>::DistributedCartesianSpace(const std::s
     ct.getCoords(coords);
 
     compute_neighbor_buffers(*nghs, coords, local_bounds, dims, ct.procsPerDim(), buffer_size_);
+    getAllBounds(comm);
 }
 
 template<typename BaseSpaceType>
 DistributedCartesianSpace<BaseSpaceType>::DistributedCartesianSpace(const std::string& name, const BoundingBox& bounds, 
         unsigned int buffer_size, MPI_Comm comm, int tree_threshold) : base_space {std::unique_ptr<BaseSpaceType>(new BaseSpaceType(name, bounds, tree_threshold))}, 
         local_bounds{0, 0, 0, 0}, out_of_bounds_agents{std::make_shared<AIDPyObjMapT>()}, 
-        buffer_size_{buffer_size}, cart_comm{}, nghs{std::make_shared<std::vector<CTNeighbor>>()}, rank{-1}
+        buffer_size_{buffer_size}, cart_comm{}, nghs{std::make_shared<std::vector<CTNeighbor>>()}, all_bounds{},
+        rank{-1}
 {
     int dims = 1;
     if (bounds.y_extent_ > 0) ++dims;
@@ -152,11 +159,52 @@ DistributedCartesianSpace<BaseSpaceType>::DistributedCartesianSpace(const std::s
     ct.getCoords(coords);
 
     compute_neighbor_buffers(*nghs, coords, local_bounds, dims, ct.procsPerDim(), buffer_size_);
+    getAllBounds(comm);
+
 }
 
 template<typename BaseSpaceType>
 DistributedCartesianSpace<BaseSpaceType>::~DistributedCartesianSpace() {
     MPI_Comm_free(&cart_comm);
+}
+
+template<typename T>
+struct MPIType_Selector {
+    static MPI_Datatype type;
+};
+
+template<typename BaseSpaceType>
+void DistributedCartesianSpace<BaseSpaceType>::getAllBounds(MPI_Comm comm) {
+    // coord_type is always long, I think, but use it here anyway
+    std::vector<BoundingBox::coord_type> box{local_bounds.xmin_, local_bounds.x_extent_,
+                                                       local_bounds.ymin_, local_bounds.y_extent_,
+                                                       local_bounds.zmin_, local_bounds.z_extent_};
+    int comm_size;
+    MPI_Comm_size(comm, &comm_size);
+    BoundingBox::coord_type* all_bb = new BoundingBox::coord_type[comm_size * 6];
+    MPI_Datatype dtype = MPIType_Selector<BoundingBox::coord_type>::type;
+    MPI_Allgather(&box[0], 6, dtype, all_bb, 6, dtype, comm);
+
+    for (int i = 0; i < comm_size; ++i) {
+        int idx = 6 * i;
+        BoundingBox::coord_type x_min = all_bb[idx];
+        BoundingBox::coord_type x_extent = all_bb[idx + 1];
+        BoundingBox::coord_type y_min = all_bb[idx + 2];
+        BoundingBox::coord_type y_extent = all_bb[idx + 3];
+        BoundingBox::coord_type z_min = all_bb[idx + 4];
+        BoundingBox::coord_type z_extent = all_bb[idx + 5];
+
+        BoundingBox box(x_min, x_extent, y_min, y_extent, z_min, z_extent);
+        all_bounds.emplace(i, box);
+    }
+    delete[] all_bb;
+
+    // erase own rank
+    all_bounds.erase(rank);
+    // erase neighbors as we have those in nghs
+    for (auto& ngh : (*nghs)) {
+        all_bounds.erase(ngh.rank);
+    }
 }
 
 template<typename BaseSpaceType>
@@ -201,6 +249,18 @@ void DistributedCartesianSpace<BaseSpaceType>::getAgentsWithin(const BoundingBox
 }
 
 template<typename BaseSpaceType>
+void DistributedCartesianSpace<BaseSpaceType>::addToOutOfBounds(R4Py_Agent* agent, typename DistributedCartesianSpace<BaseSpaceType>::PointType* pt, 
+    int rank)
+{
+    PyObject* aid_tuple = agent->aid->as_tuple;
+    Py_INCREF(aid_tuple);
+    PyArrayObject* pt_array = pt->coords;
+    Py_INCREF(pt_array);
+    PyObject* obj = Py_BuildValue("(O, I, O)", aid_tuple, rank, pt_array);
+    (*out_of_bounds_agents)[agent->aid] = obj;
+}
+
+template<typename BaseSpaceType>
 typename DistributedCartesianSpace<BaseSpaceType>::PointType* DistributedCartesianSpace<BaseSpaceType>::move(R4Py_Agent* agent, PointType* to) {
    
     PointType* pt = base_space->move(agent, to);
@@ -211,15 +271,21 @@ typename DistributedCartesianSpace<BaseSpaceType>::PointType* DistributedCartesi
             out_of_bounds_agents->erase(agent->aid);
         } else {
             // what neighbor now contains the agent
+            bool added = false;
             for (auto& ngh : (*nghs)) {
                 if (ngh.local_bounds.contains(pt)) {
-                    PyObject* aid_tuple = agent->aid->as_tuple;
-                    Py_INCREF(aid_tuple);
-                    PyArrayObject* pt_array = pt->coords;
-                    Py_INCREF(pt_array);
-                    PyObject* obj = Py_BuildValue("(O, I, O)", aid_tuple, ngh.rank, pt_array);
-                    (*out_of_bounds_agents)[agent->aid] = obj;
+                    addToOutOfBounds(agent, pt, ngh.rank);
+                    added = true;
                     break;
+                }
+            }
+
+            if (!added) {
+                for (auto& kv: all_bounds) {
+                    if (kv.second.contains(pt)) {
+                        addToOutOfBounds(agent, pt, kv.first);
+                        break;
+                    }
                 }
             }
         }

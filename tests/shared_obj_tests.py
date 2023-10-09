@@ -1339,6 +1339,47 @@ class SharedContextTests1(unittest.TestCase):
                     self.assertEqual(a2, agent)
                 self.assertEqual(1, count)
 
+    def test_far_move(self):
+        box = geometry.BoundingBox(xmin=0, xextent=120, ymin=0, yextent=120, zmin=0, zextent=0)
+        grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=MPI.COMM_WORLD)
+
+        context = ctx.SharedContext(MPI.COMM_WORLD)
+        context.add_projection(grid)
+        rank = MPI.COMM_WORLD.Get_rank()
+
+        if rank == 0:
+            a1 = EAgent(1, 0, rank, 12)
+            context.add(a1)
+            pt = space.DiscretePoint(12, 5)
+            grid.move(a1, pt)
+
+        elif rank == 8:
+            a2 = EAgent(2, 0, rank, 12)
+            context.add(a2)
+            pt = space.DiscretePoint(84, 90)
+            grid.move(a2, pt)
+
+        context.synchronize(create_agent)
+
+        if rank == 0:
+            a1 = context.agent((1, 0, 0))
+            # well oob into rank 8
+            pt = space.DiscretePoint(82, 91)
+            grid.move(a1, pt)
+
+        context.synchronize(create_agent)
+
+        if rank == 0:
+            a1 = context.agent((1, 0, 0))
+            self.assertIsNone(a1)
+
+        if rank == 8:
+            a1 = context.agent((1, 0, 0))
+            self.assertIsNotNone(a1)
+
+
+
     # tests context synchronization in 2D 2 rank
     # adds agents moves them oob in a grid and
     # tests if moved to correct location
