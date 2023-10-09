@@ -94,6 +94,7 @@ private:
     int rank;
 
     void getAllBounds(MPI_Comm comm);
+    void eraseOOB(R4Py_AgentID *aid);
 
 public:
     using PointType = typename BaseSpaceType::PointType;
@@ -228,7 +229,7 @@ bool DistributedCartesianSpace<BaseSpaceType>::contains(R4Py_Agent* agent) const
 
 template<typename BaseSpaceType>
 bool DistributedCartesianSpace<BaseSpaceType>::remove(R4Py_AgentID* aid) {
-    out_of_bounds_agents->erase(aid);
+    eraseOOB(aid);
     return base_space->remove(aid);
 }
 
@@ -252,30 +253,35 @@ void DistributedCartesianSpace<BaseSpaceType>::getAgentsWithin(const BoundingBox
     base_space->getAgentsWithin(bounds, agents);
 }
 
-template<typename BaseSpaceType>
-typename DistributedCartesianSpace<BaseSpaceType>::PointType* DistributedCartesianSpace<BaseSpaceType>::move(R4Py_Agent* agent, PointType* to) {
-   
+template <typename BaseSpaceType>
+void DistributedCartesianSpace<BaseSpaceType>::eraseOOB(R4Py_AgentID* aid) {
+    auto iter = out_of_bounds_agents->find(aid);
+    if (iter != out_of_bounds_agents->end()) {
+        Py_DECREF(PyTuple_GET_ITEM(iter->second, 0));
+        Py_DECREF(PyTuple_GET_ITEM(iter->second, 2));
+        Py_DECREF(iter->second);
+        out_of_bounds_agents->erase(iter);
+    }
+}
+
+    template <typename BaseSpaceType>
+    typename DistributedCartesianSpace<BaseSpaceType>::PointType *DistributedCartesianSpace<BaseSpaceType>::move(R4Py_Agent *agent, PointType *to)
+{
+
     PointType* pt = base_space->move(agent, to);
     // pt will be null if the move fails for a valid reason -- e.g.,
     // space is already occupied
     if (pt) {
-        if (local_bounds.contains(pt)) {
-            auto iter = out_of_bounds_agents->find(agent->aid);
-            if (iter != out_of_bounds_agents->end()) {
-                Py_DECREF(PyTuple_GET_ITEM(iter->second, 0));
-                Py_DECREF(PyTuple_GET_ITEM(iter->second, 2));
-                Py_DECREF(iter->second);
-                out_of_bounds_agents->erase(iter);
-            }
-        } else {
-            // what neighbor now contains the agent
-            for (auto& box_rank: all_bounds) {
+        eraseOOB(agent->aid);
+        if (!local_bounds.contains(pt)) {
+            // what rank now contains the agent
+            for (auto &box_rank : all_bounds) {
                 if (box_rank.first.contains(pt)) {
-                    PyObject* aid_tuple = agent->aid->as_tuple;
+                    PyObject *aid_tuple = agent->aid->as_tuple;
                     Py_INCREF(aid_tuple);
-                    PyArrayObject* pt_array = pt->coords;
+                    PyArrayObject *pt_array = pt->coords;
                     Py_INCREF(pt_array);
-                    PyObject* obj = Py_BuildValue("(O, I, O)", aid_tuple, box_rank.second, pt_array);
+                    PyObject *obj = Py_BuildValue("(O, I, O)", aid_tuple, box_rank.second, pt_array);
                     (*out_of_bounds_agents)[agent->aid] = obj;
                     break;
                 }
@@ -592,7 +598,6 @@ struct R4Py_SharedCSpace {
     ISharedContinuousSpace* space;
     PyObject* cart_comm;
 };
-
 }
 
 

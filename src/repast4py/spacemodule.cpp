@@ -1242,6 +1242,7 @@ static PyObject* SharedGrid_synchMove(PyObject* self, PyObject* args) {
     pt_data[2] = obj_data[2];
 
     ((R4Py_SharedGrid*)self)->grid->move((R4Py_Agent*)agent, pt);
+    Py_DECREF(pt);
 
     Py_RETURN_NONE;
 }
@@ -2118,6 +2119,7 @@ static PyObject* SharedCSpace_synchMove(PyObject* self, PyObject* args) {
     pt_data[2] = obj_data[2];
 
     ((R4Py_SharedCSpace*)self)->space->move((R4Py_Agent*)agent, pt);
+    Py_DECREF(pt);
 
     Py_RETURN_NONE;
 }
