@@ -282,7 +282,8 @@ void DistributedCartesianSpace<BaseSpaceType>::eraseOOB(R4Py_AgentID* aid) {
                     Py_INCREF(aid_tuple);
                     PyArrayObject *pt_array = pt->coords;
                     Py_INCREF(pt_array);
-                    // Py_BuildValue increments aid_tuple and pt_array ref counts
+                    // Py_BuildValue increments aid_tuple and pt_array ref counts,
+                    // but without the incref zombies example is segfaulting ...
                     PyObject *obj = Py_BuildValue("(O, I, O)", aid_tuple, box_rank.second, pt_array);
                     (*out_of_bounds_agents)[agent->aid] = obj;
                     break;
