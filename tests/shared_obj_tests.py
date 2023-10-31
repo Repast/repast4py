@@ -1381,7 +1381,7 @@ class SharedContextTests1(unittest.TestCase):
     def test_far_move_cs(self):
         box = geometry.BoundingBox(xmin=0, xextent=120, ymin=0, yextent=120, zmin=0, zextent=0)
         grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky,
-                                  occupancy=OccupancyType.Multiple, buffer_size=2, 
+                                  occupancy=OccupancyType.Multiple, buffer_size=2,
                                   tree_threshold=10, comm=MPI.COMM_WORLD)
 
         context = ctx.SharedContext(MPI.COMM_WORLD)
@@ -2229,6 +2229,32 @@ class SharedContextTests3(unittest.TestCase):
 
     long_message = True
 
+    # def test_cart_comm(self):
+    #     comm = MPI.COMM_WORLD
+    #     rank = comm.Get_rank()
+
+    #     context = ctx.SharedContext(comm)
+
+    #     box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+    #     cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
+    #                                 occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
+    #                                 tree_threshold=100)
+
+    #     context.add_projection(cspace)
+    #     c_moved = [[] for _ in range(cspace._cart_comm.size)]
+
+    #     if rank == 0:
+    #         for i in range(30):
+    #             cp, _ = get_random_pts(box)
+    #             c_moved[1].append((cp.coordinates, (i, 2, 3)))
+
+    #     if rank == 1:
+    #         for i in range(30):
+    #             cp, _ = get_random_pts(box)
+    #             c_moved[0].append((cp.coordinates, (i, 2, 3)))
+
+    #     cspace._cart_comm.alltoall(c_moved)
+
     # Idea here is move agents into buffered areas
     # and record their locations and ids. That
     # data is sent to rank where the agents are
@@ -2255,8 +2281,8 @@ class SharedContextTests3(unittest.TestCase):
         context.add_projection(cspace)
         context.add_projection(grid)
 
-        g_moved = [[] for i in range(grid._cart_comm.size)]
-        c_moved = [[] for i in range(grid._cart_comm.size)]
+        g_moved = [[] for _ in range(grid._cart_comm.size)]
+        c_moved = [[] for _ in range(grid._cart_comm.size)]
 
         gm = []
         cm = []
