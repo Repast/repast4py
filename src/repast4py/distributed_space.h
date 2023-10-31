@@ -257,6 +257,8 @@ template <typename BaseSpaceType>
 void DistributedCartesianSpace<BaseSpaceType>::eraseOOB(R4Py_AgentID* aid) {
     auto iter = out_of_bounds_agents->find(aid);
     if (iter != out_of_bounds_agents->end()) {
+        Py_DECREF(PyTuple_GET_ITEM(iter->second, 0));
+        Py_DECREF(PyTuple_GET_ITEM(iter->second, 2));
         // if decref destroys the tuple, then it's members are decreffed
         Py_DECREF(iter->second);
         out_of_bounds_agents->erase(iter);
@@ -277,7 +279,9 @@ void DistributedCartesianSpace<BaseSpaceType>::eraseOOB(R4Py_AgentID* aid) {
             for (auto &box_rank : all_bounds) {
                 if (box_rank.first.contains(pt)) {
                     PyObject *aid_tuple = agent->aid->as_tuple;
+                    Py_INCREF(aid_tuple);
                     PyArrayObject *pt_array = pt->coords;
+                    Py_INCREF(pt_array);
                     // Py_BuildValue increments aid_tuple and pt_array ref counts
                     PyObject *obj = Py_BuildValue("(O, I, O)", aid_tuple, box_rank.second, pt_array);
                     (*out_of_bounds_agents)[agent->aid] = obj;
