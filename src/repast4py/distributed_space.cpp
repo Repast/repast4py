@@ -209,7 +209,7 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, MPI_Comm* cart_comm, int num
     std::fill_n(procs_per_dim, num_dims, 0);
     MPI_Dims_create(size, num_dims, procs_per_dim);
 
-    int periods[num_dims];
+    int* periods = new int[num_dims];
     std::fill_n(periods, num_dims, periodic ? 1 : 0);
 
     MPI_Cart_create(comm, num_dims, procs_per_dim, periods, 0, cart_comm);
@@ -246,7 +246,7 @@ CartesianTopology::CartesianTopology(MPI_Comm comm, MPI_Comm* cart_comm, const s
         procs_per_dim[i] = procs_per_dimension[i];
     }
 
-    int periods[num_dims_];
+    int* periods = new int[num_dims_];
     std::fill_n(periods, num_dims_, periodic ? 1 : 0);
 
     MPI_Cart_create(comm, num_dims_, procs_per_dim, periods, 0, cart_comm);
@@ -287,7 +287,7 @@ int CartesianTopology::getRank() {
 }
 
 void CartesianTopology::getBounds(int rank, BoundingBox& local_bounds) {
-    int coords[num_dims_];
+    int* coords = new int[num_dims_];
     MPI_Cart_coords(comm_, rank, num_dims_, coords);
     long x_extent = floor(bounds_.x_extent_ / procs_per_dim[0]);
     long xmin = bounds_.xmin_ + x_extent * coords[0];
@@ -319,7 +319,7 @@ void CartesianTopology::getBounds(BoundingBox& local_bounds) {
 }
 
 void CartesianTopology::getNeighbors(std::vector<CTNeighbor>& neighbors) {
-    int coords[num_dims_];
+    int* coords = new int[num_dims_];
     MPI_Cart_coords(comm_, getRank(), num_dims_, coords);
 
     // we can get duplicate neighbors when we have periodic space 
