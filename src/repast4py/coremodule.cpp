@@ -340,9 +340,9 @@ static PyTypeObject R4Py_AgentType = {
 
 static PyModuleDef coremodule = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "repast4py._core",
-    .m_doc = "core module",
-    .m_size = -1,
+    "repast4py._core",
+    "core module",
+    -1,
 };
 
 

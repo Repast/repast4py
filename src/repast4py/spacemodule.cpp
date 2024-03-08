@@ -2731,9 +2731,9 @@ static PyTypeObject R4Py_CartesianTopologyType = {
 
 static PyModuleDef spacemodule = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "repast4py._space",
-    .m_doc = "Repast4Py space related classes and functions",
-    .m_size = -1,
+    "repast4py._space",
+    "Repast4Py space related classes and functions",
+    -1,
 };
 
 // PyMODINIT_FUNC adds "extern C" among other things
