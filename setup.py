@@ -24,14 +24,18 @@ def run_command(exe, args):
         return []
 
 def get_linker_args():
-    compiler = os.getenv('CC')
-    if compiler is None:
-        print('Error: MPI compiler is not specified. Please specify the MPI compiler using the "CC" environment variable')
-    
+        
     linker_args = []
+
+    # NOTE Windows setuptools apparently does not use the CC env variable.
     if IS_WINDOWS:          # TODO not sure if needed
         pass
+    
     else:
+        compiler = os.getenv('CC')
+        if compiler is None:
+            print('Error: MPI compiler is not specified. Please specify the MPI compiler using the "CC" environment variable')
+        
         args = run_command(compiler, '-show')
     
         for arg in args:
@@ -52,18 +56,21 @@ def get_compiler_args():
 def get_extra_includes():
     if IS_WINDOWS:
         return [os.environ['MSMPI_INC']]
+        #return ["C:\\Program Files (x86)\\Intel\\oneAPI\\mpi\\2021.11\\include"]
     else:
         return []
 
 def get_lib_dirs():
     if IS_WINDOWS:
         return [os.environ['MSMPI_LIB64']]
+        #return ["C:\\Program Files (x86)\\Intel\\oneAPI\\mpi\\2021.11\\lib"]
     else:
         return []
 
 def get_libs():
     if IS_WINDOWS:
         return ['msmpi']
+        #return ['impi']
     else:
         return []
 
@@ -82,5 +89,5 @@ space_module = Extension('repast4py._space', sources=['src/repast4py/spacemodule
 
 setup(
     description="repast4py package",
-    ext_modules=[core_module, space_module]
+    ext_modules=[core_module,space_module]
 )
