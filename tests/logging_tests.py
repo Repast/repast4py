@@ -218,7 +218,7 @@ class DSLoggingTests(unittest.TestCase):
 
     def test_single_rank_logging(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             c = Counts()
