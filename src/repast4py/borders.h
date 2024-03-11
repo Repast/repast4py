@@ -40,7 +40,7 @@ struct Offset {
 
 template<>
 struct Offset<R4Py_DiscretePoint> {
-    constexpr static long value = 1;
+    constexpr static long long value = 1;
 };
 
 template<>

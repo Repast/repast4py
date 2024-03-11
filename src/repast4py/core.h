@@ -16,7 +16,7 @@
 namespace repast4py {
 
 struct R4Py_AgentID {
-    long id;
+    long long id;
     int type;
     unsigned int rank;
     PyObject* as_tuple;

@@ -15,18 +15,20 @@ template<>
 MPI_Datatype MPIType_Selector<double>::type = MPI_DOUBLE;
 template<>
 MPI_Datatype MPIType_Selector<long>::type = MPI_LONG;
+template<>
+MPI_Datatype MPIType_Selector<long long>::type = MPI_LONG_LONG;
 
 
 void compute_buffer_bounds(CTNeighbor& ngh, int offsets[], int num_dims, BoundingBox& local_bounds, 
     unsigned int buffer_size) 
 {
-    long xmin = local_bounds.xmin_, xmax = local_bounds.xmax_;
-    long ymin = 0, ymax = 0;
+    long long xmin = local_bounds.xmin_, xmax = local_bounds.xmax_;
+    long long ymin = 0, ymax = 0;
     if (num_dims == 2) {
         ymin = local_bounds.ymin_; 
         ymax = local_bounds.ymax_;
     }
-    long zmin = 0, zmax = 0;
+    long long zmin = 0, zmax = 0;
     if (num_dims == 3) {
         ymin = local_bounds.ymin_; 
         ymax = local_bounds.ymax_;
@@ -63,7 +65,7 @@ void compute_buffer_bounds(CTNeighbor& ngh, int offsets[], int num_dims, Boundin
         zmax = zmin + buffer_size;
     }
 
-    ngh.buffer_info = Py_BuildValue("(i(llllll))", ngh.rank, xmin, xmax, ymin, ymax,
+    ngh.buffer_info = Py_BuildValue("(i(LLLLLL))", ngh.rank, xmin, xmax, ymin, ymax,
         zmin, zmax);
 }
 
@@ -269,7 +271,7 @@ void CartesianTopology::getCoords(std::vector<int>& coords) {
     MPI_Cart_coords(comm_, getRank(), num_dims_, &coords[0]);
 }
 
-static void adjust_min_extent(int coord, int remainder, long* min, long* extent) {
+static void adjust_min_extent(int coord, int remainder, long long* min, long long* extent) {
     if (remainder > 0) {
         (*extent) += coord < remainder ?  1 : 0;
         if (coord > 0 && coord < remainder) {
@@ -289,14 +291,14 @@ int CartesianTopology::getRank() {
 void CartesianTopology::getBounds(int rank, BoundingBox& local_bounds) {
     int* coords = new int[num_dims_];
     MPI_Cart_coords(comm_, rank, num_dims_, coords);
-    long x_extent = floor(bounds_.x_extent_ / procs_per_dim[0]);
-    long xmin = bounds_.xmin_ + x_extent * coords[0];
+    long long x_extent = floor(bounds_.x_extent_ / procs_per_dim[0]);
+    long long xmin = bounds_.xmin_ + x_extent * coords[0];
     adjust_min_extent(coords[0], x_remainder, &xmin, &x_extent);
 
-    long ymin = 0;
-    long y_extent = 0;
-    long zmin = 0;
-    long z_extent = 0;
+    long long ymin = 0;
+    long long y_extent = 0;
+    long long zmin = 0;
+    long long z_extent = 0;
 
     if (num_dims_ > 1) {
         y_extent = floor(bounds_.y_extent_ / procs_per_dim[1]);

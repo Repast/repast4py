@@ -202,7 +202,7 @@ static PyObject* Agent_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
 
 static int Agent_init(R4Py_Agent* self, PyObject* args, PyObject* kwds) {
     static char* kwlist[] = {(char*)"id", (char*)"type", (char*)"rank", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "li|l", kwlist, &self->aid->id, &self->aid->type,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Li|l", kwlist, &self->aid->id, &self->aid->type,
         &self->aid->rank)) {
         return -1;
     }
@@ -212,12 +212,12 @@ static int Agent_init(R4Py_Agent* self, PyObject* args, PyObject* kwds) {
         return -1;
     }
     // TODO - maybe build this with PyTuple_New rather than parse the format string
-    self->aid->as_tuple = Py_BuildValue("(liI)", self->aid->id, self->aid->type, self->aid->rank);
+    self->aid->as_tuple = Py_BuildValue("(LiI)", self->aid->id, self->aid->type, self->aid->rank);
     return 0;
 }
 
 static PyObject* Agent_get_id(R4Py_Agent* self, void* closure) {
-    return PyLong_FromLong(self->aid->id);
+    return PyLong_FromLongLong(self->aid->id);
 }
 
 static PyObject* Agent_get_uid_rank(R4Py_Agent* self, void* closure) {

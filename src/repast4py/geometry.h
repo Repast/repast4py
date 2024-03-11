@@ -43,7 +43,7 @@ struct TypeSelector {
 
 template<>
 struct TypeSelector<R4Py_DiscretePoint> {
-    using type = long;
+    using type = long long;
 };
 
 template<>
