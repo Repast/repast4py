@@ -58,8 +58,9 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         
         env:
-          # Only build 64-bit on Windows
-          CIBW_ARCHS_WINDOWS: "AMD64"
+          CIBW_ARCHS_WINDOWS: "AMD64 x86"
+
+          CIBW_ARCHS_MACOS: "universal2 arm64"
           CIBW_ENVIRONMENT_MACOS: "CC=mpicxx CXX=mpicxx"
           
           # Disable building PyPy wheels on all platforms

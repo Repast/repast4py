@@ -56,14 +56,15 @@ def get_compiler_args():
 def get_extra_includes():
     if IS_WINDOWS:
         return [os.environ['MSMPI_INC']]
-        #return ["C:\\Program Files (x86)\\Intel\\oneAPI\\mpi\\2021.11\\include"]
     else:
         return []
 
 def get_lib_dirs():
     if IS_WINDOWS:
-        return [os.environ['MSMPI_LIB64']]
-        #return ["C:\\Program Files (x86)\\Intel\\oneAPI\\mpi\\2021.11\\lib"]
+        if platform.machine().endswith('64'):
+            return [os.environ['MSMPI_LIB64']]
+        else: 
+            return [os.environ['MSMPI_LIB32']]
     else:
         return []
 
