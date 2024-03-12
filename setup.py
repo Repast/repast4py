@@ -2,7 +2,7 @@ from setuptools import setup, Extension
 import numpy as np
 import mpi4py
 import shutil
-import os
+import os, sys
 import shlex
 
 import platform
@@ -10,6 +10,9 @@ import platform
 IS_WINDOWS = platform.system() == "Windows"
 IS_DARWIN = platform.system() == "Darwin"
 IS_LINUX = platform.system() == "Linux"
+
+def is_64bit() -> bool:
+    return sys.maxsize > 2**32
 
 def run_command(exe, args):
     cmd = shutil.which(exe)
@@ -61,7 +64,7 @@ def get_extra_includes():
 
 def get_lib_dirs():
     if IS_WINDOWS:
-        if platform.machine().endswith('64'):
+        if is_64bit():
             return [os.environ['MSMPI_LIB64']]
         else: 
             return [os.environ['MSMPI_LIB32']]
