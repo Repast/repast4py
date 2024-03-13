@@ -65,6 +65,8 @@ jobs:
 
           CIBW_ARCHS_MACOS: "arm64"
           CIBW_ENVIRONMENT_MACOS: "CC=mpicxx CXX=mpicxx"
+
+          CIBW_BUILD: cp37-* cp38-* cp39-* cp310-* cp311-*
           
           # Disable building PyPy wheels on all platforms
           CIBW_SKIP: pp*
