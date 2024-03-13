@@ -12,6 +12,8 @@ IS_DARWIN = platform.system() == "Darwin"
 IS_LINUX = platform.system() == "Linux"
 
 def is_64bit() -> bool:
+    """ Returns True if the python interpreter is 64-bit, independent of the OS arch.
+    """
     return sys.maxsize > 2**32
 
 def run_command(exe, args):
@@ -31,7 +33,7 @@ def get_linker_args():
     linker_args = []
 
     # NOTE Windows setuptools apparently does not use the CC env variable.
-    if IS_WINDOWS:          # TODO not sure if needed
+    if IS_WINDOWS:
         pass
     
     else:
@@ -74,7 +76,6 @@ def get_lib_dirs():
 def get_libs():
     if IS_WINDOWS:
         return ['msmpi']
-        #return ['impi']
     else:
         return []
 
