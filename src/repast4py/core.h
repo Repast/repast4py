@@ -13,10 +13,13 @@
 #include <list>
 #include <memory>
 
+#include "types.h"
+
 namespace repast4py {
 
+
 struct R4Py_AgentID {
-    long long id;
+    long_t id;
     int type;
     unsigned int rank;
     PyObject* as_tuple;

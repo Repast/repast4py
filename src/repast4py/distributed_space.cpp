@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <set>
 
+#include "types.h"
 #include "distributed_space.h"
 
 namespace repast4py {
@@ -22,13 +23,13 @@ MPI_Datatype MPIType_Selector<long long>::type = MPI_LONG_LONG;
 void compute_buffer_bounds(CTNeighbor& ngh, int offsets[], int num_dims, BoundingBox& local_bounds, 
     unsigned int buffer_size) 
 {
-    long long xmin = local_bounds.xmin_, xmax = local_bounds.xmax_;
-    long long ymin = 0, ymax = 0;
+    long_t xmin = local_bounds.xmin_, xmax = local_bounds.xmax_;
+    long_t ymin = 0, ymax = 0;
     if (num_dims == 2) {
         ymin = local_bounds.ymin_; 
         ymax = local_bounds.ymax_;
     }
-    long long zmin = 0, zmax = 0;
+    long_t zmin = 0, zmax = 0;
     if (num_dims == 3) {
         ymin = local_bounds.ymin_; 
         ymax = local_bounds.ymax_;
@@ -65,8 +66,14 @@ void compute_buffer_bounds(CTNeighbor& ngh, int offsets[], int num_dims, Boundin
         zmax = zmin + buffer_size;
     }
 
+    #if defined(_MSC_VER)
     ngh.buffer_info = Py_BuildValue("(i(LLLLLL))", ngh.rank, xmin, xmax, ymin, ymax,
         zmin, zmax);
+    #else
+    ngh.buffer_info = Py_BuildValue("(i(llllll))", ngh.rank, xmin, xmax, ymin, ymax,
+        zmin, zmax);
+    #endif
+
 }
 
 void compute_neighbor_buffers(std::vector<CTNeighbor>& nghs, std::vector<int>& cart_coords, 
@@ -271,7 +278,7 @@ void CartesianTopology::getCoords(std::vector<int>& coords) {
     MPI_Cart_coords(comm_, getRank(), num_dims_, &coords[0]);
 }
 
-static void adjust_min_extent(int coord, int remainder, long long* min, long long* extent) {
+static void adjust_min_extent(int coord, int remainder, long_t* min, long_t* extent) {
     if (remainder > 0) {
         (*extent) += coord < remainder ?  1 : 0;
         if (coord > 0 && coord < remainder) {
@@ -291,14 +298,14 @@ int CartesianTopology::getRank() {
 void CartesianTopology::getBounds(int rank, BoundingBox& local_bounds) {
     int* coords = new int[num_dims_];
     MPI_Cart_coords(comm_, rank, num_dims_, coords);
-    long long x_extent = floor(bounds_.x_extent_ / procs_per_dim[0]);
-    long long xmin = bounds_.xmin_ + x_extent * coords[0];
+    long_t x_extent = floor(bounds_.x_extent_ / procs_per_dim[0]);
+    long_t xmin = bounds_.xmin_ + x_extent * coords[0];
     adjust_min_extent(coords[0], x_remainder, &xmin, &x_extent);
 
-    long long ymin = 0;
-    long long y_extent = 0;
-    long long zmin = 0;
-    long long z_extent = 0;
+    long_t ymin = 0;
+    long_t y_extent = 0;
+    long_t zmin = 0;
+    long_t z_extent = 0;
 
     if (num_dims_ > 1) {
         y_extent = floor(bounds_.y_extent_ / procs_per_dim[1]);

@@ -15,11 +15,14 @@
 #include <algorithm>
 #include <memory>
 
+
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 // See https://docs.scipy.org/doc/numpy/reference/c-api.array.html#importing-the-api
 #define NO_IMPORT_ARRAY_API
 //#define PY_ARRAY_UNIQUE_SYMBOL REPAST4PY_ARRAY_API
 #include "numpy/arrayobject.h"
+
+#include "types.h"
 
 namespace repast4py {
 
@@ -43,7 +46,7 @@ struct TypeSelector {
 
 template<>
 struct TypeSelector<R4Py_DiscretePoint> {
-    using type = long long;
+    using type = long_t;
 };
 
 template<>

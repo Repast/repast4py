@@ -7,6 +7,7 @@
 #ifndef SRC_BORDERS_H
 #define SRC_BORDERS_H
 
+#include "types.h"
 #include "geometry.h"
 
 namespace repast4py {
@@ -40,7 +41,7 @@ struct Offset {
 
 template<>
 struct Offset<R4Py_DiscretePoint> {
-    constexpr static long long value = 1;
+    constexpr static long_t value = 1;
 };
 
 template<>
