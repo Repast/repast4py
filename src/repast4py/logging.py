@@ -291,7 +291,7 @@ class ReducingDataSet:
                 os.makedirs(parent)
             self.ticks = []
 
-            with open(self.fpath, 'w') as f_out:
+            with open(self.fpath, 'w', newline='') as f_out:
                 f_out.write('tick')
                 for dl in data_loggers:
                     f_out.write(self._delimiter)
@@ -329,7 +329,7 @@ class ReducingDataSet:
         if self._rank == 0:
             nrows = len(self.ticks)
             val_arrays = [self.ticks] + val_arrays
-            with open(self.fpath, 'a') as f_out:
+            with open(self.fpath, 'a', newline='') as f_out:
                 for i in range(nrows):
                     first = True
                     for vals in val_arrays:
@@ -366,7 +366,7 @@ class TabularLogger:
             if not os.path.exists(parent):
                 os.makedirs(parent)
 
-            with open(self._fpath, 'w') as fout:
+            with open(self._fpath, 'w', newline='') as fout:
                 writer = csv.writer(fout, delimiter=self._delimiter)
                 writer.writerow(headers)
 
@@ -397,7 +397,7 @@ class TabularLogger:
         """
         all_items = self._comm.gather(self._rows, root=0)
         if self._rank == 0:
-            with open(self._fpath, 'a') as fout:
+            with open(self._fpath, 'a', newline='') as fout:
                 writer = csv.writer(fout, delimiter=self._delimiter)
                 for items in all_items:
                     writer.writerows(items)
