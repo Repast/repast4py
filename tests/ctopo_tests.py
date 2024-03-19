@@ -78,7 +78,7 @@ class LocalBoundsTests(unittest.TestCase):
                 i += 1
 
         new_group = MPI.COMM_WORLD.Get_group().Excl([8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
             bounds = BoundingBox(xmin=0, xextent=40, ymin=0, yextent=120, zmin=0, zextent=0)

@@ -49,7 +49,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_num_agents(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -79,7 +79,7 @@ class SharedCSTests(unittest.TestCase):
     def test_ops(self):
         # make 2 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -133,7 +133,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_oob(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -184,7 +184,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_oob_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -235,7 +235,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_buffer_data_2x1_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -279,7 +279,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_buffer_data_2x2_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -329,7 +329,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_buffer_data_4x2_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -389,7 +389,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_num_agents(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -418,7 +418,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_ops(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -471,7 +471,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_oob(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -521,7 +521,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_oob_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -653,7 +653,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_buffer_data_2x1_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -696,7 +696,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_buffer_data_2x2_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -741,7 +741,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_buffer_data_4x2_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1135,7 +1135,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests same named proj in context throws exception
     def test_duplicate_projection(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
@@ -1150,7 +1150,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests adding / removing from context
     def test_add_remove1(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1181,7 +1181,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests context.count
     def test_counts(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1216,7 +1216,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests context.contains_type
     def test_has_type(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             context = ctx.SharedContext(comm)
@@ -1230,7 +1230,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests context.agents()
     def test_get_agents(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             context = ctx.SharedContext(comm)
@@ -1301,7 +1301,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests adding / removing from context, adds / removes from projection
     def test_add_remove2(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1439,7 +1439,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests if moved to correct location
     def test_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1539,7 +1539,7 @@ class SharedContextTests1(unittest.TestCase):
     # Tests that buffer is filled on synchronization in 2D, 2 rank world
     def test_buffer(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1641,7 +1641,7 @@ class SharedContextTests1(unittest.TestCase):
 
     def test_buffer_0(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1805,7 +1805,7 @@ class SharedContextTests2(unittest.TestCase):
 
     def test_add_remove(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1845,7 +1845,7 @@ class SharedContextTests2(unittest.TestCase):
 
     def test_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1945,7 +1945,7 @@ class SharedContextTests2(unittest.TestCase):
 
     def test_buffer(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2043,7 +2043,7 @@ class SharedContextTests2(unittest.TestCase):
 
     def test_buffer_0(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2389,7 +2389,7 @@ class SharedContextTests3(unittest.TestCase):
 
     # def test_duplicate_requested(self):
     #     new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-    #     comm = MPI.COMM_WORLD.Create_group(new_group)
+    #     comm = MPI.COMM_WORLD.Create(new_group)
 
     #     if comm != MPI.COMM_NULL:
     #         rank = comm.Get_rank()
@@ -2420,7 +2420,7 @@ class SharedContextTests3(unittest.TestCase):
     def test_requested(self):
         # 4 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2529,7 +2529,7 @@ class SharedContextTests3(unittest.TestCase):
         """
         # 4 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2573,7 +2573,7 @@ class SharedContextTests3(unittest.TestCase):
         """
         # 4 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2621,7 +2621,7 @@ class SharedContextTests3(unittest.TestCase):
 
     def test_requested_with_proj(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2744,7 +2744,7 @@ class SharedContextTests3(unittest.TestCase):
 
     def test_requested_with_removed(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2799,7 +2799,7 @@ class PeriodicSyncTests(unittest.TestCase):
 
     def test_4x2_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2891,7 +2891,7 @@ class PeriodicSyncTests(unittest.TestCase):
 
     def test_2x1_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2974,7 +2974,7 @@ class PeriodicSyncTests(unittest.TestCase):
 
     def test_2x2_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()

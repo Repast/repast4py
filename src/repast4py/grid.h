@@ -8,6 +8,7 @@
 #define R4PY_SRC_GRID_H
 
 #include <vector>
+#include <string>
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>

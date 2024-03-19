@@ -102,7 +102,7 @@ class SharedValueLayerTests(unittest.TestCase):
     def test_synch_2x1_periodic(self):
         torch.set_printoptions(linewidth=140)
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
             bounds = BoundingBox(
@@ -170,7 +170,7 @@ class SharedValueLayerTests(unittest.TestCase):
     def test_synch_2x0_periodic(self):
         torch.set_printoptions(linewidth=140)
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
             bounds = BoundingBox(
@@ -563,7 +563,7 @@ class SharedValueLayerTests(unittest.TestCase):
     def test_synch_2x2_periodic(self):
         torch.set_printoptions(linewidth=140)
         new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -623,7 +623,7 @@ class SharedValueLayerTests(unittest.TestCase):
     def test_synch_2x4_periodic(self):
         torch.set_printoptions(linewidth=140)
         new_group = MPI.COMM_WORLD.Get_group().Excl([8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -686,7 +686,7 @@ class SharedValueLayerTests(unittest.TestCase):
     def test_accessors_2x1_periodic(self):
         torch.set_printoptions(linewidth=140)
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
             bounds = BoundingBox(
@@ -720,7 +720,7 @@ class SharedValueLayerTests(unittest.TestCase):
     def test_accessors_2x2_periodic(self):
         torch.set_printoptions(linewidth=140)
         new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -771,7 +771,7 @@ class SharedValueLayerTests(unittest.TestCase):
         # as part of initialization
         torch.set_printoptions(linewidth=140)
         new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
             bounds = BoundingBox(xmin=0, xextent=40, ymin=0, yextent=120, zmin=0, zextent=0)
