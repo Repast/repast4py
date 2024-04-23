@@ -202,8 +202,11 @@ static PyObject* Agent_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
 
 static int Agent_init(R4Py_Agent* self, PyObject* args, PyObject* kwds) {
     static char* kwlist[] = {(char*)"id", (char*)"type", (char*)"rank", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "li|l", kwlist, &self->aid->id, &self->aid->type,
-        &self->aid->rank)) {
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Li|l", kwlist, &self->aid->id, &self->aid->type, &self->aid->rank)) {
+    # else
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "li|l", kwlist, &self->aid->id, &self->aid->type, &self->aid->rank)) {
+    #endif
         return -1;
     }
     self->local_rank = self->aid->rank;
@@ -212,12 +215,16 @@ static int Agent_init(R4Py_Agent* self, PyObject* args, PyObject* kwds) {
         return -1;
     }
     // TODO - maybe build this with PyTuple_New rather than parse the format string
+    #if defined(_MSC_VER)
+    self->aid->as_tuple = Py_BuildValue("(LiI)", self->aid->id, self->aid->type, self->aid->rank);
+    #else
     self->aid->as_tuple = Py_BuildValue("(liI)", self->aid->id, self->aid->type, self->aid->rank);
+    #endif
     return 0;
 }
 
 static PyObject* Agent_get_id(R4Py_Agent* self, void* closure) {
-    return PyLong_FromLong(self->aid->id);
+    return PyLong_FromLongT(self->aid->id);
 }
 
 static PyObject* Agent_get_uid_rank(R4Py_Agent* self, void* closure) {
@@ -340,9 +347,9 @@ static PyTypeObject R4Py_AgentType = {
 
 static PyModuleDef coremodule = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "repast4py._core",
-    .m_doc = "core module",
-    .m_size = -1,
+    "repast4py._core",
+    "core module",
+    -1,
 };
 
 
