@@ -22,28 +22,30 @@
 
 namespace repast4py {
 
-using AgentList = std::shared_ptr<std::list<R4Py_Agent*>>;
+using AgentList = std::list<R4Py_Agent*>;
+using AgentListPtr = std::shared_ptr<AgentList>;
+
 
 template<typename MapType, typename PointType>
 class MultiOccupancyAccessor {
 
 private:
-    static AgentList empty_list;
+    static AgentListPtr empty_list;
 
 public:
-    using ValType = AgentList;
+    using ValType = AgentListPtr;
     MultiOccupancyAccessor();
     ~MultiOccupancyAccessor() {}
 
     R4Py_Agent* get(MapType& location_map, const Point<PointType>& pt);
     size_t size(MapType& location_map, const Point<PointType>& pt);
-    AgentList getAll(MapType& location_map, const Point<PointType>& pt);
+    AgentListPtr getAll(MapType& location_map, const Point<PointType>& pt);
     bool put(R4Py_Agent* agent, MapType& location_map, const Point<PointType>& pt);
     bool remove(R4Py_Agent* agent, MapType& location_map, const Point<PointType>& pt);
 };
 
 template<typename MapType, typename PointType>
-AgentList MultiOccupancyAccessor<MapType, PointType>::empty_list{std::make_shared<std::list<R4Py_Agent*>>()};
+AgentListPtr MultiOccupancyAccessor<MapType, PointType>::empty_list{std::make_shared<AgentList>()};
 
 template<typename MapType, typename PointType>
 MultiOccupancyAccessor<MapType, PointType>::MultiOccupancyAccessor() {}
@@ -68,7 +70,7 @@ size_t MultiOccupancyAccessor<MapType, PointType>::size(MapType& location_map, c
 
 
 template<typename MapType, typename PointType>
-AgentList MultiOccupancyAccessor<MapType, PointType>::getAll(MapType& location_map, const Point<PointType>& pt) {
+AgentListPtr MultiOccupancyAccessor<MapType, PointType>::getAll(MapType& location_map, const Point<PointType>& pt) {
     auto iter = location_map.find(pt);
     if (iter == location_map.end()) {
         return MultiOccupancyAccessor::empty_list;
@@ -81,7 +83,7 @@ template<typename MapType, typename PointType>
 bool MultiOccupancyAccessor<MapType, PointType>::put(R4Py_Agent* agent, MapType& location_map, const Point<PointType>& pt) {
     auto iter = location_map.find(pt);
     if (iter == location_map.end()) {
-        auto l = std::make_shared<std::list<R4Py_Agent*>>();
+        auto l = std::make_shared<AgentList>();
         l->push_back(agent);
         location_map.emplace(pt, l);
     } else {
@@ -116,7 +118,7 @@ template<typename MapType, typename PointType>
 class SingleOccupancyAccessor {
 
 private:
-    static AgentList empty_list;
+    static AgentListPtr empty_list;
 
 public:
     using ValType = R4Py_Agent*;
@@ -125,13 +127,13 @@ public:
 
     R4Py_Agent* get(MapType& location_map, const Point<PointType>& pt);
     size_t size(MapType& location_map, const Point<PointType>& pt);
-    AgentList getAll(MapType& location_map, const Point<PointType>& pt);
+    AgentListPtr getAll(MapType& location_map, const Point<PointType>& pt);
     bool put(R4Py_Agent* agent, MapType& location_map, const Point<PointType>& pt);
     bool remove(R4Py_Agent* agent, MapType& location_map, const Point<PointType>& pt);
 };
 
 template<typename MapType, typename PointType>
-AgentList SingleOccupancyAccessor<MapType, PointType>::empty_list{std::make_shared<std::list<R4Py_Agent*>>()};
+AgentListPtr SingleOccupancyAccessor<MapType, PointType>::empty_list{std::make_shared<AgentList>()};
 
 template<typename MapType, typename PointType>
 SingleOccupancyAccessor<MapType, PointType>::SingleOccupancyAccessor() {}
@@ -156,13 +158,13 @@ size_t SingleOccupancyAccessor<MapType, PointType>::size(MapType& location_map, 
 
 
 template<typename MapType, typename PointType>
-AgentList SingleOccupancyAccessor<MapType, PointType>::getAll(MapType& location_map, const Point<PointType>& pt) {
+AgentListPtr SingleOccupancyAccessor<MapType, PointType>::getAll(MapType& location_map, const Point<PointType>& pt) {
     auto iter = location_map.find(pt);
     if (iter == location_map.end()) {
         return SingleOccupancyAccessor::empty_list;
     }
 
-    auto l = std::make_shared<std::list<R4Py_Agent*>>(std::initializer_list<R4Py_Agent*>{iter->second});
+    auto l = std::make_shared<AgentList>(std::initializer_list<R4Py_Agent*>{iter->second});
     return l;
 }
 

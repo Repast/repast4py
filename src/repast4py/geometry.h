@@ -10,15 +10,19 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include <mpi.h>
 #include <iostream>
 #include <algorithm>
 #include <memory>
+
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 // See https://docs.scipy.org/doc/numpy/reference/c-api.array.html#importing-the-api
 #define NO_IMPORT_ARRAY_API
 //#define PY_ARRAY_UNIQUE_SYMBOL REPAST4PY_ARRAY_API
 #include "numpy/arrayobject.h"
+
+#include "types.h"
 
 namespace repast4py {
 
@@ -42,7 +46,7 @@ struct TypeSelector {
 
 template<>
 struct TypeSelector<R4Py_DiscretePoint> {
-    using type = long;
+    using type = long_t;
 };
 
 template<>
@@ -86,6 +90,28 @@ struct PointComp {
     }
 };
 
+
+template<typename PointType>
+struct PtrPointComp {
+    using coord_type  = typename TypeSelector<PointType>::type;
+
+    bool operator()(const PointType* p1, const PointType* p2) {
+        coord_type* p1_data = (coord_type*)PyArray_DATA(p1->coords);
+        coord_type* p2_data = (coord_type*)PyArray_DATA(p2->coords);
+        if (p1_data[0] != p2_data[0]) return p1_data[0] < p2_data[0];
+        if (p1_data[1] != p2_data[1]) return p1_data[1] < p2_data[1];
+        return p1_data[2] < p2_data[2];
+    }
+
+    bool operator()(const PointType* p1, const PointType* p2) const {
+        coord_type* p1_data = (coord_type*)PyArray_DATA(p1->coords);
+        coord_type* p2_data = (coord_type*)PyArray_DATA(p2->coords);
+        if (p1_data[0] != p2_data[0]) return p1_data[0] < p2_data[0];
+        if (p1_data[1] != p2_data[1]) return p1_data[1] < p2_data[1];
+        return p1_data[2] < p2_data[2];
+    }
+};
+
 struct BoundingBox {
     using coord_type  = typename TypeSelector<R4Py_DiscretePoint>::type;
     coord_type xmin_, xmax_;
@@ -111,8 +137,6 @@ struct BoundingBox {
 
 
 std::ostream& operator<<(std::ostream& os, const BoundingBox& box); 
-
-
 
 }
 

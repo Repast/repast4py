@@ -1,7 +1,10 @@
 #include "gtest/gtest.h"
 #include "mpi.h"
+#include "Python.h"
 
 #include "distributed_space.h"
+#include "SpatialTree.h"
+
 
 using namespace repast4py;
 
@@ -388,7 +391,7 @@ TEST(CartesianTopology, testSpecifyProcsPerDim) {
         BoundingBox lb(0, 0, 0, 0);
 
         int rank = ct.getRank();
-        ct.getBounds(gb);
+        ct.getBounds(lb);
         if (rank == 0) {
             ASSERT_EQ(0, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
@@ -399,53 +402,155 @@ TEST(CartesianTopology, testSpecifyProcsPerDim) {
         } else if (rank == 1) {
             ASSERT_EQ(0, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
-            ASSERT_EQ(25, lb.ymin_);
+            ASSERT_EQ(50, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 2) {
             ASSERT_EQ(0, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
-            ASSERT_EQ(50, lb.ymin_);
+            ASSERT_EQ(100, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 3) {
             ASSERT_EQ(0, lb.xmin_);
-            ASSERT_EQ(25, lb.x_extent_);
-            ASSERT_EQ(75, lb.ymin_);
+            ASSERT_EQ(50, lb.x_extent_);
+            ASSERT_EQ(150, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 4) {
-            ASSERT_EQ(25, lb.xmin_);
+            ASSERT_EQ(50, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
             ASSERT_EQ(0, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 5) {
-            ASSERT_EQ(25, lb.xmin_);
+            ASSERT_EQ(50, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
-            ASSERT_EQ(25, lb.ymin_);
+            ASSERT_EQ(50, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 6) {
-            ASSERT_EQ(25, lb.xmin_);
-            ASSERT_EQ(25, lb.x_extent_);
-            ASSERT_EQ(50, lb.ymin_);
-            ASSERT_EQ(25, lb.y_extent_);
+            ASSERT_EQ(50, lb.xmin_);
+            ASSERT_EQ(50, lb.x_extent_);
+            ASSERT_EQ(100, lb.ymin_);
+            ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         } else if (rank == 7) {
-            ASSERT_EQ(25, lb.xmin_);
+            ASSERT_EQ(50, lb.xmin_);
             ASSERT_EQ(50, lb.x_extent_);
-            ASSERT_EQ(75, lb.ymin_);
+            ASSERT_EQ(150, lb.ymin_);
             ASSERT_EQ(50, lb.y_extent_);
             ASSERT_EQ(0, lb.zmin_);
             ASSERT_EQ(0, lb.z_extent_);
         }
     }
+}
+
+class SpatialTreeTests : public testing::Test {
+
+protected:
+
+static PyObject* space;
+static PyObject* core;
+static PyObject* cpt_class;
+static PyObject* agent_class;
+
+static void SetUpTestSuite() {
+    Py_Initialize();
+    space = PyImport_ImportModule("repast4py.space");
+    if (space == nullptr) {
+        FAIL();
+    }
+
+    cpt_class = PyObject_GetAttrString(space, "ContinuousPoint");
+}
+
+static void TearDownTestSuite() {
+    Py_XDECREF(space);
+    Py_XDECREF(cpt_class);
+    Py_Finalize();
+}
+
+static R4Py_ContinuousPoint* create_pt(float x, float y, int id) {
+    PyObject* arg_list = Py_BuildValue("dd", x, y);
+    R4Py_ContinuousPoint* pt = (R4Py_ContinuousPoint*)PyObject_CallObject(cpt_class, arg_list);
+    Py_DECREF(arg_list);
+
+    return pt;
+}
+
+};
+
+PyObject* SpatialTreeTests::space = nullptr;
+PyObject* SpatialTreeTests::cpt_class = nullptr;
+
+TEST_F(SpatialTreeTests, testSOI) {
+    
+
+    SOItems<R4Py_ContinuousPoint> soi;
+    ASSERT_EQ(0, soi.size());
+
+    auto s1 = create_pt(1, 1, 0);
+    soi.add(s1);
+    ASSERT_EQ(1, soi.size());
+
+    auto s2 = create_pt(1, 10, 1);
+    soi.add(s2);
+    ASSERT_EQ(2, soi.size());
+
+    ASSERT_TRUE(soi.remove(s1));
+    ASSERT_EQ(1, soi.size());
+
+    ASSERT_TRUE(soi.remove(s2));
+    ASSERT_EQ(0, soi.size());
+
+    ASSERT_FALSE(soi.remove(s2));
+
+    soi.add(s1);
+    soi.add(s2);
+    ASSERT_EQ(2, soi.size());
+    soi.clear();
+    ASSERT_EQ(0, soi.size());
+}
+
+
+TEST_F(SpatialTreeTests, testMOI) {
+
+    MOItems<R4Py_ContinuousPoint> moi;
+    ASSERT_EQ(0, moi.size());
+
+    auto s1 = create_pt(1, 1, 0);
+    moi.add(s1);
+    ASSERT_EQ(1, moi.size());
+
+    auto s2 = create_pt(1, 10, 1);
+    moi.add(s2);
+    ASSERT_EQ(2, moi.size());
+
+    auto s3 = create_pt(1, 10, 2);
+    moi.add(s3);
+    // still 2 -- we are counting the points
+    ASSERT_EQ(2, moi.size());
+    
+    ASSERT_TRUE(moi.remove(s2));
+    ASSERT_EQ(2, moi.size());
+
+    ASSERT_TRUE(moi.remove(s3));
+    ASSERT_EQ(1, moi.size());
+
+    ASSERT_FALSE(moi.remove(s3));
+    ASSERT_EQ(1, moi.size());
+
+    moi.add(s2);
+    ASSERT_EQ(2, moi.size());
+
+    moi.clear();
+    ASSERT_EQ(0, moi.size());
 }
 

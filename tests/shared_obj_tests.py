@@ -49,7 +49,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_num_agents(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -79,7 +79,7 @@ class SharedCSTests(unittest.TestCase):
     def test_ops(self):
         # make 2 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -133,7 +133,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_oob(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -184,7 +184,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_oob_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -235,7 +235,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_buffer_data_2x1_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -279,7 +279,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_buffer_data_2x2_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -329,7 +329,7 @@ class SharedCSTests(unittest.TestCase):
 
     def test_buffer_data_4x2_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -389,7 +389,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_num_agents(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -418,7 +418,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_ops(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -471,7 +471,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_oob(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -521,7 +521,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_oob_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -653,7 +653,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_buffer_data_2x1_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -696,7 +696,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_buffer_data_2x2_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -741,7 +741,7 @@ class SharedGridTests(unittest.TestCase):
 
     def test_buffer_data_4x2_periodic(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1135,7 +1135,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests same named proj in context throws exception
     def test_duplicate_projection(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
@@ -1150,7 +1150,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests adding / removing from context
     def test_add_remove1(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1181,7 +1181,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests context.count
     def test_counts(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1216,7 +1216,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests context.contains_type
     def test_has_type(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             context = ctx.SharedContext(comm)
@@ -1230,7 +1230,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests context.agents()
     def test_get_agents(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             context = ctx.SharedContext(comm)
@@ -1301,7 +1301,7 @@ class SharedContextTests1(unittest.TestCase):
     # tests adding / removing from context, adds / removes from projection
     def test_add_remove2(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1339,12 +1339,107 @@ class SharedContextTests1(unittest.TestCase):
                     self.assertEqual(a2, agent)
                 self.assertEqual(1, count)
 
+    def test_far_move(self):
+        box = geometry.BoundingBox(xmin=0, xextent=120, ymin=0, yextent=120, zmin=0, zextent=0)
+        grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
+                                occupancy=OccupancyType.Multiple, buffer_size=2, comm=MPI.COMM_WORLD)
+
+        context = ctx.SharedContext(MPI.COMM_WORLD)
+        context.add_projection(grid)
+        rank = MPI.COMM_WORLD.Get_rank()
+
+        if rank == 0:
+            a1 = EAgent(1, 0, rank, 12)
+            context.add(a1)
+            pt = space.DiscretePoint(12, 5)
+            grid.move(a1, pt)
+
+        elif rank == 8:
+            a2 = EAgent(2, 0, rank, 12)
+            context.add(a2)
+            pt = space.DiscretePoint(84, 90)
+            grid.move(a2, pt)
+
+        context.synchronize(create_agent)
+
+        if rank == 0:
+            a1 = context.agent((1, 0, 0))
+            # well oob into rank 8
+            pt = space.DiscretePoint(82, 91)
+            grid.move(a1, pt)
+
+        context.synchronize(create_agent)
+
+        if rank == 0:
+            a1 = context.agent((1, 0, 0))
+            self.assertIsNone(a1)
+
+        if rank == 8:
+            a1 = context.agent((1, 0, 0))
+            self.assertIsNotNone(a1)
+
+    def test_far_move_cs(self):
+        box = geometry.BoundingBox(xmin=0, xextent=120, ymin=0, yextent=120, zmin=0, zextent=0)
+        grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky,
+                                  occupancy=OccupancyType.Multiple, buffer_size=2,
+                                  tree_threshold=10, comm=MPI.COMM_WORLD)
+
+        context = ctx.SharedContext(MPI.COMM_WORLD)
+        context.add_projection(grid)
+        rank = MPI.COMM_WORLD.Get_rank()
+
+        if rank == 0:
+            a1 = EAgent(1, 0, rank, 12)
+            context.add(a1)
+            pt = space.ContinuousPoint(12, 5)
+            grid.move(a1, pt)
+
+        elif rank == 8:
+            a2 = EAgent(2, 0, rank, 12)
+            context.add(a2)
+            pt = space.ContinuousPoint(84, 90)
+            grid.move(a2, pt)
+
+        context.synchronize(create_agent)
+
+        if rank == 0:
+            a1 = context.agent((1, 0, 0))
+            # well oob into rank 8
+            pt = space.ContinuousPoint(82, 91)
+            grid.move(a1, pt)
+
+        if rank == 8:
+            a2 = context.agent((2, 0, 8))
+            pt = space.ContinuousPoint(12, 5)
+            grid.move(a2, pt)
+
+        context.synchronize(create_agent)
+
+        if rank == 0:
+            a1 = context.agent((1, 0, 0))
+            self.assertIsNone(a1)
+            a1 = context.agent((2, 0, 8))
+            self.assertIsNotNone(a1)
+
+        if rank == 8:
+            a1 = context.agent((1, 0, 0))
+            self.assertIsNotNone(a1)
+
+        # test the decreffing when object is oob, then not
+        if rank == 8:
+            a1 = context.agent((1, 0, 0))
+            for _ in range(10):
+                pt = space.ContinuousPoint(12, 5)
+                grid.move(a1, pt)
+                pt = space.ContinuousPoint(82, 91)
+                grid.move(a1, pt)
+
     # tests context synchronization in 2D 2 rank
     # adds agents moves them oob in a grid and
     # tests if moved to correct location
     def test_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1444,7 +1539,7 @@ class SharedContextTests1(unittest.TestCase):
     # Tests that buffer is filled on synchronization in 2D, 2 rank world
     def test_buffer(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1543,6 +1638,71 @@ class SharedContextTests1(unittest.TestCase):
                 # nothing at 9, 15 now
                 pt = space.DiscretePoint(9, 15)
                 self.assertIsNone(grid.get_agent(pt))
+
+    def test_buffer_0(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create(new_group)
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            grid = space.SharedGrid("shared_grid", bounds=box, borders=BorderType.Sticky,
+                                    occupancy=OccupancyType.Multiple, buffer_size=0, comm=comm)
+
+            context = ctx.SharedContext(comm)
+            context.add_projection(grid)
+
+            if rank == 0:
+                a01 = EAgent(1, 0, rank, 1)
+                a02 = EAgent(2, 0, rank, 2)
+                a03 = EAgent(3, 0, rank, 3)
+                context.add(a01)
+                context.add(a02)
+                context.add(a03)
+
+                pt = space.DiscretePoint(8, 20)
+                grid.move(a01, pt)
+                pt = space.DiscretePoint(9, 15)
+                grid.move(a02, pt)
+                pt = space.DiscretePoint(9, 15)
+                grid.move(a03, pt)
+
+            if rank == 1:
+                a11 = EAgent(1, 0, rank, 11)
+                a12 = EAgent(2, 0, rank, 12)
+                a13 = EAgent(3, 0, rank, 13)
+
+                context.add(a11)
+                context.add(a12)
+                context.add(a13)
+
+                pt = space.DiscretePoint(10, 20)
+                grid.move(a11, pt)
+                pt = space.DiscretePoint(11, 15)
+                grid.move(a12, pt)
+                pt = space.DiscretePoint(15, 15)
+                grid.move(a13, pt)
+
+            grid._pre_synch_ghosts(context._agent_manager)
+            self.assertEqual(0, len(context._agent_manager._ghost_agents))
+            context.synchronize(create_agent, False)
+            grid._synch_ghosts(context._agent_manager, create_agent)
+
+            if rank == 0:
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
+
+            if rank == 1:
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
+
+            grid._pre_synch_ghosts(context._agent_manager)
+            grid._synch_ghosts(context._agent_manager, create_agent)
+
+            if rank == 1:
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+                self.assertEqual(3, len(context._agent_manager._local_agents))
 
     def test_buffer_3x3(self):
         comm = MPI.COMM_WORLD
@@ -1645,7 +1805,7 @@ class SharedContextTests2(unittest.TestCase):
 
     def test_add_remove(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1685,7 +1845,7 @@ class SharedContextTests2(unittest.TestCase):
 
     def test_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1785,7 +1945,7 @@ class SharedContextTests2(unittest.TestCase):
 
     def test_buffer(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -1880,6 +2040,82 @@ class SharedContextTests2(unittest.TestCase):
                 # nothing at 9, 15 now
                 pt = space.ContinuousPoint(9, 15)
                 self.assertIsNone(grid.get_agent(pt))
+
+    def test_buffer_0(self):
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create(new_group)
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            box = geometry.BoundingBox(xmin=0, xextent=20, ymin=0, yextent=40, zmin=0, zextent=0)
+            grid = space.SharedCSpace("shared_grid", bounds=box, borders=BorderType.Sticky,
+                                      occupancy=OccupancyType.Multiple, buffer_size=0, comm=comm,
+                                      tree_threshold=100)
+
+            context = ctx.SharedContext(comm)
+            context.add_projection(grid)
+
+            if rank == 0:
+                a01 = EAgent(1, 0, rank, 1)
+                a02 = EAgent(2, 0, rank, 2)
+                a03 = EAgent(3, 0, rank, 3)
+                context.add(a01)
+                context.add(a02)
+                context.add(a03)
+
+                pt = space.ContinuousPoint(8, 20)
+                grid.move(a01, pt)
+                pt = space.ContinuousPoint(9, 15)
+                grid.move(a02, pt)
+                pt = space.ContinuousPoint(9, 15)
+                grid.move(a03, pt)
+
+            if rank == 1:
+                a11 = EAgent(1, 0, rank, 11)
+                a12 = EAgent(2, 0, rank, 12)
+                a13 = EAgent(3, 0, rank, 13)
+
+                context.add(a11)
+                context.add(a12)
+                context.add(a13)
+
+                pt = space.ContinuousPoint(10, 20)
+                grid.move(a11, pt)
+                pt = space.ContinuousPoint(11, 15)
+                grid.move(a12, pt)
+                pt = space.ContinuousPoint(15, 15)
+                grid.move(a13, pt)
+
+            context.synchronize(create_agent)
+
+            if rank == 0:
+                pt = space.ContinuousPoint(10, 20)
+                agent = grid.get_agent(pt)
+                self.assertIsNone(agent)
+
+                pt = space.ContinuousPoint(11, 15)
+                agent = grid.get_agent(pt)
+                self.assertIsNone(agent)
+
+                self.assertEqual(3, len(context._agent_manager._local_agents))
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+
+            if rank == 1:
+                pt = space.ContinuousPoint(8, 20)
+                agent = grid.get_agent(pt)
+                self.assertIsNone(agent)
+
+                pt = space.ContinuousPoint(9, 15)
+                agent = grid.get_agent(pt)
+                self.assertIsNone(agent)
+
+                self.assertEqual(0, len(context._agent_manager._ghost_agents))
+
+            grid._pre_synch_ghosts(context._agent_manager)
+            grid._synch_ghosts(context._agent_manager, create_agent)
+
+            self.assertEqual(0, len(context._agent_manager._ghost_agents))
 
     def test_buffer_3x3(self):
         comm = MPI.COMM_WORLD
@@ -1993,6 +2229,32 @@ class SharedContextTests3(unittest.TestCase):
 
     long_message = True
 
+    # def test_cart_comm(self):
+    #     comm = MPI.COMM_WORLD
+    #     rank = comm.Get_rank()
+
+    #     context = ctx.SharedContext(comm)
+
+    #     box = geometry.BoundingBox(xmin=0, xextent=90, ymin=0, yextent=120, zmin=0, zextent=0)
+    #     cspace = space.SharedCSpace("shared_space", bounds=box, borders=BorderType.Sticky,
+    #                                 occupancy=OccupancyType.Multiple, buffer_size=2, comm=comm,
+    #                                 tree_threshold=100)
+
+    #     context.add_projection(cspace)
+    #     c_moved = [[] for _ in range(cspace._cart_comm.size)]
+
+    #     if rank == 0:
+    #         for i in range(30):
+    #             cp, _ = get_random_pts(box)
+    #             c_moved[1].append((cp.coordinates, (i, 2, 3)))
+
+    #     if rank == 1:
+    #         for i in range(30):
+    #             cp, _ = get_random_pts(box)
+    #             c_moved[0].append((cp.coordinates, (i, 2, 3)))
+
+    #     cspace._cart_comm.alltoall(c_moved)
+
     # Idea here is move agents into buffered areas
     # and record their locations and ids. That
     # data is sent to rank where the agents are
@@ -2019,8 +2281,8 @@ class SharedContextTests3(unittest.TestCase):
         context.add_projection(cspace)
         context.add_projection(grid)
 
-        g_moved = [[] for i in range(grid._cart_comm.size)]
-        c_moved = [[] for i in range(grid._cart_comm.size)]
+        g_moved = [[] for _ in range(grid._cart_comm.size)]
+        c_moved = [[] for _ in range(grid._cart_comm.size)]
 
         gm = []
         cm = []
@@ -2127,7 +2389,7 @@ class SharedContextTests3(unittest.TestCase):
 
     # def test_duplicate_requested(self):
     #     new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-    #     comm = MPI.COMM_WORLD.Create_group(new_group)
+    #     comm = MPI.COMM_WORLD.Create(new_group)
 
     #     if comm != MPI.COMM_NULL:
     #         rank = comm.Get_rank()
@@ -2158,7 +2420,7 @@ class SharedContextTests3(unittest.TestCase):
     def test_requested(self):
         # 4 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2267,7 +2529,7 @@ class SharedContextTests3(unittest.TestCase):
         """
         # 4 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2311,7 +2573,7 @@ class SharedContextTests3(unittest.TestCase):
         """
         # 4 rank comm
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2359,7 +2621,7 @@ class SharedContextTests3(unittest.TestCase):
 
     def test_requested_with_proj(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2482,7 +2744,7 @@ class SharedContextTests3(unittest.TestCase):
 
     def test_requested_with_removed(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1, 2, 3])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2537,7 +2799,7 @@ class PeriodicSyncTests(unittest.TestCase):
 
     def test_4x2_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2629,7 +2891,7 @@ class PeriodicSyncTests(unittest.TestCase):
 
     def test_2x1_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()
@@ -2712,7 +2974,7 @@ class PeriodicSyncTests(unittest.TestCase):
 
     def test_2x2_synch(self):
         new_group = MPI.COMM_WORLD.Get_group().Excl([4, 5, 6, 7, 8])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             rank = comm.Get_rank()

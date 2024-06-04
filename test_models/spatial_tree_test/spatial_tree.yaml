@@ -1,0 +1,5 @@
+random.seed: 42
+stop.at: 10
+walker.count: 30000
+world.width: 16000
+world.height: 16000

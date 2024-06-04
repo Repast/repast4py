@@ -103,7 +103,6 @@ class _Impl2D:
 
     def __init__(self, bounds, borders, init_value, dtype):
         self.tpt = dpt(0, 0, 0)
-        self.idx = np.array([[0], [0]])
         if borders == BorderType.Sticky:
             self.borders = GridStickyBorders(bounds)
         elif borders == BorderType.Periodic:
@@ -121,14 +120,16 @@ class _Impl2D:
         self.min_max = np.array(
             [bounds.xmin, bounds.xmin + bounds.xextent - 1, bounds.ymin, bounds.ymin + bounds.yextent - 1])
 
-    def _update_idx(self, pt):
-        """Updates in the internal indexing array from the specified point,
-        converting from x,y,z order to pytorch order (z,y,x)
-        """
-        self.idx[0, 0] = pt[1]
-        self.idx[1, 0] = pt[0]
+    # def _update_idx(self, pt):
+    #     """Updates in the internal indexing array from the specified point,
+    #     converting from x,y,z order to pytorch order (z,y,x)
+    #     """
+    #     # self.idx[0, 0] = pt[1]
+    #     # self.idx[1, 0] = pt[0]
+    #     self.idx[0] = pt[1]
+    #     self.idx[1] = pt[0]
 
-        return self.idx
+    #     return self.idx
 
     def get(self, pt: DiscretePoint):
         """Gets the value at the specified point
@@ -139,7 +140,7 @@ class _Impl2D:
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.pt_translation
-        return self.grid[self._update_idx(npt)]
+        return self.grid[npt[1], npt[0]]
 
     def set(self, pt: DiscretePoint, val):
         """Sets the value at the specified location
@@ -153,7 +154,8 @@ class _Impl2D:
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.pt_translation
-        self.grid[self._update_idx(npt)] = val
+        # print(self._update_idx(npt))
+        self.grid[npt[1], npt[0]] = val
 
     def get_nghs(self, pt: DiscretePoint):
         """ Gets the neighboring values and locations around the specified point.
@@ -165,7 +167,7 @@ class _Impl2D:
         grid_idxs = nghs + self.ngh_translation
         # swap to remove the row major
         nghs[[0, 1]] = nghs[[1, 0]]
-        return (self.grid[grid_idxs], nghs)
+        return (self.grid[grid_idxs[0], grid_idxs[1]], nghs)
 
     # def _compute_slice(self, key):
     #     if isinstance(key, tuple):
@@ -234,18 +236,18 @@ class _Impl3D:
              bounds.ymin, bounds.ymin + bounds.yextent - 1,
              bounds.zmin, bounds.zmin + bounds.zextent - 1])
 
-    def _update_idx(self, pt):
-        """Updates in the internal indexing array from the specified point,
-        converting from x,y,z order to pytorch order (z,y,x)
-        """
-        # Torch 3D tensor of shape (3, 4, 2)
-        # is 3 arrays of 4 rows and 2 columns:
-        # thus (z, y, x)
-        self.idx[0, 0] = pt[2]
-        self.idx[1, 0] = pt[1]
-        self.idx[2, 0] = pt[0]
+    # def _update_idx(self, pt):
+    #     """Updates in the internal indexing array from the specified point,
+    #     converting from x,y,z order to pytorch order (z,y,x)
+    #     """
+    #     # Torch 3D tensor of shape (3, 4, 2)
+    #     # is 3 arrays of 4 rows and 2 columns:
+    #     # thus (z, y, x)
+    #     self.idx[0, 0] = pt[2]
+    #     self.idx[1, 0] = pt[1]
+    #     self.idx[2, 0] = pt[0]
 
-        return self.idx
+    #     return self.idx
 
     def get(self, pt: DiscretePoint):
         """Gets the value at the specified point
@@ -256,7 +258,7 @@ class _Impl3D:
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.pt_translation
-        return self.grid[self._update_idx(npt)]
+        return self.grid[npt[2], npt[1], npt[0]]
 
     def set(self, pt: DiscretePoint, val):
         """Sets the value at the specified location
@@ -268,7 +270,7 @@ class _Impl3D:
         self.borders._transform(pt, self.tpt)
         # npt is a np array
         npt = self.tpt.coordinates + self.pt_translation
-        self.grid[self._update_idx(npt)] = val
+        self.grid[npt[2], npt[1], npt[0]] = val
 
     def get_nghs(self, pt: DiscretePoint):
         """Gets the neighboring values and locations around the specified point.
@@ -282,7 +284,7 @@ class _Impl3D:
         grid_idxs = nghs + self.ngh_translation
         # swap to reverse tensor (z,y,x) order
         nghs[[0, 1, 2]] = nghs[[2, 1, 0]]
-        return (self.grid[grid_idxs], nghs)
+        return (self.grid[grid_idxs[0], grid_idxs[1], grid_idxs[2]], nghs)
 
     # def _compute_slice(self, key):
     #     if isinstance(key, tuple):

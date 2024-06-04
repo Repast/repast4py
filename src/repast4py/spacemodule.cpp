@@ -18,6 +18,7 @@
 
 #include "mpi4py/mpi4py.h"
 
+#include "types.h"
 #include "space.h"
 #include "grid.h"
 #include "cspace.h"
@@ -46,8 +47,13 @@ static PyObject* DiscretePoint_new(PyTypeObject* type, PyObject* args, PyObject*
     self = (R4Py_DiscretePoint*) type->tp_alloc(type, 0);
     if (self != NULL) {
         npy_intp shape[] = {3};
+        #if defined(_MSC_VER)
+        self->coords = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type, PyArray_DescrFromType(NPY_LONGLONG), 
+            1, shape, NULL, NULL, NPY_ARRAY_C_CONTIGUOUS, NULL);
+        #else
         self->coords = (PyArrayObject*)PyArray_NewFromDescr(&PyArray_Type, PyArray_DescrFromType(NPY_LONG), 
             1, shape, NULL, NULL, NPY_ARRAY_C_CONTIGUOUS, NULL);
+        #endif
         if (self->coords == NULL) {
             Py_DECREF(self);
             return NULL;
@@ -61,9 +67,14 @@ static PyObject* DiscretePoint_new(PyTypeObject* type, PyObject* args, PyObject*
 static int DiscretePoint_init(R4Py_DiscretePoint* self, PyObject* args, PyObject* kwds) {
     static char* kwlist[] = {(char*)"x", (char*)"y", (char*)"z", NULL};
     
-    long* d = (long*)PyArray_DATA(self->coords);
+    long_t* d = (long_t*)PyArray_DATA(self->coords);
     d[2] = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ll|l", kwlist, &d[0], &d[1], &d[2])) {
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "LL|L", kwlist, &d[0], &d[1], &d[2]))
+    #else
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ll|l", kwlist, &d[0], &d[1], &d[2]))
+    #endif
+    {
         return -1;
     }
 
@@ -71,40 +82,55 @@ static int DiscretePoint_init(R4Py_DiscretePoint* self, PyObject* args, PyObject
 }
 
 static PyObject* DiscretePoint_reset1D(PyObject* self, PyObject* args) {
-    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
-    if (!PyArg_ParseTuple(args, "l", &d[0])) {
+    long_t* d = (long_t*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(args, "L", &d[0])) 
+    #else
+    if (!PyArg_ParseTuple(args, "l", &d[0]))
+    #endif
+    {
         return NULL;
     }
     Py_RETURN_NONE;
 }
 
 static PyObject* DiscretePoint_reset2D(PyObject* self, PyObject* args) {
-    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
-    if (!PyArg_ParseTuple(args, "ll", &d[0], &d[1])) {
+    long_t* d = (long_t*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(args, "LL", &d[0], &d[1])) 
+    #else
+    if (!PyArg_ParseTuple(args, "ll", &d[0], &d[1])) 
+    #endif
+    {
         return NULL;
     }
     Py_RETURN_NONE;
 }
 
 static PyObject* DiscretePoint_reset3D(PyObject* self, PyObject* args) {
-    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
-    if (!PyArg_ParseTuple(args, "lll", &d[0], &d[1], &d[2])) {
+    long_t* d = (long_t*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(args, "LLL", &d[0], &d[1], &d[2]))
+    #else
+    if (!PyArg_ParseTuple(args, "lll", &d[0], &d[1], &d[2]))
+    #endif
+    {
         return NULL;
     }
     Py_RETURN_NONE;
 }
 
 static PyObject* DiscretePoint_reset(PyObject* self, PyObject* args) {
-    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    long_t* d = (long_t*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
     PyTupleObject* pt;
     if (!PyArg_ParseTuple(args, "O!", &PyTuple_Type, &pt)) {
         return NULL;
     }
 
-    d[0] = PyLong_AsLong(PyTuple_GET_ITEM(pt, 0));
-    d[1] = PyLong_AsLong(PyTuple_GET_ITEM(pt, 1));
-    d[2] = PyLong_AsLong(PyTuple_GET_ITEM(pt, 2));
-
+    d[0] = PyLong_AsLongT(PyTuple_GET_ITEM(pt, 0));
+    d[1] = PyLong_AsLongT(PyTuple_GET_ITEM(pt, 1));
+    d[2] = PyLong_AsLongT(PyTuple_GET_ITEM(pt, 2));
+    
     Py_RETURN_NONE;
 }
 
@@ -124,10 +150,15 @@ static PyObject* DiscretePoint_reset_from_array(PyObject* self, PyObject* args) 
     npy_intp* shape = PyArray_SHAPE(arr);
     npy_int c = shape[0];
     
-    long* d = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+    long_t* d = (long_t*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
     int typ = PyArray_TYPE(arr);
     if (typ == NPY_LONG) {
         long* o = (long*)PyArray_DATA(arr);
+        for (int i = 0; i < c && i < 3; ++i) {
+            d[i] = o[i];
+        }
+    } else if (typ == NPY_LONGLONG) {
+        long_t* o = (long_t*)PyArray_DATA(arr);
         for (int i = 0; i < c && i < 3; ++i) {
             d[i] = o[i];
         }
@@ -150,15 +181,15 @@ static PyObject* DiscretePoint_get_coords(R4Py_DiscretePoint* self, void* closur
 }
 
 static PyObject* DiscretePoint_get_x(R4Py_DiscretePoint* self, void* closure) {
-    return PyLong_FromLong(((long*)PyArray_DATA(self->coords))[0]);
+    return PyLong_FromLongT(((long_t*)PyArray_DATA(self->coords))[0]);
 }
 
 static PyObject* DiscretePoint_get_y(R4Py_DiscretePoint* self, void* closure) {
-    return PyLong_FromLong(((long*)PyArray_DATA(self->coords))[1]);
+    return PyLong_FromLongT(((long_t*)PyArray_DATA(self->coords))[1]);
 }
 
 static PyObject* DiscretePoint_get_z(R4Py_DiscretePoint* self, void* closure) {
-    return PyLong_FromLong(((long*)PyArray_DATA(self->coords))[2]);
+    return PyLong_FromLongT(((long_t*)PyArray_DATA(self->coords))[2]);
 }
 
 PyDoc_STRVAR(dp_x,
@@ -205,14 +236,14 @@ static PyMethodDef DiscretePoint_methods[] = {
 
 
 static PyObject* DiscretePoint_repr(R4Py_DiscretePoint* self) {
-    long* data = (long*)PyArray_DATA(self->coords);
+    long_t* data = (long_t*)PyArray_DATA(self->coords);
     return PyUnicode_FromFormat("DiscretePoint(%ld, %ld, %ld)", data[0], data[1], data[2]);   
 }
 
 static PyObject* DiscretePoint_richcmp(PyObject* self, PyObject* other, int op) {
     if (op == Py_EQ && Py_TYPE(self) == Py_TYPE(other)) {
-        long* p1 = (long*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
-        long* p2 = (long*)PyArray_DATA(((R4Py_DiscretePoint*)other)->coords);
+        long_t* p1 = (long_t*)PyArray_DATA(((R4Py_DiscretePoint*)self)->coords);
+        long_t* p2 = (long_t*)PyArray_DATA(((R4Py_DiscretePoint*)other)->coords);
         if (p1[0] == p2[0] && p1[1] == p2[1] && p1[2] == p2[2]) 
             Py_RETURN_TRUE;
         else
@@ -546,11 +577,15 @@ static int GridStickyBorders_init(R4Py_GridStickyBorders* self, PyObject* args, 
         return -1;
     }
 
-    long xmin, width;
-    long ymin, height;
-    long zmin, depth;
+    long_t xmin, width;
+    long_t ymin, height;
+    long_t zmin, depth;
 
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(bounds, "LLLLLL", &xmin, &width, &ymin, &height, &zmin, &depth))
+    #else
     if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth))
+    #endif
     {
         return -1;
     }
@@ -666,11 +701,15 @@ static int GridPeriodicBorders_init(R4Py_GridPeriodicBorders* self, PyObject* ar
         return -1;
     }
 
-    long xmin, width;
-    long ymin, height;
-    long zmin, depth;
+    long_t xmin, width;
+    long_t ymin, height;
+    long_t zmin, depth;
 
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(bounds, "LLLLLL", &xmin, &width, &ymin, &height, &zmin, &depth))
+    #else
     if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth))
+    #endif
     {
         return -1;
     }
@@ -791,11 +830,16 @@ static int Grid_init(R4Py_Grid* self, PyObject* args, PyObject* kwds) {
         return -1;
     }
 
-    long xmin, width;
-    long ymin, height;
-    long zmin, depth;
+    long_t xmin, width;
+    long_t ymin, height;
+    long_t zmin, depth;
 
-    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) {
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(bounds, "LLLLLL", &xmin, &width, &ymin, &height, &zmin, &depth)) 
+    #else
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) 
+    #endif
+    {
         return -1;
     }
 
@@ -918,9 +962,9 @@ static PyObject* Grid_getAgents(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_Grid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
+    AgentListPtr list = ((R4Py_Grid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
-    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    agent_iter->iter = new TAgentIter<AgentList>(list);
     return (PyObject*)agent_iter;
 }
 
@@ -1106,11 +1150,16 @@ static int SharedGrid_init(R4Py_SharedGrid* self, PyObject* args, PyObject* kwds
         return -1;
     }
 
-    long xmin, x_extent;
-    long ymin, y_extent;
-    long zmin, z_extent;
+    long_t xmin, x_extent;
+    long_t ymin, y_extent;
+    long_t zmin, z_extent;
 
-    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent)) {
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(bounds, "LLLLLL", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent)) 
+    #else
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent)) 
+    #endif
+    {
         return -1;
     }
 
@@ -1235,13 +1284,14 @@ static PyObject* SharedGrid_synchMove(PyObject* self, PyObject* args) {
     if (pt == NULL) {
         return NULL;
     }
-    long* obj_data = (long*)PyArray_DATA(obj);
-    long* pt_data = (long*)PyArray_DATA(pt->coords);
+    long_t* obj_data = (long_t*)PyArray_DATA(obj);
+    long_t* pt_data = (long_t*)PyArray_DATA(pt->coords);
     pt_data[0] = obj_data[0];
     pt_data[1] = obj_data[1];
     pt_data[2] = obj_data[2];
 
     ((R4Py_SharedGrid*)self)->grid->move((R4Py_Agent*)agent, pt);
+    Py_DECREF(pt);
 
     Py_RETURN_NONE;
 }
@@ -1269,9 +1319,9 @@ static PyObject* SharedGrid_getAgents(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
+    AgentListPtr list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
-    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    agent_iter->iter = new TAgentIter<AgentList>(list);
     return (PyObject*)agent_iter;
 }
 
@@ -1285,17 +1335,17 @@ static PyObject* SharedGrid_getNumAgents(PyObject* self, PyObject* args, PyObjec
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
+    AgentListPtr list = ((R4Py_SharedGrid*)self)->grid->getAgentsAt((R4Py_DiscretePoint*)pt);
     if (agent_type == -1) {
-        return PyLong_FromLong(list->size());
+        return PyLong_FromLongT(list->size());
     } else {
-        long count = 0;
+        long_t count = 0;
         for (auto agent : (*list)) {
             if (agent->aid->type == agent_type) {
                 ++count;
             }
         }
-        return PyLong_FromLong(count);
+        return PyLong_FromLongT(count);
     } 
 }
 
@@ -1320,8 +1370,13 @@ static PyObject* SharedGrid_clearOOBData(PyObject* self, PyObject* args) {
 
 static PyObject* SharedGrid_getLocalBounds(PyObject* self, PyObject* args) {
     BoundingBox bounds = ((R4Py_SharedGrid*)self)->grid->getLocalBounds();
+    #if defined(_MSC_VER)
+    PyObject* box_args = Py_BuildValue("(LLLLLL)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
+        bounds.zmin_, bounds.z_extent_);
+    #else
     PyObject* box_args = Py_BuildValue("(llllll)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
         bounds.zmin_, bounds.z_extent_);
+    #endif
     PyObject* pmod = PyImport_ImportModule("repast4py.space");
     PyObject* bbox_class = PyObject_GetAttrString(pmod, "BoundingBox");
     PyObject* box = PyObject_CallObject(bbox_class, box_args);
@@ -1602,11 +1657,16 @@ static int CSpace_init(R4Py_CSpace* self, PyObject* args, PyObject* kwds) {
         return -1;
     }
 
-    long xmin, width;
-    long ymin, height;
-    long zmin, depth;
+    long_t xmin, width;
+    long_t ymin, height;
+    long_t zmin, depth;
 
-    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) {
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(bounds, "LLLLLL", &xmin, &width, &ymin, &height, &zmin, &depth)) 
+    #else
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) 
+    #endif
+    {
         return -1;
     }
 
@@ -1729,9 +1789,9 @@ static PyObject* CSpace_getAgents(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_CSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
+    AgentListPtr list = ((R4Py_CSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
-    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    agent_iter->iter = new TAgentIter<AgentList>(list);
     return (PyObject*)agent_iter;
 }
 
@@ -1741,11 +1801,16 @@ static PyObject* CSpace_getAgentsWithin(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    long xmin, width;
-    long ymin, height;
-    long zmin, depth;
+    long_t xmin, width;
+    long_t ymin, height;
+    long_t zmin, depth;
 
-    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) {
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(bounds, "LLLLLL", &xmin, &width, &ymin, &height, &zmin, &depth))
+    #else
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth))
+    #endif
+    {
         return NULL;
     }
 
@@ -1968,11 +2033,16 @@ static int SharedCSpace_init(R4Py_SharedCSpace* self, PyObject* args, PyObject* 
         return -1;
     }
 
-    long xmin, x_extent;
-    long ymin, y_extent;
-    long zmin, z_extent;
+    long_t xmin, x_extent;
+    long_t ymin, y_extent;
+    long_t zmin, z_extent;
 
-    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent)) {
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(bounds, "LLLLLL", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent))
+    #else
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent))
+    #endif
+    {
         return -1;
     }
 
@@ -2118,6 +2188,7 @@ static PyObject* SharedCSpace_synchMove(PyObject* self, PyObject* args) {
     pt_data[2] = obj_data[2];
 
     ((R4Py_SharedCSpace*)self)->space->move((R4Py_Agent*)agent, pt);
+    Py_DECREF(pt);
 
     Py_RETURN_NONE;
 }
@@ -2145,9 +2216,9 @@ static PyObject* SharedCSpace_getAgents(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
+    AgentListPtr list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
     R4Py_AgentIter* agent_iter = (R4Py_AgentIter*)R4Py_AgentIterType.tp_new(&R4Py_AgentIterType, NULL, NULL);
-    agent_iter->iter = new TAgentIter<std::list<R4Py_Agent*>>(list);
+    agent_iter->iter = new TAgentIter<AgentList>(list);
     return (PyObject*)agent_iter;
 }
 
@@ -2161,17 +2232,17 @@ static PyObject* SharedCSpace_getNumAgents(PyObject* self, PyObject* args, PyObj
         return NULL;
     }
 
-    std::shared_ptr<std::list<R4Py_Agent*>> list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
+    AgentListPtr list = ((R4Py_SharedCSpace*)self)->space->getAgentsAt((R4Py_ContinuousPoint*)pt);
     if (agent_type == -1) {
-        return PyLong_FromLong(list->size());
+        return PyLong_FromLongT(list->size());
     } else {
-        long count = 0;
+        long_t count = 0;
         for (auto agent : (*list)) {
             if (agent->aid->type == agent_type) {
                 ++count;
             }
         }
-        return PyLong_FromLong(count);
+        return PyLong_FromLongT(count);
     } 
 }
 
@@ -2196,8 +2267,13 @@ static PyObject* SharedCSpace_clearOOBData(PyObject* self, PyObject* args) {
 
 static PyObject* SharedCSpace_getLocalBounds(PyObject* self, PyObject* args) {
     BoundingBox bounds = ((R4Py_SharedCSpace*)self)->space->getLocalBounds();
+    #if defined(_MSC_VER)
+    PyObject* box_args = Py_BuildValue("(LLLLLL)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
+        bounds.zmin_, bounds.z_extent_);
+    #else
     PyObject* box_args = Py_BuildValue("(llllll)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
         bounds.zmin_, bounds.z_extent_);
+    #endif
     PyObject* pmod = PyImport_ImportModule("repast4py.space");
     PyObject* bbox_class = PyObject_GetAttrString(pmod, "BoundingBox");
     PyObject* box = PyObject_CallObject(bbox_class, box_args);
@@ -2215,11 +2291,16 @@ static PyObject* SharedCSpace_getAgentsWithin(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    long xmin, width;
-    long ymin, height;
-    long zmin, depth;
+    long_t xmin, width;
+    long_t ymin, height;
+    long_t zmin, depth;
 
-    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth)) {
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(bounds, "LLLLLL", &xmin, &width, &ymin, &height, &zmin, &depth))
+    #else
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &width, &ymin, &height, &zmin, &depth))
+    #endif
+    {
         return NULL;
     }
 
@@ -2518,11 +2599,16 @@ static int CartesianTopology_init(R4Py_CartesianTopology* self, PyObject* args, 
         return -1;
     }
 
-    long xmin, x_extent;
-    long ymin, y_extent;
-    long zmin, z_extent;
+    long_t xmin, x_extent;
+    long_t ymin, y_extent;
+    long_t zmin, z_extent;
 
-    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent)) {
+    #if defined(_MSC_VER)
+    if (!PyArg_ParseTuple(bounds, "LLLLLL", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent))
+    #else
+    if (!PyArg_ParseTuple(bounds, "llllll", &xmin, &x_extent, &ymin, &y_extent, &zmin, &z_extent))
+    #endif
+    {
         return -1;
     }
     BoundingBox box(xmin, x_extent, ymin, y_extent, zmin, z_extent);
@@ -2556,8 +2642,13 @@ static PyObject* CartesianTopology_getCartComm(PyObject* self, void* closure) {
 static PyObject* CartesianTopology_getLocalBounds(PyObject* self, void* args) {
     BoundingBox bounds(0, 0, 0, 0, 0, 0);
     ((R4Py_CartesianTopology*)self)->topo->getBounds(bounds);
+    #if defined(_MSC_VER)
+    PyObject* box_args = Py_BuildValue("(LLLLLL)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
+        bounds.zmin_, bounds.z_extent_);
+    #else
     PyObject* box_args = Py_BuildValue("(llllll)", bounds.xmin_, bounds.x_extent_, bounds.ymin_, bounds.y_extent_,
         bounds.zmin_, bounds.z_extent_);
+    #endif
     PyObject* pmod = PyImport_ImportModule("repast4py.space");
     PyObject* bbox_class = PyObject_GetAttrString(pmod, "BoundingBox");
     PyObject* box = PyObject_CallObject(bbox_class, box_args);
@@ -2572,6 +2663,15 @@ static PyObject* CartesianTopology_getLocalBounds(PyObject* self, void* args) {
 static PyObject* CartesianTopology_getCartCoords(PyObject* self, void* closure) {
     std::vector<int> coords;
     ((R4Py_CartesianTopology*)self)->topo->getCoords(coords);
+    #if defined(_MSC_VER)
+    if (coords.size() == 1) {
+        return Py_BuildValue("(L)", coords[0]);
+    } else if (coords.size() == 2) {
+        return Py_BuildValue("(LL)", coords[0], coords[1]);
+    } else {
+        return Py_BuildValue("(LLL)", coords[0], coords[1], coords[2]);
+    }
+    #else
     if (coords.size() == 1) {
         return Py_BuildValue("(l)", coords[0]);
     } else if (coords.size() == 2) {
@@ -2579,6 +2679,8 @@ static PyObject* CartesianTopology_getCartCoords(PyObject* self, void* closure) 
     } else {
         return Py_BuildValue("(lll)", coords[0], coords[1], coords[2]);
     }
+    #endif
+
 }
 
 static PyObject* CartesianTopology_computeBufferData(PyObject* self, PyObject* args) {
@@ -2729,9 +2831,9 @@ static PyTypeObject R4Py_CartesianTopologyType = {
 
 static PyModuleDef spacemodule = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "repast4py._space",
-    .m_doc = "Repast4Py space related classes and functions",
-    .m_size = -1,
+    "repast4py._space",
+    "Repast4Py space related classes and functions",
+    -1,
 };
 
 // PyMODINIT_FUNC adds "extern C" among other things
