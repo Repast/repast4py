@@ -48,7 +48,7 @@ class SharedDirectedNetworkTests(unittest.TestCase):
     def test_add_remove(self):
         # make 1 rank comm for basic add remove tests
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             g = DirectedSharedNetwork('network', comm)
@@ -636,7 +636,7 @@ class SharedUndirectedNetworkTests(unittest.TestCase):
     def test_add_remove(self):
         # make 1 rank comm for basic add remove tests
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             g = UndirectedSharedNetwork('network', comm)
@@ -1475,7 +1475,7 @@ class InitNetworkTests(unittest.TestCase):
     def test_generation1(self):
         # make 1 rank comm for basic add remove tests
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             g = nx.generators.watts_strogatz_graph(30, 2, 0.25)
@@ -1515,7 +1515,7 @@ class InitNetworkTests(unittest.TestCase):
     def test_generation2(self):
         # make 1 rank comm for basic add remove tests
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             g = nx.generators.dual_barabasi_albert_graph(60, 2, 1, 0.25)
@@ -1572,7 +1572,7 @@ class InitNetworkTests(unittest.TestCase):
     def test_generation3(self):
         # make 1 rank comm for basic add remove tests
         new_group = MPI.COMM_WORLD.Get_group().Incl([0])
-        comm = MPI.COMM_WORLD.Create_group(new_group)
+        comm = MPI.COMM_WORLD.Create(new_group)
 
         if comm != MPI.COMM_NULL:
             g = nx.complete_graph(60)
