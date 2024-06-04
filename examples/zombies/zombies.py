@@ -19,6 +19,7 @@ from repast4py.space import BorderType, OccupancyType
 
 model = None
 
+
 @numba.jit((int64[:], int64[:]), nopython=True)
 def is_equal(a1, a2):
     return a1[0] == a2[0] and a1[1] == a2[1]
