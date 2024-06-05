@@ -8,7 +8,7 @@ This module includes classes and functions for checkpointing a repast4py simulat
 simulation.
 """
 
-from typing import Union, List, Dict, Callable
+from typing import Union, List, Dict, Callable, Iterable
 from dataclasses import dataclass, field
 from os import PathLike
 import pickle
@@ -17,6 +17,7 @@ from mpi4py import MPI
 
 from . import random
 from . import schedule
+from .core import Agent
 
 
 IGNORE_EVT = 0
@@ -28,6 +29,7 @@ class Checkpoint:
     checkpoint_at: float = 0.0
     random_state: List = field(default_factory=list)
     schedule_state: Dict = field(default_factory=dict)
+    agent_state:  List = field(default_factory=list)
 
 
 @dataclass
@@ -62,6 +64,17 @@ def to_evt_data(evt: Union[schedule.OneTimeEvent, schedule.RepeatingEvent]):
         evt_data.interval = evt.interval
 
     return evt_data
+
+
+def save_agents(checkpoint: Checkpoint, agents: Iterable[Agent]):
+    for agent in agents:
+        checkpoint.agent_state.append(agent.save())
+
+
+def restore_agents(checkpoint: Checkpoint, restore_agent: Callable):
+    for agent_state in checkpoint.agent_state:
+        agent = restore_agent(agent_state)
+        yield agent
 
 
 def save_schedule(checkpoint: Checkpoint):
