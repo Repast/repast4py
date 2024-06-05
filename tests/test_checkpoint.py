@@ -4,12 +4,12 @@ from mpi4py import MPI
 from typing import Tuple
 import networkx as nx
 import json
+import os
 
 try:
     from repast4py import random, checkpoint, schedule, core
 except ModuleNotFoundError:
     import sys
-    import os
     sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
     from repast4py import random, checkpoint, schedule, core
 
@@ -666,13 +666,9 @@ class CheckpointTests(unittest.TestCase):
 
         # run forwards
         model.runner.schedule.execute()
-        for agent in model.context.agents(shuffle=False):
-            print(agent.uid, agent.val)
         model.runner.schedule.execute()
 
         for agent in model.context.agents():
-            print(agent.val)
-            print(expected[agent.uid])
             self.assertEqual(agent.val, expected[agent.uid])
 
     def test_network(self):
@@ -682,6 +678,8 @@ class CheckpointTests(unittest.TestCase):
         nm.runner.schedule.execute()
         nm.runner.schedule.execute()
 
+        if not os.path.exists('./test_out'):
+            os.mkdir('./test_out')
         fpath = './test_out/network.txt'
         with open(fpath, 'w') as fout:
             graph = nm.network.graph
