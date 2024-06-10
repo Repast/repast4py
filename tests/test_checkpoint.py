@@ -57,8 +57,8 @@ class Model:
             def restore_schedule(data):
                 return self.step
 
-            self.runner = checkpoint.restore_schedule(ckp, restore_schedule, MPI.COMM_WORLD)
-            for agent in checkpoint.restore_agents(ckp, restore_agent):
+            self.runner = ckp.restore_schedule(MPI.COMM_WORLD, restore_schedule)
+            for agent in ckp.restore_agents(restore_agent):
                 self.context.add(agent)
 
     def step(self):
@@ -94,8 +94,8 @@ class NetworkModel:
             def restore_schedule(data):
                 return self.step
 
-            self.runner = checkpoint.restore_schedule(ckp, restore_schedule, MPI.COMM_WORLD)
-            agent_map = {agent.uid: agent for agent in checkpoint.restore_agents(ckp, restore_agent)}
+            self.runner = ckp.restore_schedule(MPI.COMM_WORLD, restore_schedule)
+            agent_map = {agent.uid: agent for agent in ckp.restore_agents(restore_agent)}
 
             def create_agent(node_id, agent_type, rank, **agent_attributes):
                 return agent_map[tuple(agent_attributes['uid'])]
@@ -128,11 +128,11 @@ class CheckpointTests(unittest.TestCase):
         # generate 10 values
         random.default_rng.random((10,))
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
+        ckp.save_random()
 
         exp_vals = random.default_rng.random((10,))
         random.init(31)
-        checkpoint.restore_random(ckp)
+        ckp.restore_random()
         self.assertEqual(42, random.seed)
         vals = random.default_rng.random((10,))
         self.assertEqual(list(exp_vals), list(vals))
@@ -141,7 +141,7 @@ class CheckpointTests(unittest.TestCase):
         fname = './test_data/checkpoint.pkl'
         self.pickle(fname, ckp)
         ckp = self.unpickle(fname)
-        checkpoint.restore_random(ckp)
+        ckp.restore_random()
         self.assertEqual(42, random.seed)
         vals = random.default_rng.random((10,))
         self.assertEqual(list(exp_vals), list(vals))
@@ -157,8 +157,8 @@ class CheckpointTests(unittest.TestCase):
         runner.schedule_event(2.0, agent.update, metadata={'name': 'agent.update'})
 
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
-        checkpoint.save_schedule(ckp)
+        ckp.save_random()
+        ckp.save_schedule()
 
         # run forward to add another val to agent.val
         # running from checkpoint should match this agent.val
@@ -169,8 +169,8 @@ class CheckpointTests(unittest.TestCase):
             self.assertEqual(data['name'], 'agent.update')
             return agent.update
 
-        checkpoint.restore_random(ckp)
-        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        ckp.restore_random()
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
 
         self.assertEqual(1, len(runner.schedule.queue))
 
@@ -195,8 +195,8 @@ class CheckpointTests(unittest.TestCase):
         runner.schedule.execute()
 
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
-        checkpoint.save_schedule(ckp)
+        ckp.save_random()
+        ckp.save_schedule()
 
         # run forward to add another val to agent.val
         # running from checkpoint should match this agent.val
@@ -208,8 +208,8 @@ class CheckpointTests(unittest.TestCase):
             self.assertEqual(data['name'], 'agent.update')
             return agent.update
 
-        checkpoint.restore_random(ckp)
-        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        ckp.restore_random()
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
 
         self.assertEqual(1, len(runner.schedule.queue))
 
@@ -243,8 +243,8 @@ class CheckpointTests(unittest.TestCase):
         runner.schedule.execute()
 
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
-        checkpoint.save_schedule(ckp)
+        ckp.save_random()
+        ckp.save_schedule()
 
         # run forward to add another val to agent.val
         # running from checkpoint should match this agent.val
@@ -264,8 +264,8 @@ class CheckpointTests(unittest.TestCase):
             else:
                 self.fail()
 
-        checkpoint.restore_random(ckp)
-        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        ckp.restore_random()
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
 
         a1.val = a1.val[:-n]
         a2.val = a2.val[:-n]
@@ -297,8 +297,8 @@ class CheckpointTests(unittest.TestCase):
         runner.schedule.execute()
 
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
-        checkpoint.save_schedule(ckp)
+        ckp.save_random()
+        ckp.save_schedule()
 
         # run forward to add another val to agent.val
         # running from checkpoint should match this agent.val
@@ -317,8 +317,8 @@ class CheckpointTests(unittest.TestCase):
             else:
                 self.fail()
 
-        checkpoint.restore_random(ckp)
-        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        ckp.restore_random()
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
 
         a1.val = a1.val[:-n]
         a2.val = a2.val[:-n]
@@ -351,8 +351,8 @@ class CheckpointTests(unittest.TestCase):
         runner.schedule.execute()
 
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
-        checkpoint.save_schedule(ckp)
+        ckp.save_random()
+        ckp.save_schedule()
 
         # run forward to add another val to agent.val
         # running from checkpoint should match this agent.val
@@ -371,8 +371,8 @@ class CheckpointTests(unittest.TestCase):
             else:
                 self.fail()
 
-        checkpoint.restore_random(ckp)
-        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        ckp.restore_random()
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
 
         a1.val = a1.val[:-n]
         a2.val = a2.val[:-n]
@@ -405,8 +405,8 @@ class CheckpointTests(unittest.TestCase):
         runner.schedule.execute()
 
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
-        checkpoint.save_schedule(ckp)
+        ckp.save_random()
+        ckp.save_schedule()
 
         # run forward to add another val to agent.val
         # running from checkpoint should match this agent.val
@@ -425,8 +425,8 @@ class CheckpointTests(unittest.TestCase):
             else:
                 self.fail()
 
-        checkpoint.restore_random(ckp)
-        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        ckp.restore_random()
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
 
         a1.val = a1.val[:-n]
         a2.val = a2.val[:-n]
@@ -459,8 +459,8 @@ class CheckpointTests(unittest.TestCase):
         ckp = checkpoint.Checkpoint()
 
         def save():
-            checkpoint.save_random(ckp)
-            checkpoint.save_schedule(ckp)
+            ckp.save_random()
+            ckp.save_schedule()
 
         runner.schedule_event(3.1, save)
         runner.execute()
@@ -477,8 +477,8 @@ class CheckpointTests(unittest.TestCase):
             else:
                 self.fail()
 
-        checkpoint.restore_random(ckp)
-        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        ckp.restore_random()
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
         self.assertEqual(3.1, runner.tick())
 
         # restore agent state to state a checkpoint
@@ -507,8 +507,8 @@ class CheckpointTests(unittest.TestCase):
         ckp = checkpoint.Checkpoint()
 
         def save():
-            checkpoint.save_random(ckp)
-            checkpoint.save_schedule(ckp)
+            ckp.save_random()
+            ckp.save_schedule()
 
         runner.schedule_event(3.1, save)
 
@@ -534,8 +534,8 @@ class CheckpointTests(unittest.TestCase):
             elif data['name'] == 'end_evt':
                 return evt
 
-        checkpoint.restore_random(ckp)
-        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        ckp.restore_random()
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
         self.assertEqual(3.1, runner.tick())
 
         runner.execute()
@@ -559,8 +559,8 @@ class CheckpointTests(unittest.TestCase):
 
         def save():
             ckp = checkpoint.Checkpoint()
-            checkpoint.save_random(ckp)
-            checkpoint.save_schedule(ckp)
+            ckp.save_random()
+            ckp.save_schedule()
             self.pickle(fname, ckp)
 
         runner.schedule_event(3.1, save)
@@ -579,8 +579,8 @@ class CheckpointTests(unittest.TestCase):
                 self.fail()
 
         ckp1 = self.unpickle(fname)
-        checkpoint.restore_random(ckp1)
-        runner = checkpoint.restore_schedule(ckp1, restorer, MPI.COMM_WORLD)
+        ckp1.restore_random()
+        runner = ckp1.restore_schedule(MPI.COMM_WORLD, restorer)
 
         self.assertEqual(3.1, runner.tick())
 
@@ -622,8 +622,8 @@ class CheckpointTests(unittest.TestCase):
 
         # checkpoint a voided evt
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
-        checkpoint.save_schedule(ckp)
+        ckp.save_random()
+        ckp.save_schedule()
 
         def restorer(data):
             if data['name'] == 'a1':
@@ -633,8 +633,8 @@ class CheckpointTests(unittest.TestCase):
             elif data['name'] == 'end':
                 self.fail()
 
-        checkpoint.restore_random(ckp)
-        runner = checkpoint.restore_schedule(ckp, restorer, MPI.COMM_WORLD)
+        ckp.restore_random()
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
         self.assertEqual(2.0, runner.tick())
 
         runner.execute()
@@ -650,15 +650,15 @@ class CheckpointTests(unittest.TestCase):
         model.runner.schedule.execute()
 
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
-        checkpoint.save_schedule(ckp)
-        checkpoint.save_agents(ckp, model.context.agents(shuffle=False))
+        ckp.save_random()
+        ckp.save_schedule()
+        ckp.save_agents(model.context.agents(shuffle=False))
 
         model.runner.schedule.execute()
         model.runner.schedule.execute()
         expected = {agent.uid: agent.val for agent in model.context.agents()}
 
-        checkpoint.restore_random(ckp)
+        ckp.restore_random()
         model = Model(MPI.COMM_WORLD, ckp)
 
         for agent in model.context.agents(shuffle=False):
@@ -702,14 +702,14 @@ class CheckpointTests(unittest.TestCase):
         expected = [(u.uid, v.uid, attribute) for u, v, attribute in graph.edges(data=True)]
 
         ckp = checkpoint.Checkpoint()
-        checkpoint.save_random(ckp)
-        checkpoint.save_schedule(ckp)
-        checkpoint.save_agents(ckp, nm.context.agents(shuffle=False))
+        ckp.save_random()
+        ckp.save_schedule()
+        ckp.save_agents(nm.context.agents(shuffle=False))
 
         nm.runner.schedule.execute()
         nm.runner.schedule.execute()
 
-        checkpoint.restore_random(ckp)
+        ckp.restore_random()
         nm = NetworkModel(MPI.COMM_WORLD, ckp, fpath)
         actual = [(u.uid, v.uid, attribute) for u, v, attribute in nm.network.graph.edges(data=True)]
 
