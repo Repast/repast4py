@@ -289,6 +289,7 @@ class Schedule:
         # 0 is first valid tick
         self.tick = -0.000000000000000000000000000000000000001
         self.counter = itertools.count()
+        self.last_count: int = 0
         self.executing_group = ScheduleGroup()
 
     def _push_event(self, at: float, evt: ScheduledEvent):
@@ -300,12 +301,12 @@ class Schedule:
 
         """
         if at >= self.tick:
-            count = next(self.counter)
-            evt.order_idx = count
+            self.last_count = next(self.counter)
+            evt.order_idx = self.last_count
             if at == self.tick:
                 self.executing_group.add_evt(evt)
             else:
-                heapq.heappush(self.queue, (at, count, evt))
+                heapq.heappush(self.queue, (at, self.last_count, evt))
 
     def schedule_event(self, at: float, evt: Callable, priority_type: PriorityType = PriorityType.RANDOM,
                        priority: float = float('nan'), metadata: Dict = {}) -> ScheduledEvent:

@@ -12,6 +12,8 @@ from typing import Union, Dict, Callable, Iterable
 from dataclasses import dataclass, field
 import warnings
 from mpi4py import MPI
+import itertools
+
 
 from . import random
 from . import schedule
@@ -19,6 +21,7 @@ from .core import Agent
 
 
 IGNORE_EVT = 0
+DEFAULT_TAG = '__default'
 
 
 @dataclass
@@ -73,7 +76,7 @@ class Checkpoint:
     def save_schedule(self):
         runner = schedule.runner()
         ss = self.schedule_state
-        ss['counter'] = runner.schedule.counter
+        ss['last_count'] = runner.schedule.last_count
         ss['tick'] = runner.schedule.tick
         evts = [self._to_evt_data(evt) for evt in runner.end_evts if evt.metadata['__type'] != schedule.EvtType.VOID]
         # item: (at, count, evt) tuple
@@ -102,7 +105,8 @@ class Checkpoint:
         return scheduled_evt
 
     def restore_schedule(self, comm: MPI.Intracomm, evt_creator: Callable,
-                         evt_processor: Callable = lambda x, y: None, initialize: bool = True):
+                         evt_processor: Callable = lambda x, y: None,
+                         tag=DEFAULT_TAG, initialize: bool = True):
         """
         Initializes the schedule runner.
         Args:
@@ -123,17 +127,22 @@ class Checkpoint:
             runner = schedule.runner()
 
         for evt_data in schedule_state['evts']:
-            evt_type = evt_data.metadata['__type']
-            evt = None
-            if evt_type != schedule.EvtType.STOP:
-                evt = evt_creator(evt_data.metadata)
-                if evt is None:
-                    warnings.warn(f"No callable evt returned for {evt_data.metadata}")
-            if evt != IGNORE_EVT:
-                scheduled_evt = self._schedule_evt(runner, evt_type, evt_data, evt)
-                evt_processor(evt_data.metadata, scheduled_evt)
+            metadata = evt_data.metadata
+            evt_tag = metadata.get('tag', DEFAULT_TAG)
+            if evt_tag == tag:
+                evt_type = metadata['__type']
+                evt = None
+                if evt_type != schedule.EvtType.STOP:
+                    evt = evt_creator(metadata)
+                    if evt is None:
+                        warnings.warn(f"No callable evt returned for {metadata}")
+                if evt != IGNORE_EVT:
+                    scheduled_evt = self._schedule_evt(runner, evt_type, evt_data, evt)
+                    evt_processor(metadata, scheduled_evt)
 
-        runner.schedule.counter = schedule_state['counter']
+        last_count = schedule_state['last_count']
+        runner.schedule.counter = itertools.count(last_count + 1)
+        runner.schedule.last_count = last_count
 
         return runner
 
