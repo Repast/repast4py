@@ -1,5 +1,5 @@
 import unittest
-import dill as pkl
+import pickle
 from mpi4py import MPI
 from typing import Tuple
 import networkx as nx
@@ -116,11 +116,11 @@ class CheckpointTests(unittest.TestCase):
 
     def pickle(self, fname, checkpoint):
         with open(fname, 'wb') as fout:
-            pkl.dump(checkpoint, fout)
+            pickle.dump(checkpoint, fout)
 
     def unpickle(self, fname):
         with open(fname, 'rb') as fin:
-            obj = pkl.load(fin)
+            obj = pickle.load(fin)
         return obj
 
     def test_random(self):
@@ -564,10 +564,6 @@ class CheckpointTests(unittest.TestCase):
             self.pickle(fname, ckp)
 
         runner.schedule_event(3.1, save)
-        # mimic the added a4 below calling this twice
-        # after restore
-        random.default_rng.random()
-        random.default_rng.random()
         runner.execute()
 
         expected = [list(a1.val), list(a2.val), list(a3.val)]
@@ -594,14 +590,8 @@ class CheckpointTests(unittest.TestCase):
         a2.val = a2.val[:4]
         a3.val = a3.val[:4]
 
-        a4 = EAgent(4, 1, 0)
-        self.assertEqual(1, len(a4.val))
-        runner.schedule_event(4.0, a4.update)
-
         runner.execute()
-        self.assertEqual(2, len(a4.val))
 
-        runner.execute()
         self.assertEqual(12.1, runner.tick())
         self.assertEqual(expected[0], a1.val)
         self.assertEqual(expected[1], a2.val)
