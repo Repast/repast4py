@@ -1,5 +1,5 @@
 import unittest
-import pickle
+import dill as pickle
 from mpi4py import MPI
 from typing import Tuple
 import networkx as nx
@@ -30,6 +30,19 @@ class EAgent(core.Agent):
 
     def update(self):
         self.val.append(random.default_rng.random())
+
+    def save(self) -> Tuple:
+        return (self.uid, list(self.val))
+
+
+class OAgent(core.Agent):
+
+    def __init__(self, id, agent_type, rank,):
+        super().__init__(id=id, type=agent_type, rank=rank)
+        self.val = 0
+
+    def update(self):
+        self.val += 1
 
     def save(self) -> Tuple:
         return (self.uid, list(self.val))
@@ -590,8 +603,13 @@ class CheckpointTests(unittest.TestCase):
         a2.val = a2.val[:4]
         a3.val = a3.val[:4]
 
-        runner.execute()
+        a4 = OAgent(4, 1, 0)
+        self.assertEqual(0, a4.val)
+        runner.schedule_event(3.9, a4.update)
+        runner.schedule.execute()
+        self.assertEqual(1, a4.val)
 
+        runner.execute()
         self.assertEqual(12.1, runner.tick())
         self.assertEqual(expected[0], a1.val)
         self.assertEqual(expected[1], a2.val)
