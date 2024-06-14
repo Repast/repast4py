@@ -1,7 +1,9 @@
 name: ci-build
 
 on:
-  workflow_call:
+  schedule:
+    - cron: "0 6 * * *"   # Fire at 06:00 AM every day
+  workflow_dispatch:      # Only works on the default branch
   pull_request:
   push:
     branches:
