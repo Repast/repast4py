@@ -1,11 +1,14 @@
 name: ci-build
 
 on:
-  workflow_call:
+  # Schedule and workflow_dispatch (manual) only work on default branch
+  schedule:
+    - cron: "0 6 * * *"   # Fire at 06:00 AM every day
+  workflow_dispatch:      
   pull_request:
   push:
     branches:
-      - windows_build
+      - develop
   release:
     types:
       - published
