@@ -830,7 +830,7 @@ def _parse_graph_desc(line: str):
         return (id, is_directed)
     except Exception:
         raise ValueError('Error reading graph description file on line 1. Expected graph description with '
-                         'format: "id, [0|1]", where 0 indicates an undirected graph and 1 directed')
+                         'format: "id [0|1]", where 0 indicates an undirected graph and 1 directed')
 
 
 _LINE_P = re.compile('\{[^}]+\}|\S+')
