@@ -17,6 +17,7 @@ import itertools
 
 from . import random
 from . import schedule
+# from . import parameters
 from .core import Agent
 
 
@@ -51,9 +52,30 @@ class Checkpoint:
         random.seed = self.random_state[0]
         random.default_rng.bit_generator.state = self.random_state[1]
 
+    # Checkpoint parameters, or assume user provides coherent ones?
+    # def save_parameters(self, saver: Callable = lambda x: x):
+    #     """Save parameters.params to the checkpoint object.
+
+    #     Args:
+    #         saver: an optional Callable to which each parameter value will be passed
+    #             allowing any non-pickeable values to represented as a pickleable
+    #             value. By default each parameters value will be saved as is.
+
+    #     """
+    #     params = parameters.params
+    #     self.param_state = {k: saver(v) for k, v in params}
+
+    # def restore_parameters(self, restorer: Callable = lambda x: x):
+    #     params = parameters.params
+
     def _to_evt_data(self, evt: Union[schedule.OneTimeEvent, schedule.RepeatingEvent]):
         evt_data = EvtData()
-        meta = evt.metadata
+        meta = {}
+        for k, v in evt.metadata.items():
+            if isinstance(v, Callable):
+                meta[k] = v(evt.evt)
+            else:
+                meta[k] = v
         evt_data.metadata = meta
         evt_data.at = evt.at
         evt_data.order_idx = evt.order_idx
@@ -97,8 +119,8 @@ class Checkpoint:
                                                             priority_type=evt_data.priority_type,
                                                             priority=evt_data.priority,
                                                             metadata=evt_data.metadata)
-        elif evt_type == schedule.EvtType.STOP:
-            scheduled_evt = runner.schedule_stop(evt_data.at)
+        # elif evt_type == schedule.EvtType.STOP:
+        #     scheduled_evt = runner.schedule_stop(evt_data.at)
         elif evt_type == schedule.EvtType.END:
             scheduled_evt = runner.schedule_end_event(evt, metadata=evt_data.metadata)
 
@@ -148,3 +170,6 @@ class Checkpoint:
 
     def save(self, key, value):
         self.other_state[key] = value
+
+    def restore(self, key, restorer: Callable, *args):
+        return restorer(self.other_state[key], *args)
