@@ -1529,7 +1529,7 @@ class InitNetworkTests(unittest.TestCase):
             fname = './test_data/gen_net_test.txt'
             write_network(g, "test", fname, 3, partition_method='random')
 
-            p = re.compile('\{[^}]+\}|\S+')
+            p = re.compile(r'\{[^}]+\}|\S+')
 
             with open(fname, 'r') as f_in:
                 line = f_in.readline().strip()
@@ -1582,7 +1582,7 @@ class InitNetworkTests(unittest.TestCase):
                 options = nxmetis.types.MetisOptions(seed=1)
                 write_network(g, "metis_test", fname, 3, partition_method='metis', options=options)
 
-                p = re.compile('\{[^}]+\}|\S+')
+                p = re.compile(r'\{[^}]+\}|\S+')
                 ranks = {}
 
                 with open(fname, 'r') as f_in:
