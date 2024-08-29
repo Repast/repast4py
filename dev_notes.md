@@ -50,7 +50,7 @@ mpirun -n 9 ./unit_tests --gtest_filter=CartesianTopology.*
 
 ## Requirements
 
-* Python 3.7+
+* Python 3.8+
 * mpi4py
 * PyTorch
 * NumPy >= 1.18
@@ -127,11 +127,11 @@ https://github.com/pypa/manylinux
 
 Testing the sdist (source dist) in a virtual env with tox:
 
-`CC=mpicxx CXX=mpicxx tox`
+`CC=mpicxx CXX=mpicxx tox --list-dependencies`
 
 and 
 
-`CC=mpicxx CXX=mpicxx tox -r`
+`CC=mpicxx CXX=mpicxx tox -r --list-dependencies`
 
 if the virtual env needs to be recreated.
 
