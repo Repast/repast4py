@@ -10,7 +10,7 @@
 #include "structmember.h"
 
 
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+// #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
 // See https://docs.scipy.org/doc/numpy/reference/c-api.array.html#importing-the-api
 #define PY_ARRAY_UNIQUE_SYMBOL REPAST4PY_ARRAY_API
