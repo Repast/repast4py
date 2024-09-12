@@ -53,7 +53,7 @@ mpirun -n 9 ./unit_tests --gtest_filter=CartesianTopology.*
 * Python 3.7+
 * mpi4py
 * PyTorch
-* NumPy >= 1.18
+* NumPy >= 1.18 < 2.0
 * nptyping (`pip install nptyping`)
 * numba
 * typing-extensions if < 3.8
