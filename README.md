@@ -57,7 +57,7 @@ Repast4Py can be downloaded and installed from PyPI using pip.
 Since Repast4Py includes native MPI C++ code that needs to be compiled,
 the C compiler `CC` environment variable must be set
 to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation. Depending
-on the operating system the `CXX` variable may also need to be set.
+on the operating system, the `CXX` variable may also need to be set.
 
 ```
 env CC=mpicxx CXX=mpicxx pip install repast4py
