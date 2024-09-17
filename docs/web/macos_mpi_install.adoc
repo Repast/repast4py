@@ -111,7 +111,7 @@ test it with an import.
 
 [source,zsh]
 ----
-% CC=mpicxx pip3 install repast4py
+% CC=mpicxx CXX=mpicxx pip3 install repast4py
 Collecting repast4py
 ...
 % python3

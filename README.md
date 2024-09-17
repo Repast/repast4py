@@ -40,7 +40,7 @@ that Windows users use the Windows Subsystem for Linux (WSL). Installation instr
 WSL can be found [here](https://docs.microsoft.com/en-us/windows/wsl/install).
 
 Under Linux, MPI can be installed using your OS's package manager. For example, 
-under Ubuntu 20.04 (and thus WSL), the mpich MPI implementation can be installed with:
+under Ubuntu 22.04 (and thus WSL), the mpich MPI implementation can be installed with:
 
 ```bash
 $ sudo apt install mpich
@@ -56,10 +56,11 @@ Check the resource's documentation on available software for more details.
 Repast4Py can be downloaded and installed from PyPI using pip. 
 Since Repast4Py includes native MPI C++ code that needs to be compiled,
 the C compiler `CC` environment variable must be set
-to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation.
+to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation. Depending
+on the operating system the `CXX` variable may also need to be set.
 
 ```
-env CC=mpicxx pip install repast4py
+env CC=mpicxx CXX=mpicxx pip install repast4py
 ```
 
 __NOTE__: If you see an error message about a missing `python.h` header file when
