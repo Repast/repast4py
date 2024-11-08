@@ -9,6 +9,7 @@ Submodules
 
    repast4py.context
    repast4py.core
+   repast4py.checkpoint
    repast4py.geometry
    repast4py.logging
    repast4py.network

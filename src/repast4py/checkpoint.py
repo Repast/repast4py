@@ -20,8 +20,12 @@ from . import schedule
 from .core import Agent
 
 
-IGNORE_EVT = 0
-DEFAULT_TAG = '__default'
+IGNORE_EVT: int = 0
+"""Return value indicating that a saved evt should be ignored
+when restoring the schedule."""
+
+DEFAULT_TAG: str = '__default'
+"""The default tag in saved event metadata dictionaries"""
 
 
 @dataclass
@@ -37,7 +41,13 @@ class EvtData:
 class Checkpoint:
 
     def __init__(self):
-        """Creates a Checkpoint instance that can be used to save the simulation."""
+        """Creates a Checkpoint instance that can be used to save the simulation.
+
+        The expectation is that the user can save a Checkpoint instance using the dill
+        module to pickle it. Consequently, all the state to save passed to a Checkpoint instance
+        must be pickleable using dill. If that is not the case, then translate the state
+        into something pickleable (e.g., a string or some bespoke representation).
+        """
         self.checkpoint_at: float = 0.0
         self.random_state = []
         self.schedule_state = {}
@@ -45,14 +55,14 @@ class Checkpoint:
         self.other_state = {}
 
     def save_random(self):
-        """Saves the current random state of the :attr:`random.default_rng`
-        generator."""
+        """Saves the current random state of the :py:mod:`repast4py.random.default_rng`
+        generator and the py:mod:`repast4py.random.seed`."""
         state = random.default_rng.bit_generator.state
         self.random_state = [random.seed, state]
 
     def restore_random(self):
         """Restores the checkpointed random state, setting
-        :attr:`random.seed` and :attr:`random.default_rng` to the
+        :py:mod:`repast4py.random.seed` and :py:mod:`repast4py.random.default_rng` to the
         saved state.
         """
         random.seed = self.random_state[0]
@@ -93,15 +103,55 @@ class Checkpoint:
         return evt_data
 
     def save_agents(self, agents: Iterable[Agent]):
+        """Saves the specified agents' state to this Checkpoint.
+
+        This iterates over each agent and stores the result of each agents'
+        `save()` method. The tuple returned by `save()` must be pickleable
+        using the `dill` module.
+
+        Args:
+            agents: the Iterable of Agents to save.
+        """
         for agent in agents:
             self.agent_state.append(agent.save())
 
     def restore_agents(self, restore_agent: Callable):
+        """Restores saved agents one by one, returning a generator
+        over the restored agents.
+
+        Each saved agent state (see :attr:`save_agents`) is passed
+        to the `restore_agent` Callable and the result of that call
+        is returned, until there are no more agents to restore.
+
+        Args:
+            restore_agent: a Callable that takes agent state and returns
+                an Agent.
+
+        Examples:
+            Restore an agent implemented in a `MyAgent` class with two attributes.
+
+            >>> def restore_my_agent(agent_state):
+                    a = agent_state[0]
+                    b = agent_state[1]
+                    return MyAgent(a, b)
+            >>> for agent in ckp.restore_agents(restore_my_agent):
+                    # do something with agent
+        """
         for agent_state in self.agent_state:
             agent = restore_agent(agent_state)
             yield agent
 
     def save_schedule(self):
+        """Saves the currently scheduled events to this Checkpoint.
+
+        The state of the :py:mod:`repast4py.schedule.runner` is saved together
+        with the currently scheduled events (Python Callables), and their metadata.
+        The intention is that user provides enough metadata to reconstruct the scheduled
+        Callable. For example, if the Callable is a Python class that updates
+        some attribute on some agents, then the metadata would record the agent
+        ids of those agents, and the name of the class. That data can then be
+        used to re-create the class when the scheduled is restored.
+        """
         runner = schedule.runner()
         ss = self.schedule_state
         ss['last_count'] = runner.schedule.last_count
@@ -136,16 +186,38 @@ class Checkpoint:
                          evt_processor: Callable = lambda x, y: None,
                          tag=DEFAULT_TAG, initialize: bool = True):
         """
-        Initializes the schedule runner.
+        Restores the state of the schedule, and by default initializes
+        the schedule runner.
+
+        The saved metadata dictionaries for each currently scheduled
+        event (see :py:mod:`~repast4py.schedule.SharedScheduleRunner.schedule_event` and
+        :py:mod:`~repast4py.schedule.SharedScheduleRunner.schedule_repeating_event`)
+        are passed to the `evt_creator` argument which is expected to return a Callable
+        that can then be scheduled appropriately. If the `evt_creator` returns :py:mod:`~repast4py.checkpoint.IGNORE_EVT`,
+        then the event will not be scheduled as part of restoring the schedule. If an `evt_processor`
+        is specified, then each metadata dictonary and the :py:mod:`~repast4py.schedule.ScheduledEvent`
+        created when restoring and scheduling saved events is passed to that. This can be useful,
+        if, for example, a model needs to cache :py:mod:`~repast4py.schedule.ScheduledEvent` in order
+        to `void` them before they are executed. Here an `evt_processor` can add these
+        :py:mod:`~repast4py.schedule.ScheduledEvent` to the model's cache.
+
         Args:
-            checkpoint: the Checkpoint containing the schedule data
-            evt_creator: callable (function, method, etc.) that takes the metata
+            evt_creator: a Callable (function, method, etc.) that takes the metadata
                 dictionary associated with an event as an argument and returns
                 the Callable to schedule.
+            evt_processor: a Callable that that takes the metadata
+                dictionary associated with an event and the :py:mod:`~repast4py.schedule.ScheduledEvent`
+                created by the `evt_creator` as arguments.
             comm: the communicator in which this is running
+            tag: only saved scheduled events whose metadata dictionary 'tag'
+                entry matches this tag will be restored.
             initialize: if true, then the schedule runner is initialized with
                 schedule.init_schedule_runner, otherwise the schedule runner
-                is not initialized.
+                is not initialized. When restoring, this needs to be True
+                one call to restore_schedule.
+
+        Returns:
+            The :py:mod:`repast4py.schedule.runner`.
         """
         schedule_state = self.schedule_state
         if initialize:
@@ -175,7 +247,40 @@ class Checkpoint:
         return runner
 
     def save(self, key, value):
+        """Saves arbitrary key value pairs into this Checkpoint.
+
+        Args:
+            key: an identifying key for the saved value.
+            value: the value to save.
+        """
         self.other_state[key] = value
 
     def restore(self, key, restorer: Callable, *args):
+        """Restores a value identified by the specified key using the
+        specified Callable.
+
+        Args:
+            key: the identifying key of the saved value to restore.
+            restorer: a Callable that takes the saved value associated
+                with the key, and returns the restored value.
+            args: additional optional arguments that are passed to the restorer
+                in addition to the saved value.
+
+        Returns:
+            The restored value associated with the key.
+
+        Examples:
+            Saving and restoring some arbitrary state from a `Model` object
+            named `model`.
+
+            >>> ckp = Checkpoint()
+            >>> model_props = [model.a, model.b, model.c]
+            >>> ckp.save('mprops', model_props)
+            >>> def restore_props(prop_data, model):
+                    model.a = prop_data[0]
+                    model.b = prop_data[1]
+                    model.c = prop_data[2]
+                    return model
+            >>> ckp.restore('mprops', model)
+        """
         return restorer(self.other_state[key], *args)
