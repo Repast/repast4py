@@ -5,7 +5,6 @@
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
 """
 This module includes classes and functions for checkpointing a repast4py simulation.
-simulation.
 """
 
 from typing import Union, Dict, Callable, Iterable
@@ -38,6 +37,7 @@ class EvtData:
 class Checkpoint:
 
     def __init__(self):
+        """Creates a Checkpoint instance that can be used to save the simulation."""
         self.checkpoint_at: float = 0.0
         self.random_state = []
         self.schedule_state = {}
@@ -45,10 +45,16 @@ class Checkpoint:
         self.other_state = {}
 
     def save_random(self):
+        """Saves the current random state of the :attr:`random.default_rng`
+        generator."""
         state = random.default_rng.bit_generator.state
         self.random_state = [random.seed, state]
 
     def restore_random(self):
+        """Restores the checkpointed random state, setting
+        :attr:`random.seed` and :attr:`random.default_rng` to the
+        saved state.
+        """
         random.seed = self.random_state[0]
         random.default_rng.bit_generator.state = self.random_state[1]
 
