@@ -175,8 +175,8 @@ class Checkpoint:
                                                             priority_type=evt_data.priority_type,
                                                             priority=evt_data.priority,
                                                             metadata=evt_data.metadata)
-        # elif evt_type == schedule.EvtType.STOP:
-        #     scheduled_evt = runner.schedule_stop(evt_data.at)
+        elif evt_type == schedule.EvtType.STOP:
+            scheduled_evt = runner.schedule_stop(evt_data.at)
         elif evt_type == schedule.EvtType.END:
             scheduled_evt = runner.schedule_end_event(evt, metadata=evt_data.metadata)
 
@@ -184,7 +184,7 @@ class Checkpoint:
 
     def restore_schedule(self, comm: MPI.Intracomm, evt_creator: Callable,
                          evt_processor: Callable = lambda x, y: None,
-                         tag=DEFAULT_TAG, initialize: bool = True):
+                         tag=DEFAULT_TAG, initialize: bool = True, restore_stop_at: bool = False):
         """
         Restores the state of the schedule, and by default initializes
         the schedule runner.
@@ -213,8 +213,11 @@ class Checkpoint:
                 entry matches this tag will be restored.
             initialize: if true, then the schedule runner is initialized with
                 schedule.init_schedule_runner, otherwise the schedule runner
-                is not initialized. When restoring, this needs to be True
+                is not initialized. When restoring, this needs to be True in
                 one call to restore_schedule.
+            restore_stop_at: if true, then any stop actions will be restored, otherwise
+                it is the user's responsibility to schedule a stop after restoring the
+                schedule.
 
         Returns:
             The :py:mod:`repast4py.schedule.runner`.
@@ -236,6 +239,11 @@ class Checkpoint:
                     evt = evt_creator(metadata)
                     if evt is None:
                         warnings.warn(f"No callable evt returned for {metadata}")
+                elif restore_stop_at:
+                    if schedule_state['tick'] == evt_data.at:
+                        warnings.warn(f"Scheduling stop at first tick {evt_data.at} in restored schedule")
+                    evt = runner.stop
+                
                 if evt != IGNORE_EVT:
                     scheduled_evt = self._schedule_evt(runner, evt_type, evt_data, evt)
                     evt_processor(metadata, scheduled_evt)

@@ -491,7 +491,7 @@ class CheckpointTests(unittest.TestCase):
                 self.fail()
 
         ckp.restore_random()
-        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer, restore_stop_at=True)
         self.assertEqual(3.1, runner.tick())
 
         # restore agent state to state a checkpoint
@@ -548,7 +548,7 @@ class CheckpointTests(unittest.TestCase):
                 return evt
 
         ckp.restore_random()
-        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer, restore_stop_at=True)
         self.assertEqual(3.1, runner.tick())
 
         runner.execute()
@@ -591,9 +591,9 @@ class CheckpointTests(unittest.TestCase):
             else:
                 self.fail()
 
-        ckp1 = self.unpickle(fname)
+        ckp1: checkpoint.Checkpoint = self.unpickle(fname)
         ckp1.restore_random()
-        runner = ckp1.restore_schedule(MPI.COMM_WORLD, restorer)
+        runner = ckp1.restore_schedule(MPI.COMM_WORLD, restorer, restore_stop_at=True)
 
         self.assertEqual(3.1, runner.tick())
 
@@ -652,7 +652,7 @@ class CheckpointTests(unittest.TestCase):
                 self.fail()
 
         ckp.restore_random()
-        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer)
+        runner = ckp.restore_schedule(MPI.COMM_WORLD, restorer, restore_stop_at=True)
         self.assertEqual(2.0, runner.tick())
 
         runner.execute()
