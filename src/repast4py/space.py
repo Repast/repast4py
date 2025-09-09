@@ -7,6 +7,7 @@
 from typing import Callable, List, Tuple
 import mpi4py
 import numpy as np
+from enum import IntEnum
 
 from ._core import Agent
 from .core import AgentManager, SharedProjection
@@ -22,7 +23,7 @@ from ._space import CartesianTopology, Grid, ContinuousSpace
 from .geometry import BoundingBox, get_num_dims
 
 
-class BorderType:
+class BorderType(IntEnum):
     """An enum defining the border types that can be used with a space or grid.
 
     The border type determines an agent's new location when the assigned location is beyond
@@ -44,7 +45,7 @@ class BorderType:
     """
 
 
-class OccupancyType:
+class OccupancyType(IntEnum):
     """An enum defining the occupancy type of a location in a space or grid. The
     occupancy type determines how many agents are allowed at a single location.
 
@@ -268,7 +269,7 @@ class SharedGrid(_SharedGrid, SharedProjection):
         pass
 
 
-class SharedCSpace(_SharedContinuousSpace):
+class SharedCSpace(_SharedContinuousSpace, SharedProjection):
     """An N-dimensional cartesian space where agents can occupy locations defined by
     a continuous floating point coordinate.
 
@@ -422,7 +423,7 @@ class SharedCSpace(_SharedContinuousSpace):
             recv_data = self._cart_comm.alltoall(send_data)
             self._process_recv_data(recv_data, agent_manager, create_agent)
 
-    def _agent_moving_rank(self, moving_agent: Agent, dest_rank: int, moved_agent_data: List,
+    def _agent_moving_rank(self, moving_agent: Agent, dest_rank: int, moving_agent_data: List,
                            agent_manager: AgentManager):
         self.remove(moving_agent)
 
