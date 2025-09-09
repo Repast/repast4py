@@ -7,17 +7,21 @@
 This module includes classes and functions for checkpointing a repast4py simulation.
 """
 
-from typing import Union, Dict, Callable, Iterable
+from typing import Union, Dict, Callable, Iterable, Tuple, Any
 from dataclasses import dataclass, field
 import warnings
-from mpi4py import MPI
 import itertools
+
+from mpi4py import MPI
+
 
 
 from . import random
 from . import schedule
 # from . import parameters
 from .core import Agent
+from .context import SharedContext
+from .network import SharedNetwork, DirectedSharedNetwork, UndirectedSharedNetwork
 
 
 IGNORE_EVT: int = 0
@@ -53,6 +57,7 @@ class Checkpoint:
         self.schedule_state = {}
         self.agent_state = []
         self.other_state = {}
+        self.networks = {}
 
     def save_random(self):
         """Saves the current random state of the :py:mod:`repast4py.random.default_rng`
@@ -289,6 +294,95 @@ class Checkpoint:
                     model.b = prop_data[1]
                     model.c = prop_data[2]
                     return model
-            >>> ckp.restore('mprops', model)
+            >>> ckp.restore('mprops', restore_props, model)
         """
         return restorer(self.other_state[key], *args)
+    
+    def save_network(self, network: SharedNetwork, comm: MPI.Intracomm):
+        data = []
+        rank = comm.Get_rank()
+        if network.is_directed:
+            for nd in filter(lambda n: n.local_rank == rank, network.graph.nodes):
+                edge_data = [nd.uid]
+                edge_data.append([(o.uid, o.local_rank, network.graph[nd][o]) for o in network.graph.successors(nd)])
+                edge_data.append([(o.uid, o.local_rank, network.graph[o][nd]) for o in network.graph.predecessors(nd)])
+                data.append(edge_data)
+        else:
+            for nd in filter(lambda n: n.local_rank == rank, network.graph.nodes):
+                edge_data = [nd.uid]
+                edge_data.append([(n.uid, n.local_rank, network.graph[nd][n]) for n in network.graph.neighbors(nd)])
+                data.append(edge_data)
+
+        net_data = {"name": network.name, "directed": network.is_directed,
+                    "data": data}
+        self.networks["network.name"] = net_data
+
+    def restore_networks(self, context: SharedContext, comm: MPI.Intracomm, create_agent: Callable):
+        agent_map = {agent.uid: agent for agent in context.agents()}
+        requests = {}
+        restorers = []
+        for _, network in self.networks.items():
+            restorer = NetworkRestorer(context, network, comm)
+            restorer.restore(agent_map, requests)
+            restorers.append(restorer)
+
+        requested_agents = context.request_agents([request for request in requests.values()],
+                                                  create_agent)
+        for agent in requested_agents:
+            requests[agent.uid] = agent
+
+        for restorer in restorers:
+            restorer.create_ghost_edges(agent_map, requests)
+
+
+class NetworkRestorer:
+
+    def __init__(self, context, network_save, comm):
+        directed = network_save["directed"]
+        name = network_save["name"]
+        self.network = DirectedSharedNetwork(name, comm) if directed else UndirectedSharedNetwork(name, comm)
+        context.add_projection(self.network)
+        self.network_save = network_save
+        self.ghost_edges = []
+
+    def _make_suc_edge(self, node_uid, other_uid, e_attribs):
+        return (0, node_uid, other_uid, e_attribs)
+    
+    def _make_pre_edge(self, node_uid, other_uid, e_attribs):
+        return (1, other_uid, node_uid, e_attribs)
+    
+    def _add_suc_edge(self, node, other, e_attribs):
+        self.network.add_edge(node, other, **e_attribs)
+    
+    def _add_pre_edge(self, node, other, e_attribs):
+        self.network.add_edge(other, node, **e_attribs)
+
+    def _add_edges(self, node, others, edge_tuple_maker, edge_adder):
+        for other_uid, other_local_rank, e_attributes in others:
+            other_node = self.agent_map.get(other_uid)
+            if other_node is None:
+                self.requests[other_uid] = (other_uid, other_local_rank)
+                self.ghost_edges.append(edge_tuple_maker(node.uid, other_uid, e_attributes))
+            else:
+                edge_adder(node, other_node, e_attributes)
+
+    def create_ghost_edges(self, agent_map: Dict, requests: Dict):
+        for edge_t, u, v, e_attribs in self.ghost_edges:
+            if edge_t == 0:
+                self.network.add_edge(agent_map[u], requests[v], **e_attribs)
+            else:
+                self.network.add_edge(requests[v], agent_map[u], **e_attribs)
+
+    def restore(self, agent_map, requests: Dict):
+        self.agent_map = agent_map
+        self.requests = requests
+        edges = self.network_save["data"]
+        if self.network.is_directed:
+            for node_uid, successors, predecessors in edges:
+                node = agent_map[node_uid]
+                self._add_edges(node, successors, self._make_suc_edge, self._add_suc_edge)
+                self._add_edges(node, predecessors, self._make_pre_edge, self._add_pre_edge)
+        else:
+            for node_uid, others in edges:
+                node = agent_map[node_uid]
+                self._add_edges(node, others, self._make_suc_edge, self._add_suc_edge)

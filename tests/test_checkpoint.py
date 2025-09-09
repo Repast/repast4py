@@ -15,7 +15,7 @@ except ModuleNotFoundError:
 
 from repast4py.schedule import PriorityType
 from repast4py.context import SharedContext
-from repast4py.network import DirectedSharedNetwork
+from repast4py.network import DirectedSharedNetwork, write_network, read_network
 import repast4py.network
 
 
@@ -45,7 +45,20 @@ class OAgent(core.Agent):
         self.val += 1
 
     def save(self) -> Tuple:
-        return (self.uid, list(self.val))
+        return (self.uid, self.val)
+
+
+class NAgent(core.Agent):
+
+    def __init__(self, id, agent_type, rank,):
+        super().__init__(id=id, type=agent_type, rank=rank)
+        self.val = 0
+
+    def save(self) -> Tuple:
+        return (self.uid, self.val)
+    
+    def update(self, data):
+        self.val = data
 
 
 def restore_agent(agent_data: Tuple):
@@ -81,18 +94,18 @@ class Model:
 
 class NetworkModel:
 
-    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint = None, network_path=None):
+    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint = None):
         self.context = SharedContext(comm)
         if ckp is None:
             self.context = SharedContext(comm)
-            self.network = DirectedSharedNetwork('test', comm)
+            self.network: DirectedSharedNetwork = DirectedSharedNetwork('test', comm)
             self.context.add_projection(self.network)
 
             self.rank = comm.Get_rank()
             g: nx.Graph = nx.connected_watts_strogatz_graph(20, 2, 0.25)
             node_map = {}
             for node in g.nodes:
-                agent = EAgent(node, 0, self.rank)
+                agent = NAgent(node, 0, self.rank)
                 self.context.add(agent)
                 node_map[node] = agent
 
@@ -108,12 +121,15 @@ class NetworkModel:
                 return self.step
 
             self.runner = ckp.restore_schedule(MPI.COMM_WORLD, restore_schedule)
-            agent_map = {agent.uid: agent for agent in ckp.restore_agents(restore_agent)}
+            for agent in ckp.restore_agents(restore_agent):
+                self.context.add(agent)
 
-            def create_agent(node_id, agent_type, rank, **agent_attributes):
-                return agent_map[tuple(agent_attributes['uid'])]
-            repast4py.network.read_network(network_path, self.context, create_agent, None)
-            self.network = self.context.get_projection('test')
+            def create_agent(data):
+                uid = data[0]
+                return NAgent(uid[0], uid[1], uid[2])
+
+            ckp.restore_networks(self.context, comm, create_agent)
+            self.network: DirectedSharedNetwork = self.context.get_projection('test')
 
     def step(self):
         u, v = random.default_rng.integers(0, 20, size=2)
@@ -124,6 +140,56 @@ class NetworkModel:
         else:
             self.network.add_edge(head, tail)
 
+
+def create_net_agent(id, agent_type, rank, **kwargs):
+    return NAgent(id, agent_type, rank)
+
+
+def restore_net_agent(agent_data):
+    uid = agent_data[0]
+    return NAgent(uid[0], uid[1], uid[2])
+
+
+class NetworkModel2:
+
+    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint = None):
+        self.context = SharedContext(comm)
+        if ckp is None:
+            self.context = SharedContext(comm)
+            read_network("./test_data/sample_network.txt", self.context,
+                         create_net_agent, restore_net_agent)
+
+            self.rank = comm.Get_rank()
+            self.network = self.context.get_projection("sample_network")
+            
+            self.runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
+            self.runner.schedule_repeating_event(1.0, 1.0, self.step,
+                                                 metadata={'name': 'model.step'})
+        else:
+            def restore_schedule(data):
+                return self.step
+
+            self.runner = ckp.restore_schedule(MPI.COMM_WORLD, restore_schedule)
+            for agent in ckp.restore_agents(restore_net_agent):
+                self.context.add(agent)
+
+            def create_agent(data):
+                uid = data[0]
+                return NAgent(uid[0], uid[1], uid[2])
+
+            self.rank = comm.Get_rank()
+            ckp.restore_networks(self.context, comm, create_agent)
+            self.network = self.context.get_projection('sample_network')
+
+    def step(self):
+        # u, v = random.default_rng.integers(0, 20, size=2)
+        head, tail = [agent for agent in self.context.agents(shuffle=True, count = 2)]
+        # head = self.context.agent((u, 0, self.rank))
+        # tail = self.context.agent((v, 0, self.rank))
+        if self.network.contains_edge(head, tail):
+            self.network.remove_edge(head, tail)
+        else:
+            self.network.add_edge(head, tail)
 
 class CheckpointTests(unittest.TestCase):
 
@@ -696,39 +762,50 @@ class CheckpointTests(unittest.TestCase):
         nm.runner.schedule.execute()
         nm.runner.schedule.execute()
 
-        if not os.path.exists('./test_out'):
-            os.mkdir('./test_out')
-        fpath = './test_out/network.txt'
-        with open(fpath, 'w') as fout:
-            graph = nm.network.graph
-            is_d = 1 if nx.is_directed(graph) else 0
-            fout.write(f'{nm.network.name} {is_d}\n')
-            node_map = {}
-            for i, nd in enumerate(graph.nodes(data=True)):
-                repast4py.network._write_node(fout, (i, {'uid': nd[0].uid}), nd[0].uid_rank)
-                node_map[nd[0]] = i
-
-            fout.write('EDGES\n')
-            for u, v, attribute in graph.edges(data=True):
-                line = f'{node_map[u]} {node_map[v]}'
-                if (len(attribute) > 0):
-                    line = f'{line} {json.dumps(attribute)}'
-
-                fout.write(line)
-                fout.write('\n')
-
-        expected = [(u.uid, v.uid, attribute) for u, v, attribute in graph.edges(data=True)]
+        expected = [(u.uid, v.uid, attribute) for u, v, attribute in nm.network.graph.edges(data=True)]
 
         ckp = checkpoint.Checkpoint()
         ckp.save_random()
         ckp.save_schedule()
-        ckp.save_agents(nm.context.agents(shuffle=False))
+        ckp.save_agents(nm.context.agents())
+        ckp.save_network(nm.network, MPI.COMM_WORLD)
 
         nm.runner.schedule.execute()
         nm.runner.schedule.execute()
 
         ckp.restore_random()
-        nm = NetworkModel(MPI.COMM_WORLD, ckp, fpath)
+        nm = NetworkModel(MPI.COMM_WORLD, ckp)
+        actual = [(u.uid, v.uid, attribute) for u, v, attribute in nm.network.graph.edges(data=True)]
+
+        self.assertEqual(len(actual), len(expected))
+        for item in expected:
+            self.assertTrue(item in actual)
+
+
+   
+class MPCheckpointTests(unittest.TestCase):
+
+    def test_network(self):
+        random.init(42)
+        nm = NetworkModel2(MPI.COMM_WORLD)
+
+        nm.runner.schedule.execute()
+        nm.runner.schedule.execute()
+
+
+        expected = [(u.uid, v.uid, attribute) for u, v, attribute in nm.network.graph.edges(data=True)]
+
+        ckp = checkpoint.Checkpoint()
+        ckp.save_random()
+        ckp.save_schedule()
+        ckp.save_agents(nm.context.agents(shuffle=False))
+        ckp.save_network(nm.network, MPI.COMM_WORLD)
+
+        nm.runner.schedule.execute()
+        nm.runner.schedule.execute()
+
+        ckp.restore_random()
+        nm = NetworkModel2(MPI.COMM_WORLD, ckp)
         actual = [(u.uid, v.uid, attribute) for u, v, attribute in nm.network.graph.edges(data=True)]
 
         self.assertEqual(len(actual), len(expected))
