@@ -9,7 +9,7 @@ import mpi4py
 import numpy as np
 
 from ._core import Agent
-from .core import AgentManager
+from .core import AgentManager, SharedProjection
 
 from ._space import DiscretePoint, ContinuousPoint
 from ._space import SharedGrid as _SharedGrid
@@ -57,7 +57,7 @@ class OccupancyType:
     """Only a single agent can inhabit a location."""
 
 
-class SharedGrid(_SharedGrid):
+class SharedGrid(_SharedGrid, SharedProjection):
     """An N-dimensional cartesian discrete space shared across ranks, where agents can occupy locations defined by
     a discretete integer coordinate.
 
@@ -257,7 +257,7 @@ class SharedGrid(_SharedGrid):
                     for a in agents:
                         data_list.append((a.save(), (pt.x, pt.y, pt.z)))
 
-    def _agent_moving_rank(self, moving_agent: Agent, dest_rank: int, moved_agent_data: List,
+    def _agent_moving_rank(self, moving_agent: Agent, dest_rank: int, moving_agent_data: List,
                            agent_manager: AgentManager):
         self.remove(moving_agent)
 
