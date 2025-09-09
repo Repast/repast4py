@@ -103,7 +103,7 @@ class Checkpoint:
         evt_data.priority_type = evt.priority_type
         evt_data.priority = evt.priority
         if meta['__type'] == schedule.EvtType.REPEATING:
-            evt_data.interval = evt.interval
+            evt_data.interval = evt.interval # type: ignore
 
         return evt_data
 
@@ -167,10 +167,10 @@ class Checkpoint:
         ss['evts'] = evts
 
     def _schedule_evt(self, runner: schedule.SharedScheduleRunner, evt_type: schedule.EvtType, evt_data: EvtData,
-                      evt: Callable):
+                      evt: Callable) -> schedule.ScheduledEvent | None:
         # next(schedule.counter) in _push_event should now return
         # the serialized order_idx
-        runner.schedule.counter = iter((evt_data.order_idx,))
+        runner.schedule.counter = iter((evt_data.order_idx,)) # type: ignore
         scheduled_evt = None
         if evt_type == schedule.EvtType.ONE_TIME:
             scheduled_evt = runner.schedule_event(evt_data.at, evt, priority_type=evt_data.priority_type,
@@ -250,7 +250,7 @@ class Checkpoint:
                     evt = runner.stop
                 
                 if evt != IGNORE_EVT:
-                    scheduled_evt = self._schedule_evt(runner, evt_type, evt_data, evt)
+                    scheduled_evt = self._schedule_evt(runner, evt_type, evt_data, evt) # type: ignore
                     evt_processor(metadata, scheduled_evt)
 
         last_count = schedule_state['last_count']
@@ -304,8 +304,8 @@ class Checkpoint:
         if network.is_directed:
             for nd in filter(lambda n: n.local_rank == rank, network.graph.nodes):
                 edge_data = [nd.uid]
-                edge_data.append([(o.uid, o.local_rank, network.graph[nd][o]) for o in network.graph.successors(nd)])
-                edge_data.append([(o.uid, o.local_rank, network.graph[o][nd]) for o in network.graph.predecessors(nd)])
+                edge_data.append([(o.uid, o.local_rank, network.graph[nd][o]) for o in network.graph.successors(nd)]) # type: ignore
+                edge_data.append([(o.uid, o.local_rank, network.graph[o][nd]) for o in network.graph.predecessors(nd)]) # type: ignore
                 data.append(edge_data)
         else:
             for nd in filter(lambda n: n.local_rank == rank, network.graph.nodes):
