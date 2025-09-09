@@ -21,3 +21,5 @@ include::tutorial_random_walk.adoc[]
 include::tutorial_network.adoc[]
 
 include::tutorial_zombies.adoc[]
+
+include::checkpointing.adoc[]

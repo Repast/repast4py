@@ -76,7 +76,7 @@ class SharedContext:
             projection: the projection add
         """
         for prj in self.projections.values():
-            if projection.name == prj.name:
+            if projection.name == prj.name: # type: ignore
                 raise ValueError('Context already contains the named projection "{}"'.format(prj.name))
 
         self.projections[self.projection_id] = projection
@@ -86,7 +86,7 @@ class SharedContext:
 
         self._agent_manager.add_ghosts_to_projection(projection)
 
-        if isinstance(projection, BoundedProjection):
+        if isinstance(projection, BoundedProjection): # type: ignore
             self.bounded_projs[self.projection_id] = projection
         else:
             self.non_bounded_projs.append(projection)

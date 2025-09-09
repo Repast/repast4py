@@ -9,6 +9,7 @@ and projections.
 """
 import collections
 import numpy as np
+from numpy.typing import NDArray
 from ._core import Agent
 from typing import Callable, List, Tuple, Dict
 from dataclasses import dataclass
@@ -397,7 +398,7 @@ class BoundedProjection(Protocol):
         """
         pass
 
-    def _move_oob_agent(self, agent: Agent, location: np.array):
+    def _move_oob_agent(self, agent: Agent, location: NDArray):
         """Moves an agent to the location in its new projection when
         that agent moves out of bounds from a previous projection.
 

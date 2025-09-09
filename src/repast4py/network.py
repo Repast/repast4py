@@ -110,6 +110,13 @@ class SharedNetwork(SharedProjection, ABC):
 
         return self.graph.number_of_edges()
     
+    @property
+    @abstractmethod
+    def is_directed(self) -> bool:
+        """Gets whether or not this network is directed.
+        """
+        pass
+    
     @abstractmethod
     def _get_edge_key(self, edge: Tuple) -> Tuple:
         """Gets the canonical edge key used to manage dictionaries of edges.

@@ -14,8 +14,8 @@ except ModuleNotFoundError:
 
 from repast4py.schedule import PriorityType
 from repast4py.context import SharedContext
-from repast4py.network import DirectedSharedNetwork,read_network
-
+from repast4py.network import DirectedSharedNetwork,UndirectedSharedNetwork, read_network
+from repast4py.space import BoundingBox, BorderType, SharedGrid, SharedCSpace, OccupancyType
 
 
 class EAgent(core.Agent):
@@ -127,8 +127,9 @@ class NetworkModel:
                 uid = data[0]
                 return NAgent(uid[0], uid[1], uid[2])
 
-            ckp.restore_networks(self.context, comm, create_agent)
-            self.network: DirectedSharedNetwork = self.context.get_projection('test') # type: ignore
+            self.network: DirectedSharedNetwork = DirectedSharedNetwork('test', comm)
+            ckp.restore_network(self.context, self.network, create_agent)
+            
 
     def step(self):
         u, v = random.default_rng.integers(0, 20, size=2)
@@ -159,7 +160,7 @@ class NetworkModel2:
                          create_net_agent, restore_net_agent)
 
             self.rank = comm.Get_rank()
-            self.network = self.context.get_projection("sample_network") # type: ignore
+            self.network: UndirectedSharedNetwork = self.context.get_projection("sample_network") # type: ignore
             
             self.runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
             self.runner.schedule_repeating_event(1.0, 1.0, self.step,
@@ -177,8 +178,8 @@ class NetworkModel2:
                 return NAgent(uid[0], uid[1], uid[2])
 
             self.rank = comm.Get_rank()
-            ckp.restore_networks(self.context, comm, create_agent)
-            self.network: DirectedSharedNetwork = self.context.get_projection('sample_network') # type: ignore
+            self.network = UndirectedSharedNetwork("sample_network", comm)
+            ckp.restore_network(self.context, self.network, create_agent)
 
     def step(self):
         # u, v = random.default_rng.integers(0, 20, size=2)
@@ -767,10 +768,16 @@ class CheckpointTests(unittest.TestCase):
         ckp.save_random()
         ckp.save_schedule()
         ckp.save_agents(nm.context.agents())
-        ckp.save_network(nm.network, MPI.COMM_WORLD)
+        ckp.save_network(nm.network, MPI.COMM_WORLD.Get_rank())
+
+        with open("./test_out/checkpoint.dill", "wb") as fout:
+            pickle.dump(ckp, fout)
 
         nm.runner.schedule.execute()
         nm.runner.schedule.execute()
+
+        with open("./test_out/checkpoint.dill", "rb") as fin:
+            ckp: checkpoint.Checkpoint = pickle.load(fin)
 
         ckp.restore_random()
         nm = NetworkModel(MPI.COMM_WORLD, ckp)
@@ -779,7 +786,99 @@ class CheckpointTests(unittest.TestCase):
         self.assertEqual(len(actual), len(expected))
         for item in expected:
             self.assertTrue(item in actual)
+    
+    def test_grid(self):
+        random.init(42)
+        comm = MPI.COMM_WORLD
+        context = SharedContext(comm)
+        box = BoundingBox(0, 40, 0, 40, 0, 0)
+        grid = SharedGrid('grid', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
+                               buffer_size=2, comm=comm)
+        context.add_projection(grid)
 
+        expected = {}
+        for i in range(50):
+            agent = OAgent(i, 0, 0)
+            context.add(agent)
+            grid.move(agent, grid.get_random_local_pt(random.default_rng))
+            expected[agent.uid] = grid.get_location(agent)
+
+        
+        ckp = checkpoint.Checkpoint()
+        ckp.save_agents(context.agents())
+        ckp.save_space(context, grid)
+        with open("./test_out/checkpoint.dill", "wb") as fout:
+            pickle.dump(ckp, fout)
+
+        # recreate context and grid space
+        context = SharedContext(comm)
+        box = BoundingBox(0, 40, 0, 40, 0, 0)
+        grid = SharedGrid('grid', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
+                               buffer_size=2, comm=comm)
+        context.add_projection(grid)
+
+        def restore_agent(data):
+            uid = data[0]
+            return OAgent(uid[0], uid[1], uid[2])
+
+        with open("./test_out/checkpoint.dill", "rb") as fin:
+            ckp: checkpoint.Checkpoint = pickle.load(fin)
+        for agent in ckp.restore_agents(restore_agent):
+            context.add(agent)
+    
+        ckp.restore_space(context, grid)
+
+        for uid, exp_location in expected.items():
+            agent = context.agent(uid)
+            location = grid.get_location(agent)
+            self.assertEqual(exp_location, location)
+
+    def test_space(self):
+        random.init(42)
+        comm = MPI.COMM_WORLD
+        context = SharedContext(comm)
+        box = BoundingBox(0, 40, 0, 40, 0, 0)
+        grid = SharedCSpace('grid', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
+                             buffer_size=2, comm=comm, tree_threshold=100)
+        context.add_projection(grid)
+
+        expected = {}
+        for i in range(50):
+            agent = OAgent(i, 0, 0)
+            context.add(agent)
+            grid.move(agent, grid.get_random_local_pt(random.default_rng))
+            expected[agent.uid] = grid.get_location(agent)
+
+        
+        ckp = checkpoint.Checkpoint()
+        ckp.save_agents(context.agents())
+        ckp.save_space(context, grid)
+        with open("./test_out/checkpoint.dill", "wb") as fout:
+            pickle.dump(ckp, fout)
+
+        # recreate context and grid space
+        context = SharedContext(comm)
+        box = BoundingBox(0, 40, 0, 40, 0, 0)
+        grid = SharedCSpace('grid', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
+                             buffer_size=2, comm=comm, tree_threshold=100)
+        context.add_projection(grid)
+
+        def restore_agent(data):
+            uid = data[0]
+            return OAgent(uid[0], uid[1], uid[2])
+
+        with open("./test_out/checkpoint.dill", "rb") as fin:
+            ckp: checkpoint.Checkpoint = pickle.load(fin)
+        for agent in ckp.restore_agents(restore_agent):
+            context.add(agent)
+    
+        ckp.restore_space(context, grid)
+
+        for uid, exp_location in expected.items():
+            agent = context.agent(uid)
+            location = grid.get_location(agent)
+            self.assertEqual(exp_location, location)
+            
 
    
 class MPCheckpointTests(unittest.TestCase):
@@ -798,7 +897,7 @@ class MPCheckpointTests(unittest.TestCase):
         ckp.save_random()
         ckp.save_schedule()
         ckp.save_agents(nm.context.agents(shuffle=False))
-        ckp.save_network(nm.network, MPI.COMM_WORLD)
+        ckp.save_network(nm.network, MPI.COMM_WORLD.Get_rank())
 
         nm.runner.schedule.execute()
         nm.runner.schedule.execute()

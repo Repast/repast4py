@@ -7,7 +7,7 @@
 This module includes classes and functions for checkpointing a repast4py simulation.
 """
 
-from typing import Union, Dict, Callable, Iterable, Tuple, Any
+from typing import Union, Dict, Callable, Iterable
 from dataclasses import dataclass, field
 import warnings
 import itertools
@@ -22,6 +22,7 @@ from . import schedule
 from .core import Agent
 from .context import SharedContext
 from .network import SharedNetwork, DirectedSharedNetwork, UndirectedSharedNetwork
+from .space import SharedCSpace, SharedGrid, DiscretePoint, ContinuousPoint
 
 
 IGNORE_EVT: int = 0
@@ -58,6 +59,7 @@ class Checkpoint:
         self.agent_state = []
         self.other_state = {}
         self.networks = {}
+        self.spaces = {}
 
     def save_random(self):
         """Saves the current random state of the :py:mod:`repast4py.random.default_rng`
@@ -298,9 +300,50 @@ class Checkpoint:
         """
         return restorer(self.other_state[key], *args)
     
-    def save_network(self, network: SharedNetwork, comm: MPI.Intracomm):
+    def save_space(self, context: SharedContext, space: SharedGrid | SharedCSpace):
+        """Saves the specified space into this Checkpointing by saving the space location of
+        all the agents in the context. The saved locations are identified by the space's
+        name.
+
+        Args:
+            context: the model's context containing the agents whose locations we want to save.
+            space: the space to save.
+        """
+        locations = {}
+
+        for agent in context.agents():
+            locations[agent.uid] = space.get_location(agent).coordinates
+        self.spaces[space.name] = locations
+
+    def restore_space(self, context: SharedContext, space: SharedGrid | SharedCSpace):
+        """Places all the agents in the specified context into the specified space at the location
+        saved for that agent. The saved locations for the specified space are looked up using
+        the space's name.
+        
+        Args:
+            context: the model's context containing the agents we want to place into the specified
+                space as the saved locations.
+            space: the space to restore the agents into.
+        """
+        locations = self.spaces[space.name]
+        if isinstance(space, SharedGrid):
+            for agent in context.agents():
+                location = locations[agent.uid]
+                space.move(agent, DiscretePoint(location[0], location[1], location[2]))
+        else:
+            for agent in context.agents():
+                location = locations[agent.uid]
+                space.move(agent, ContinuousPoint(location[0], location[1], location[2]))            
+
+
+    def save_network(self, network: SharedNetwork, rank: int):
+        """Saves the specified network to this Checkpoint instance.
+        
+        Args:
+            network: the network to save.
+            rank: the rank of the executing process.
+        """
         data = []
-        rank = comm.Get_rank()
         if network.is_directed:
             for nd in filter(lambda n: n.local_rank == rank, network.graph.nodes):
                 edge_data = [nd.uid]
@@ -315,16 +358,29 @@ class Checkpoint:
 
         net_data = {"name": network.name, "directed": network.is_directed,
                     "data": data}
-        self.networks["network.name"] = net_data
+        self.networks[network.name] = net_data
 
-    def restore_networks(self, context: SharedContext, comm: MPI.Intracomm, create_agent: Callable):
-        agent_map = {agent.uid: agent for agent in context.agents()}
+    def restore_network(self, context: SharedContext, network: SharedNetwork, create_agent: Callable):
+        """Restores any saved networks from this Checkpoint instance. The networks are added to the context,
+        and all the requisite cross-process edges will be created. Note that the context is expected
+        to curently contain restored agents.
+
+        Args:
+            context: the model's context.
+            comm: the current communicator. This will be used to create ghosts and cross process links
+                where necessary.
+            create_agent:  Callable that can take the Tuple result of an agent :samp:`save()` and
+                return an agent.
+        Raises:
+            ValueError if expected agents are not found in the context.
+        
+        """
         requests = {}
+        network_data = self.networks[network.name]
         restorers = []
-        for _, network in self.networks.items():
-            restorer = NetworkRestorer(context, network, comm)
-            restorer.restore(agent_map, requests)
-            restorers.append(restorer)
+        restorer = NetworkRestorer(context, network, network_data)
+        restorer.restore(requests)
+        restorers.append(restorer)
 
         requested_agents = context.request_agents([request for request in requests.values()],
                                                   create_agent)
@@ -332,17 +388,16 @@ class Checkpoint:
             requests[agent.uid] = agent
 
         for restorer in restorers:
-            restorer.create_ghost_edges(agent_map, requests)
+            restorer.create_ghost_edges(requests)
 
 
 class NetworkRestorer:
 
-    def __init__(self, context, network_save, comm):
-        directed = network_save["directed"]
-        name = network_save["name"]
-        self.network = DirectedSharedNetwork(name, comm) if directed else UndirectedSharedNetwork(name, comm)
+    def __init__(self, context: SharedContext, network: SharedNetwork, network_data: Dict):
+        self.network = network
         context.add_projection(self.network)
-        self.network_save = network_save
+        self.network_save = network_data
+        self.context = context
         self.ghost_edges = []
 
     def _make_suc_edge(self, node_uid, other_uid, e_attribs):
@@ -359,30 +414,35 @@ class NetworkRestorer:
 
     def _add_edges(self, node, others, edge_tuple_maker, edge_adder):
         for other_uid, other_local_rank, e_attributes in others:
-            other_node = self.agent_map.get(other_uid)
+            other_node = self.context.agent(other_uid)
+            if other_node is None:
+                # maybe it's a previously retrived ghost agent
+                other_node = self.context.ghost_agent(other_uid) 
             if other_node is None:
                 self.requests[other_uid] = (other_uid, other_local_rank)
                 self.ghost_edges.append(edge_tuple_maker(node.uid, other_uid, e_attributes))
             else:
                 edge_adder(node, other_node, e_attributes)
 
-    def create_ghost_edges(self, agent_map: Dict, requests: Dict):
+    def create_ghost_edges(self,requests: Dict):
         for edge_t, u, v, e_attribs in self.ghost_edges:
             if edge_t == 0:
-                self.network.add_edge(agent_map[u], requests[v], **e_attribs)
+                self.network.add_edge(self.context.agent(u), requests[v], **e_attribs)
             else:
-                self.network.add_edge(requests[v], agent_map[u], **e_attribs)
+                self.network.add_edge(requests[v], self.context.agent(u), **e_attribs)
 
-    def restore(self, agent_map, requests: Dict):
-        self.agent_map = agent_map
+    def restore(self, requests: Dict):
         self.requests = requests
         edges = self.network_save["data"]
-        if self.network.is_directed:
-            for node_uid, successors, predecessors in edges:
-                node = agent_map[node_uid]
-                self._add_edges(node, successors, self._make_suc_edge, self._add_suc_edge)
-                self._add_edges(node, predecessors, self._make_pre_edge, self._add_pre_edge)
-        else:
-            for node_uid, others in edges:
-                node = agent_map[node_uid]
-                self._add_edges(node, others, self._make_suc_edge, self._add_suc_edge)
+        try:
+            if self.network.is_directed:
+                for node_uid, successors, predecessors in edges:
+                    node = self.context.agent(node_uid)
+                    self._add_edges(node, successors, self._make_suc_edge, self._add_suc_edge)
+                    self._add_edges(node, predecessors, self._make_pre_edge, self._add_pre_edge)
+            else:
+                for node_uid, others in edges:
+                    node = self.context.agent(node_uid)
+                    self._add_edges(node, others, self._make_suc_edge, self._add_suc_edge)
+        except KeyError:
+            raise ValueError("Expected agent not found in context. Have agents been restored to the context?")
