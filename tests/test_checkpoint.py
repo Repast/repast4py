@@ -128,6 +128,7 @@ class NetworkModel:
                 return NAgent(uid[0], uid[1], uid[2])
 
             self.network: DirectedSharedNetwork = DirectedSharedNetwork('test', comm)
+            self.context.add_projection(self.network)
             ckp.restore_network(self.context, self.network, create_agent)
             
 
@@ -179,6 +180,7 @@ class NetworkModel2:
 
             self.rank = comm.Get_rank()
             self.network = UndirectedSharedNetwork("sample_network", comm)
+            self.context.add_projection(self.network)
             ckp.restore_network(self.context, self.network, create_agent)
 
     def step(self):
