@@ -18,11 +18,12 @@ from itertools import chain
 import re
 import math
 import json
+from abc import ABC, abstractmethod
 
 from typing import List, Iterable, Callable, Tuple, Dict
 
 from ._core import Agent
-from .core import AgentManager
+from .core import AgentManager, SharedProjection
 from . import random
 
 
@@ -33,7 +34,7 @@ class GhostedEdge:
     edge_attr: Dict
 
 
-class SharedNetwork:
+class SharedNetwork(SharedProjection, ABC):
     """A network that can be shared across multiple process ranks through
     ghost nodes and edges. This is the base class for the Directed and Undirected
     SharedNetwork classes. This class should **NOT** be instantiated directly by users.
@@ -108,6 +109,81 @@ class SharedNetwork:
         """Gets the number of edges in this SharedNework."""
 
         return self.graph.number_of_edges()
+    
+    @abstractmethod
+    def _get_edge_key(self, edge: Tuple) -> Tuple:
+        """Gets the canonical edge key used to manage dictionaries of edges.
+
+        Args:
+            edge: the edge whose key we are getting
+        Returns:
+            The canonical edge key
+        """
+        pass
+
+    @abstractmethod
+    def _remove_edge_key(self, u_agent: Agent, v_agent: Agent):
+        """Removes the canonical edge key for the specified edge.
+
+        Args:
+            u_agent: the u node agent
+            v_agent: the v node agent
+        """
+        pass
+
+    @abstractmethod
+    def _add_edge_key(self, u_agent: Agent, v_agent: Agent) -> Tuple:
+        """Creates a canonical edge key for the pair of nodes.
+
+        Args:
+            u_agent: the u node agent
+            v_agent: the v node agent
+        """
+        pass
+
+    @abstractmethod
+    def _has_edge(self, agent: Agent) -> bool:
+        """Gets whether or not the specified agent participates in
+        an edge in this network.
+
+        Args:
+            agent: the agent to check
+        Returns:
+            True if the agent is part of an edge, otherwise false
+        """
+        pass
+
+    @abstractmethod
+    def add_edge(self, u_agent: Agent, v_agent: Agent, **kwattr):
+        """Adds an edge between u_agent and v_agent.
+
+        If the u and v agents are not existing nodes in the network, they
+        will be added. Edge attributes can be added using keyword
+        arguments.
+
+        Args:
+            u_agent: The u agent
+            v_agent: The v agent
+            kwattr: optional keyword arguments for assigning edge data.
+
+        Examples:
+            Add an edge with a weight attribute
+
+            >>> g.add_edge(agent1, agent2, weight=3.1)
+        """
+        pass
+
+    @abstractmethod
+    def num_edges(self, agent: Agent) -> int:
+        """Gets the number of edges that contain the specified agent.
+
+        Args:
+            agent: agent whose edge will be counted
+
+        Returns:
+            The number of edges that contain the specified agent
+        """
+        pass
 
     def add(self, agent: Agent):
         """Adds the specified agent as a node in the network.
@@ -422,7 +498,7 @@ class SharedNetwork:
         # to set up ghosting of the moved agent).
         nodes_to_remove = []
         edges_to_remove = []
-        for u, v, attr in self._edges(moving_agent, data=True):
+        for u, v, attr in self._edges(moving_agent, data=True): # type: ignore
             other = v if u.uid == moving_agent.uid else u
             if other.local_rank != self.rank and not agent_manager.is_requested(other.uid):
                 # other is ghosted and not requested so the edge is artifact of edge created
@@ -490,7 +566,7 @@ class SharedNetwork:
                 ghost = agent_manager.get_ghost(uid)
                 if ghost is not None:
                     agent = agent_manager.get_local(uid)
-                    edge_list = [e for e in self._edges(ghost, data=True)]
+                    edge_list = [e for e in self._edges(ghost, data=True)] # type: ignore
                     for u, v, attr in edge_list:
                         self.graph.remove_edge(u, v)
                         if u.uid == agent.uid:
@@ -508,7 +584,7 @@ class SharedNetwork:
                 # during next sync.
                 agent = agent_manager.get_ghost(uid, 0)
                 if agent is not None:
-                    for edge in self._edges(agent):
+                    for edge in self._edges(agent): # type: ignore
                         edge_key = self._get_edge_key(edge)
                         ge = self.ghosted_edges.get(edge_key, None)
                         if ge is not None:
@@ -573,7 +649,7 @@ class UndirectedSharedNetwork(SharedNetwork):
         """
         return self.canonical_edge_keys[edge]
 
-    def _add_edge_key(self, u_agent: Agent, v_agent: Agent):
+    def _add_edge_key(self, u_agent: Agent, v_agent: Agent) -> Tuple:
         """Creates a canonical edge key for the pair of nodes.
 
         Args:
@@ -702,7 +778,7 @@ class DirectedSharedNetwork(SharedNetwork):
         Returns:
             True if the agent is part of an edge, otherwise false
         """
-        return len(self.graph.in_edges(agent)) > 0 or len(self.graph.out_edges(agent)) > 0
+        return len(self.graph.in_edges(agent)) > 0 or len(self.graph.out_edges(agent)) > 0 # type: ignore
 
     def _get_edge_key(self, edge: Tuple):
         """Gets the canonical edge key used to manage dictionaries of edges.
@@ -727,7 +803,7 @@ class DirectedSharedNetwork(SharedNetwork):
         """
         pass
 
-    def _add_edge_key(self, u_agent: Agent, v_agent: Agent):
+    def _add_edge_key(self, u_agent: Agent, v_agent: Agent) -> Tuple: # type: ignore
         """Creates a canonical edge key for the pair of nodes.
 
         This is a NOOP on SharedDirectedNetwork
@@ -786,7 +862,7 @@ class DirectedSharedNetwork(SharedNetwork):
         Returns:
             An iterator over the incoming and outgoing edges for the specifed agent
         """
-        return chain(self.graph.out_edges(agent, data=data), self.graph.in_edges(agent, data=data))
+        return chain(self.graph.out_edges(agent, data=data), self.graph.in_edges(agent, data=data)) # type: ignore
 
     def num_edges(self, agent: Agent) -> int:
         """Gets the number of edges that contain the specified agent.
@@ -794,19 +870,7 @@ class DirectedSharedNetwork(SharedNetwork):
         Returns:
             The number of edges that contain the specified agent
         """
-        return len(self.graph.out_edges(agent)) + len(self.graph.in_edges(agent))
-
-
-def _parse_graph_description(line: str):
-    vals = line.split(' ')
-    if len(vals) != 2:
-        raise ValueError('Error reading graph description file. Invalid format on first line.')
-    try:
-        val = int(vals[1])
-    except Exception:
-        raise ValueError('Error reading graph description file. Invalid format on first line. Second value must be an integer')
-
-    return (val[0], val != 0)
+        return len(self.graph.out_edges(agent)) + len(self.graph.in_edges(agent)) # type: ignore
 
 
 @dataclass
@@ -914,7 +978,7 @@ def _parse_edge(line: str, line_num: int, graph, graph_data: GraphData):
                 graph_data.edges.append((u_uid, v_uid))
 
     except KeyError:
-        raise ValueError(f'Error reading graph description file on line {line_num}. Agent with {u_id} or {v_id} cannot be found')
+        raise ValueError(f'Error reading graph description file on line {line_num}. Agent with {u_id} or {v_id} cannot be found') # pyright: ignore[reportPossiblyUnboundVariable]
 
     except Exception:
         raise ValueError(f'Error reading graph description file on line {line_num}. Expected edge description with format: '
@@ -1072,7 +1136,7 @@ def _random_partition(graph: nx.Graph, network_name: str, fpath: str, n_ranks: i
 def _metis_partition(graph: nx.Graph, network_name: str, fpath: str, n_ranks: int, **partitioning_args):
     # import here so that users without nxmetis can
     # use the other network code.
-    import nxmetis
+    import nxmetis # pyright: ignore[reportMissingImports]
 
     _, partitions = nxmetis.partition(graph, n_ranks, **partitioning_args)
 
