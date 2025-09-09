@@ -3,7 +3,6 @@ import dill as pickle
 from mpi4py import MPI
 from typing import Tuple
 import networkx as nx
-import json
 import os
 
 try:
@@ -15,8 +14,8 @@ except ModuleNotFoundError:
 
 from repast4py.schedule import PriorityType
 from repast4py.context import SharedContext
-from repast4py.network import DirectedSharedNetwork, write_network, read_network
-import repast4py.network
+from repast4py.network import DirectedSharedNetwork,read_network
+
 
 
 class EAgent(core.Agent):
@@ -70,7 +69,7 @@ def restore_agent(agent_data: Tuple):
 
 class Model:
 
-    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint = None):
+    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint | None = None):
         self.context = SharedContext(comm)
         if ckp is None:
             rank = comm.Get_rank()
@@ -94,7 +93,7 @@ class Model:
 
 class NetworkModel:
 
-    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint = None):
+    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint | None = None):
         self.context = SharedContext(comm)
         if ckp is None:
             self.context = SharedContext(comm)
@@ -129,7 +128,7 @@ class NetworkModel:
                 return NAgent(uid[0], uid[1], uid[2])
 
             ckp.restore_networks(self.context, comm, create_agent)
-            self.network: DirectedSharedNetwork = self.context.get_projection('test')
+            self.network: DirectedSharedNetwork = self.context.get_projection('test') # type: ignore
 
     def step(self):
         u, v = random.default_rng.integers(0, 20, size=2)
@@ -152,7 +151,7 @@ def restore_net_agent(agent_data):
 
 class NetworkModel2:
 
-    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint = None):
+    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint | None = None):
         self.context = SharedContext(comm)
         if ckp is None:
             self.context = SharedContext(comm)
@@ -160,7 +159,7 @@ class NetworkModel2:
                          create_net_agent, restore_net_agent)
 
             self.rank = comm.Get_rank()
-            self.network = self.context.get_projection("sample_network")
+            self.network = self.context.get_projection("sample_network") # type: ignore
             
             self.runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
             self.runner.schedule_repeating_event(1.0, 1.0, self.step,
@@ -179,7 +178,7 @@ class NetworkModel2:
 
             self.rank = comm.Get_rank()
             ckp.restore_networks(self.context, comm, create_agent)
-            self.network = self.context.get_projection('sample_network')
+            self.network: DirectedSharedNetwork = self.context.get_projection('sample_network') # type: ignore
 
     def step(self):
         # u, v = random.default_rng.integers(0, 20, size=2)
