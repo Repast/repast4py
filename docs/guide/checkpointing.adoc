@@ -440,7 +440,7 @@ ckp.restore_network(context, network, create_agent)    #<4>
 <1> Restores the agents and adds them to the context (a prerequisite for restoring a network)
 <2> Creates the network to be restored
 <3> Adds the network to the context
-<3> Restores the network adding the saved edges, including cross process ones.
+<4> Restores the network adding the saved edges, including cross process ones.
 
 ==== Checkpointing Distributed Models
 
