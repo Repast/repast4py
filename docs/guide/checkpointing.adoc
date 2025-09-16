@@ -1,21 +1,21 @@
 == Checkpointing
 
 Checkpointing is a technique that saves the state of a Repast4Py model at a specific
-tick such that the model can restored and continued from that tick. This can be useful
+tick such that the model can be restored and continued from that tick. This can be useful
 when a model run may be interrupted (e.g., the walltime of an HPC resource on which the
-model is runnig may expire), or when a model requires a burn-in period to reach some stability before
+model is running may expire), or when a model requires a burn-in period to reach some stability before
 running experiments with the model. In the first case, periodic checkpointing allows the model
 to continue from when it was interrupted, and in the second case the model can be checkpointed
 after burn-in, and subsequent experiments can restore the model to run from that point on, rather
-than having to complete the burn-in each for each experiment.
+than having to complete the burn-in period for each experiment.
 
-Repast4Py model can be checkpointed using the https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint[Checkpoint] class in the
-https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html[repast4py.checkpoint] module.
-Once the state has been saved in a https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint[Checkpoint] instance, that instance can be written to a file using 
-https://pypi.org/project/dill/[dill] or another package used to serialize Python objects.
+// Repast4Py model can be checkpointed using the https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint[Checkpoint] class in the
+// https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html[repast4py.checkpoint] module.
+// Once the state has been saved in a https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint[Checkpoint] instance, that instance can be written to a file using 
+// https://pypi.org/project/dill/[dill] or another package used to serialize Python objects.
 
 
-NOTE: In addition the text below, the
+NOTE: In addition to the text below, the
 https://github.com/Repast/repast4py/blob/bbf151726c4fa5f8cfaa10b78a614aefcbb1e82e/tests/test_checkpoint.py#L1[checkpointing unit tests]
 contain good examples for how to checkpoint various parts of a model. 
 
@@ -23,7 +23,8 @@ contain good examples for how to checkpoint various parts of a model.
 
 Checkpointing a Repast4Py model uses a
 https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint[Checkpoint]
-instance to:
+instance in the
+https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html[repast4py.checkpoint] module to:
 
 * Save the current state of the random number generator
 * Save the current state of all the agents
@@ -34,12 +35,12 @@ Once the various parts of the simulation have been saved into the https://repast
 instance, that instance can be written to a file using the https://pypi.org/project/dill/[dill] package. To restore
 a simulation, the https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint[Checkpoint]
 instance is unpickled from its saved file, and its various _restore_ methods are used to create agents, initialize
-the schedule and so forth from their saved representations, and assigning those in a new model instance,
-rather than saving the model itself.
+the schedule, and any additional simulation components, from their saved representations. These  are assigned in a new model instance, 
+rather than saving the original model instance.
 
 ==== Saving a Checkpoint to a File
 A checkpoint can be _pickled_ (saved) and _unpickled_ (restored) to and from a file with the
-following code, using the https://pypi.org/project/dill/[dill] package.
+following code:
 
 [source,python,numbered]
 ----
@@ -57,11 +58,11 @@ def unpickle(fname):
 
 IMPORTANT: While https://pypi.org/project/dill/[dill] can serialize most Python types, there are
 exceptions. Consequently, you have may have to translate some Python object types to those
-amenable to serialization (e.g., strings and numbers).
+amenable to serialization (e.g., to strings and numbers).
 
 ==== Checkpointing the Random State
 
-The current state of the default random number generator,`repast4py.random.default_rng`,
+The current state of the default random number generator, `repast4py.random.default_rng`,
 can be saved to a checkpoint using the https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.save_random.html[Checkpoint.save_random]
 method.
 
@@ -73,25 +74,25 @@ ckp.save_random()    #<1>
 pickle(f"checkpoint_{MPI.COMM_WORLD.Get_rank()}.ckp", ckp)    #<2>
 ----
 <1> Saves the random state
-<2> Saves the checkpoint to the specified file using `pickle` defined in <<_saving_a_checkpoint_to_a_file, above>>, adding the current rank to the file name to separate it from checkpoints saved on other ranks
+<2> Saves the checkpoint to the specified file using `pickle` defined <<_saving_a_checkpoint_to_a_file, above>>, adding the current rank to the file name to separate it from checkpoints saved on other ranks
 
 https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.restore_random[Checkpoint.restore_random] is used to restore the random state, resetting
-reset the https://repast.github.io/repast4py.site/apidoc/source/repast4py.random.html#repast4py.random.default_rng[repast4py.random.default_rng] to the saved state.
+ the https://repast.github.io/repast4py.site/apidoc/source/repast4py.random.html#repast4py.random.default_rng[repast4py.random.default_rng] to the saved state.
 
 [source,python,numbered]
 ----
 ckp = unpickle(f"checkpoint_{MPI.COMM_WORLD.Get_rank()}.ckp")   #<1>
 ckp.restore_random()    #<2>
 ----
-<1> Restores the saved checkpoint from the specified file using `unpickle` defined in <<_saving_a_checkpoint_to_a_file, above>>
+<1> Restores the saved checkpoint from the specified file using `unpickle` defined  <<_saving_a_checkpoint_to_a_file, above>>
 <2> Restores the random state
 
 ==== Checkpointing Agents
 
 https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.save_agents[Checkpoint.save_agents] and
-https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.restore_agents[Checkpoint.restore_agents] are used to save and restore agent. They use the same save and restore pattern that is used to move and copy agents between processes (see 
-<<_saving_and_restoring_agents, Saving and Restoring Agents>>). There agent must implement a `save` method that
-captures the agent's state in a tuple, and a `restore` function must be provided that create an agent
+https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.restore_agents[Checkpoint.restore_agents] are used to save and restore agents. They use the same save and restore pattern that is used to move and copy agents between processes (see 
+<<_saving_and_restoring_agents, Saving and Restoring Agents>>). There, an agent must implement a `save` method that
+captures the agent's state in a tuple and a `restore` function must be provided that creates an agent
 from that tuple.
 
 [source,python,numbered]
@@ -102,7 +103,7 @@ class EAgent(core.Agent):    #<1>
         super().__init__(id=id, type=agent_type, rank=rank)
         self.vals = [val]    #<2>
 
-    def update(self, val):
+    def append_val(self, val):
         self.val.append(val)
 
     def save(self) -> Tuple:    #<3>
@@ -119,7 +120,7 @@ pickle(f"checkpoint_{MPI.COMM_WORLD.Get_rank()}.ckp", ckp)
 <1> An example Repast4Py agent
 <2> The agent state (`self.vals`), a list of values.
 <3> The `save` method that returns a tuple, consisting of the agent's
-unique id, and its state.
+unique id, and its state
 <4> Creates a list of example agents
 <5> Saves the agents into `ckp`, a `Checkpoint` instance
 
@@ -139,10 +140,10 @@ agents = [agent for agent in ckp.restore_agents(restore_agent)]    #<3>
 <2> Creates the agent from the saved tuple. Note that we pass
 None for the `val` and set the agent's `vals` field to the saved
 value in the next line.
-<3> Creates a list of agents from the saved agent state using the `restore_agent` function.
+<3> Creates a list of agents from the saved agent state using the `restore_agent` function
 
-NOTE: `Checkpoint.restore_agent` returns a generator that can be used in a for loop
-to add agents to a model's `context`, for exxample.
+NOTE: `Checkpoint.restore_agent` returns a generator that can be used in a `for` loop
+to add agents to a model's `context`, for example.
 
 ==== Checkpointing the Simulation Schedule
 
@@ -181,8 +182,8 @@ ckp = checkpoint.Checkpoint()
 ckp.save_schedule()    #<4>
 pickle(f"checkpoint_{MPI.COMM_WORLD.Get_rank()}.ckp", ckp) 
 ----
-<1> An example model containing agents and step method that
-calls `move` on all its agents
+<1> An example model containing agents, a step method that
+calls `move` on all its agents, and an update method that calls `update` on all its agents
 <2> Schedules `model.step` as an event, adding a metadata
 dictionary that provides the name of the event being scheduled.
 The name can be used to restore the event correctly.
@@ -238,7 +239,7 @@ class UpdateEvent:    #<1>
         self.val = val
     
     def __call__(self):
-        self.agent.update(self.val)
+        self.agent.append_val(self.val)
 
 agent = EAgent(1, 1, 1, 0)
 evt = UpdateEvent(agent, 12.2)
@@ -251,9 +252,9 @@ ckp = checkpoint.Checkpoint()
 ckp.save_schedule()
 pickle(f"checkpoint_{MPI.COMM_WORLD.Get_rank()}.ckp", ckp) 
 ----
-<1> An example event that updates a specific agent with a specific value.
+<1> An example event that updates a specific agent by appending a value to that agent's list of values
 <2> Schedules the event, adding metadata that identifies event, the agent and the value
-for that event.
+for that event
 
 To restore this event, we need a dictionary of agents keyed by agent uid in order to select the correct
 agent by id when recreating the event.
@@ -308,9 +309,9 @@ pickle(f"checkpoint_{MPI.COMM_WORLD.Get_rank()}.ckp", ckp)
 <2> Saves the list containing the model values into the checkpoint identifying
 them with the key `mprops`
 
-https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.restore[Checkpoint.restore].
-takes the key associated with the saved value, and a Callable which will be passed the saved value and any other
-arguments passed to restore. The Callable can peform additional manipulation of the saved value.
+https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.restore[Checkpoint.restore]
+takes the key associated with the saved value, and a Callable, which will be passed the saved value and any other
+arguments passed to restore. The Callable can perform additional manipulation of the saved value.
 
 [source,python,numbered]
 ----
@@ -326,20 +327,19 @@ def restore_checkpoint():
     ckp = unpickle(f"checkpoint_{MPI.COMM_WORLD.Get_rank()}.ckp")
     ckp.restore("mprops", restore, model)    #<2>
 ----
-<1> A function for restoring the 3 saved properties to the model.
+<1> A function for restoring the 3 saved properties to the model
 <2> Restores the 3 properties to the model by retrieving the list
-value using its `mprops` key, calling the provided restore function
-and passing that function the provided model instance.
+value using its `mprops` key, calling the provided restore function,
+and passing the model instance to that function.
 
 ==== Checkpointing Grid and Continuous Space Projections
 
 Checkpointing the grid and continuous space projections is done with the
 https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.save_space[Checkpoint.save_space]
-method. This saves all the locations of a context's agents in a specified space to the checkpoint. Restoring,
-requires that the user provide a context with restored agents, and an empty grid or continuous space
+method. This saves all the locations of a context's agents in a specified space to the checkpoint. Restoring requires that the user provide a context with restored agents, and an empty grid or continuous space
 instance to the
 https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.restore_space[Checkpoint.restore_space] method.
-That method will then retreive the saved agent locations in that grid or space from the checkpoint using the name of the space, and move the agents to those locations.
+This method will retrieve the saved agent locations in the grid or space from the checkpoint using the name of the space, and move the agents to those locations.
 
 NOTE: The same save and restore methods,
 https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.save_space[Checkpoint.save_space]
@@ -361,7 +361,7 @@ ckp.save_space(context, grid)    #<2>
 pickle(f"checkpoint_{MPI.COMM_WORLD.Get_rank()}.ckp", ckp) 
 ----
 <1> An example SharedGrid to checkpoint
-<2> Saves the agents locations in the grid to the checkpoint
+<2> Saves the agent locations in the grid to the checkpoint
 
 Prior to restoring a grid or continuous space, the context must be filled with the
 restored agents, and the grid or continuous space instance initialized. 
@@ -386,9 +386,9 @@ ckp.restore_space(context, grid)    #<3>
 ----
 <1> Recreating the saved SharedGrid instance
 <2> Adds the restored agents to the context
-<3> Restores the agents to their checkpointed locations with the grid.
+<3> Restores the agents to their checkpointed locations within the grid
 
-This same save and restore example applies to a `SharedCSpace` instance as well, replacing only the `grid` `SharedGrid` with a `SharedCSpace` instance in the above example code.
+As noted above, this same save and restore example applies to a `SharedCSpace` instance as well, replacing only the `grid` `SharedGrid` with a `SharedCSpace` instance in the above example code.
 
 ==== Checkpointing Network Projections
 
@@ -445,8 +445,8 @@ ckp.restore_network(context, network, create_agent)    #<4>
 ==== Checkpointing Distributed Models
 
 Each rank in a distributed model should save its own checkpoint, typically incorporating its
-rank into the checkpoint file name as in the examples above. Each rank
-should restore its own checkpoint and then a
+rank into the checkpoint file name as in the examples above. After each rank
+restores its own checkpoint, a
 https://repast.github.io/repast4py.site/apidoc/source/repast4py.context.html#repast4py.context.SharedContext.synchronize[SharedContext.synchronize] should be performed
 to synchronize the simulation state across all processes.
 
