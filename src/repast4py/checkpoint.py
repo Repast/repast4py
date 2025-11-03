@@ -169,7 +169,7 @@ class Checkpoint:
         ss['evts'] = evts
 
     def _schedule_evt(self, runner: schedule.SharedScheduleRunner, evt_type: schedule.EvtType, evt_data: EvtData,
-                      evt: Callable) -> schedule.ScheduledEvent | None:
+                      evt: Callable) -> Union[schedule.ScheduledEvent, None]:
         # next(schedule.counter) in _push_event should now return
         # the serialized order_idx
         runner.schedule.counter = iter((evt_data.order_idx,)) # type: ignore
@@ -300,7 +300,7 @@ class Checkpoint:
         """
         return restorer(self.other_state[key], *args)
     
-    def save_space(self, context: SharedContext, space: SharedGrid | SharedCSpace):
+    def save_space(self, context: SharedContext, space: Union[SharedGrid, SharedCSpace]):
         """Saves the specified space into this Checkpointing by saving the space location of
         all the agents in the context. The saved locations are identified by the space's
         name.
@@ -315,7 +315,7 @@ class Checkpoint:
             locations[agent.uid] = space.get_location(agent).coordinates
         self.spaces[space.name] = locations
 
-    def restore_space(self, context: SharedContext, space: SharedGrid | SharedCSpace):
+    def restore_space(self, context: SharedContext, space: Union[SharedGrid, SharedCSpace]):
         """Places all the agents in the specified context into the specified space at the location
         saved for that agent. The saved locations for the specified space are looked up using
         the space's name.
@@ -395,7 +395,6 @@ class NetworkRestorer:
 
     def __init__(self, context: SharedContext, network: SharedNetwork, network_data: Dict):
         self.network = network
-        context.add_projection(self.network)
         self.network_save = network_data
         self.context = context
         self.ghost_edges = []

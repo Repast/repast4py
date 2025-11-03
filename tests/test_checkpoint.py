@@ -1,7 +1,7 @@
 import unittest
 import dill as pickle
 from mpi4py import MPI
-from typing import Tuple
+from typing import Tuple, Union
 import networkx as nx
 import os
 
@@ -69,7 +69,7 @@ def restore_agent(agent_data: Tuple):
 
 class Model:
 
-    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint | None = None):
+    def __init__(self, comm: MPI.Intracomm, ckp: Union[checkpoint.Checkpoint, None] = None):
         self.context = SharedContext(comm)
         if ckp is None:
             rank = comm.Get_rank()
@@ -93,7 +93,7 @@ class Model:
 
 class NetworkModel:
 
-    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint | None = None):
+    def __init__(self, comm: MPI.Intracomm, ckp: Union[checkpoint.Checkpoint, None] = None):
         self.context = SharedContext(comm)
         if ckp is None:
             self.context = SharedContext(comm)
@@ -128,7 +128,6 @@ class NetworkModel:
                 return NAgent(uid[0], uid[1], uid[2])
 
             self.network: DirectedSharedNetwork = DirectedSharedNetwork('test', comm)
-            self.context.add_projection(self.network)
             ckp.restore_network(self.context, self.network, create_agent)
             
 
@@ -153,7 +152,7 @@ def restore_net_agent(agent_data):
 
 class NetworkModel2:
 
-    def __init__(self, comm: MPI.Intracomm, ckp: checkpoint.Checkpoint | None = None):
+    def __init__(self, comm: MPI.Intracomm, ckp: Union[checkpoint.Checkpoint, None] = None):
         self.context = SharedContext(comm)
         if ckp is None:
             self.context = SharedContext(comm)
