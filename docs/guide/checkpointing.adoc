@@ -16,7 +16,7 @@ than having to complete the burn-in period for each experiment.
 
 
 NOTE: In addition to the text below, the
-https://github.com/Repast/repast4py/blob/bbf151726c4fa5f8cfaa10b78a614aefcbb1e82e/tests/test_checkpoint.py#L1[checkpointing unit tests]
+https://github.com/Repast/repast4py/blob/master/tests/test_checkpoint.py#L1[checkpointing unit tests]
 contain good examples for how to checkpoint various parts of a model. 
 
 === How to Checkpoint
@@ -124,6 +124,10 @@ unique id, and its state
 <4> Creates a list of example agents
 <5> Saves the agents into `ckp`, a `Checkpoint` instance
 
+
+https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.restore_agents[Checkpoint.restore_agents]
+uses a user provided function to create the agents from the saved data.
+
 [source,python,numbered]
 ----
 def restore_agent(agent_data: Tuple):    #<1>
@@ -148,7 +152,7 @@ to add agents to a model's `context`, for example.
 ==== Checkpointing the Simulation Schedule
 
 Saving a schedule to a https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint[Checkpoint] uses the https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.save_schedule[Checkpoint.save_schedule]
-method. It iterates over all the events in the current SharedScheduleRunner, and saves them. However, the user
+method. It iterates over all the events in the current `SharedScheduleRunner`, and saves them. However, the user
 must provide enough metadata when scheduling the events such that they can be recreated using a
 user defined function. The metadata is typically a dictionary. 
 
@@ -215,7 +219,7 @@ def restore_checkpoint():
     ckp = unpickle(f"checkpoint_{MPI.COMM_WORLD.Get_rank()}.ckp")
     runner = ckp.restore_schedule(MPI.COMM_WORLD, restore_events)    #<3>
 ----
-<1> A model instance whose methods we want restore as scheduled events
+<1> A model instance whose methods we want to restore as scheduled events
 <2> The function used to recreate the events from the checkpoint. It is
 passed the metadata from each saved event, and should return a corresponding
 event. In this case, the `name` is used to determine which method of the
@@ -353,6 +357,7 @@ box = BoundingBox(0, 40, 0, 40, 0, 0)
 grid = SharedGrid('grid', bounds=box, borders=BorderType.Sticky, occupancy=OccupancyType.Multiple,
                    buffer_size=2, comm=comm)    #<1>
 context.add_projection(grid)
+# move agents around the grid
 ...
 
 ckp = checkpoint.Checkpoint()
