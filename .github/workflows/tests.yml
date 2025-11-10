@@ -38,18 +38,21 @@ jobs:
         uses: mpi4py/setup-mpi@v1
         with:
           mpi: ${{ matrix.mpi }}
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v7
-      - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.14 tox --with tox-uv --with tox-gh
-      - name: Install Python
-        if: matrix.env != '3.14'
-        run: uv python install --python-preference only-managed ${{ matrix.env }}
-      - name: Setup test suite
-        run: tox run -vv --notest --skip-missing-interpreters false
-        env:
-          TOX_GH_MAJOR_MINOR: ${{ matrix.env }}
-      - name: Run test suite
-        run: tox run --skip-pkg-install
-        env:
-          TOX_GH_MAJOR_MINOR: ${{ matrix.env }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: CC=mpicxx CXX=mpicxx python3 -m pip install -e .
+      - name: Test with pytest
+        run: |
+          env RDMAV_FORK_SAFE=1 python -m unittest discover tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 9 python -m unittest tests.shared_obj_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 9 python -m unittest tests.shared_vl_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 9 python -m unittest tests.ctopo_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
+          env RDMAV_FORK_SAFE=1 mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
+          env RDMAV_FORK_SAFE=1 mpirun -n 4 python -m unittest tests.logging_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 4 python -m unittest tests.shared_network_tests
+      
+    
