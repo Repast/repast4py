@@ -3,7 +3,7 @@ Version 3.0 November 2025
 :toc2:
 :icons: font
 :numbered:
-:website: https://repast.github.io
+:website: https://repast.github.io/repast4py.site
 :xrefstyle: full
 :imagesdir: images
 :source-highlighter: pygments
