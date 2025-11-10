@@ -1,4 +1,4 @@
-name: tox-tests
+name: unit tests
 
 on:
   schedule:
