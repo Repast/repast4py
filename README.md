@@ -3,17 +3,20 @@
 [![codecov](https://codecov.io/gh/Repast/repast4py/branch/develop/graph/badge.svg?token=JCDU2LT8G2)](https://codecov.io/gh/Repast/repast4py/branch/develop)
 
 ## Build Status
+| Master | Develop |
+| ------ |-------- |
+| [![unit tests](https://github.com/Repast/repast4py/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/Repast/repast4py/actions/workflows/tests.yml) | [![unit tests](https://github.com/Repast/repast4py/actions/workflows/tests.yml/badge.svg?branch=develop)](https://github.com/Repast/repast4py/actions/workflows/tests.yml) |
 
-<table>
+<!-- <table>
   <tr>
     <td><b>Master</b></td>
     <td><b>Develop</b></td>
   </tr>
   <tr>
-    <td><a href="https://circleci.com/gh/Repast/repast4py/tree/master"><img src="https://circleci.com/gh/Repast/repast4py/tree/master.svg?style=shield" alt="Build Status" /></a></td>
-    <td><a href="https://circleci.com/gh/Repast/repast4py/tree/develop"><img src="https://circleci.com/gh/Repast/repast4py/tree/develop.svg?style=shield" alt="Build Status" /></a></td>
+    <td><a href="https://circleci.com/gh/Repast/repast4py/tree/master"><img src="https://github.com/Repast/repast4py/actions/workflows/tests.yml/badge.svg?branch=master" alt="Build Status"/></a></td>
+    <td><a href="https://circleci.com/gh/Repast/repast4py/tree/develop"><img src="https://circleci.com/gh/Repast/repast4py/tree/develop.svg?style=shield" alt="Build Status"/> </a></td>
   </tr>
-</table>
+</table> -->
 
 ## Repast4Py
 
@@ -40,7 +43,7 @@ that Windows users use the Windows Subsystem for Linux (WSL). Installation instr
 WSL can be found [here](https://docs.microsoft.com/en-us/windows/wsl/install).
 
 Under Linux, MPI can be installed using your OS's package manager. For example, 
-under Ubuntu 22.04 (and thus WSL), the mpich MPI implementation can be installed with:
+under Ubuntu 20.04 (and thus WSL), the mpich MPI implementation can be installed with:
 
 ```bash
 $ sudo apt install mpich
@@ -56,11 +59,10 @@ Check the resource's documentation on available software for more details.
 Repast4Py can be downloaded and installed from PyPI using pip. 
 Since Repast4Py includes native MPI C++ code that needs to be compiled,
 the C compiler `CC` environment variable must be set
-to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation. Depending
-on the operating system, the `CXX` variable may also need to be set.
+to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation.
 
 ```
-env CC=mpicxx CXX=mpicxx pip install repast4py
+env CC=mpicxx pip install repast4py
 ```
 
 __NOTE__: If you see an error message about a missing `python.h` header file when
