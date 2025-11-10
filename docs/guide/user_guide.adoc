@@ -1,9 +1,9 @@
 = Repast for Python (Repast4Py) User Guide
-Version 2.1 September 2024
+Version 3.0 November 2025
 :toc2:
 :icons: font
 :numbered:
-:website: https://jozik.github.io/goes_bing
+:website: https://repast.github.io
 :xrefstyle: full
 :imagesdir: images
 :source-highlighter: pygments
