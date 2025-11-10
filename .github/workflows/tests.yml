@@ -1,0 +1,58 @@
+name: unit tests
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # Fire at 06:00 AM every day
+  workflow_dispatch:      
+  pull_request:
+  push:
+    branches:
+      - develop
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test with ${{ matrix.env }} on ${{ matrix.os }} with ${{ matrix.mpi }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - "3.13"
+          - "3.12"
+          - "3.11"
+          - "3.10"
+          - "3.9"
+        mpi: [ 'mpich', 'openmpi' ]
+        os:
+          - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup MPI mpich
+        uses: mpi4py/setup-mpi@v1
+        with:
+          mpi: ${{ matrix.mpi }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Repast4Py
+        run: CC=mpicxx CXX=mpicxx python3 -m pip install -e .
+      - name: Test with unittest
+        run: |
+          env RDMAV_FORK_SAFE=1 python -m unittest discover tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 9 python -m unittest tests.shared_obj_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 9 python -m unittest tests.shared_vl_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 9 python -m unittest tests.ctopo_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
+          env RDMAV_FORK_SAFE=1 mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
+          env RDMAV_FORK_SAFE=1 mpirun -n 4 python -m unittest tests.logging_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 4 python -m unittest tests.shared_network_tests
+      
+    
