@@ -25,7 +25,6 @@ jobs:
         os:
           - windows-2022
           - macos-14
-          - ubuntu-latest
 
         mpi:
           - msmpi
@@ -35,8 +34,6 @@ jobs:
           - os: windows-2022
             mpi: mpich
           - os:  macos-14
-            mpi: msmpi
-          - os: ubuntu-latest
             mpi: msmpi
 
     steps:
