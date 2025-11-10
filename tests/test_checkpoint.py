@@ -17,6 +17,9 @@ from repast4py.context import SharedContext
 from repast4py.network import DirectedSharedNetwork,UndirectedSharedNetwork, read_network
 from repast4py.space import BoundingBox, BorderType, SharedGrid, SharedCSpace, OccupancyType
 
+def setUpModule():
+    os.makedirs("./test_out", exist_ok=True)
+
 
 class EAgent(core.Agent):
 

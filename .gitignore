@@ -17,6 +17,8 @@ build
 # python distribution directory
 dist
 
+test_out/
+
 # SWIG-generated interfaces
 *_wrap.cxx
 
