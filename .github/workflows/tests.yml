@@ -38,10 +38,10 @@ jobs:
         uses: mpi4py/setup-mpi@v1
         with:
           mpi: ${{ matrix.mpi }}
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.env}}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.env }}
       - name: Install Repast4Py
         run: CC=mpicxx CXX=mpicxx python3 -m pip install -e .
       - name: Test with unittest
