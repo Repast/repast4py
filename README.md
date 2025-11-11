@@ -35,7 +35,7 @@ Collier, N. T., Ozik, J., & Tatara, E. R. (2020). Experiences in Developing a Di
 
 ### Requirements
 
-Repast4Py requires Python 3.8+
+Repast4Py requires Python 3.9+
 
 Repast4Py can run on Linux, macOS and Windows provided there is a working MPI implementation
 installed and mpi4py is supported. Repast4Py is developed and tested on Linux. We recommend
@@ -68,7 +68,7 @@ env CC=mpicxx pip install repast4py
 __NOTE__: If you see an error message about a missing `python.h` header file when
 installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
 a python dev package using your OS's package manager. For example, assuming
-Python 3.8, `sudo apt install python3.8-dev` will work for Ubuntu.
+Python 3.11, `sudo apt install python3.11-dev` will work for Ubuntu.
 
 ### Documentation
 
