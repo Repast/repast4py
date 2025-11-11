@@ -63,7 +63,7 @@ amenable to serialization (e.g., to strings and numbers).
 ==== Checkpointing the Random State
 
 The current state of the default random number generator, `repast4py.random.default_rng`,
-can be saved to a checkpoint using the https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.save_random.html[Checkpoint.save_random]
+can be saved to a checkpoint using the https://repast.github.io/repast4py.site/apidoc/source/repast4py.checkpoint.html#repast4py.checkpoint.Checkpoint.save_random[Checkpoint.save_random]
 method.
 
 [source,python,numbered]
