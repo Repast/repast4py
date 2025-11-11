@@ -57,6 +57,8 @@ jobs:
           env RDMAV_FORK_SAFE=1 mpirun -n 4 coverage run --rcfile=coverage.rc -m unittest tests.logging_tests
           env RDMAV_FORK_SAFE=1 mpirun -n 4 coverage run --rcfile=coverage.rc -m unittest tests.shared_network_tests
       - name: Generate Coverage Report
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           coverage combine
           coverage report -m
