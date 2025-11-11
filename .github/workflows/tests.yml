@@ -44,15 +44,22 @@ jobs:
           python-version: ${{ matrix.env }}
       - name: Install Repast4Py
         run: CC=mpicxx CXX=mpicxx python3 -m pip install -e .
+      - name: Install Coverage
+        run: pip install coverage
       - name: Test with unittest
         run: |
-          env RDMAV_FORK_SAFE=1 python -m unittest discover tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 9 python -m unittest tests.shared_obj_tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 9 python -m unittest tests.shared_vl_tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 9 python -m unittest tests.ctopo_tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
-          env RDMAV_FORK_SAFE=1 mpirun -n 18 python -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
-          env RDMAV_FORK_SAFE=1 mpirun -n 4 python -m unittest tests.logging_tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 4 python -m unittest tests.shared_network_tests
+          env RDMAV_FORK_SAFE=1 coverage run -m unittest discover tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.shared_vl_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.ctopo_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 18 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
+          env RDMAV_FORK_SAFE=1 mpirun -n 18 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
+          env RDMAV_FORK_SAFE=1 mpirun -n 4 coverage run --rcfile=coverage.rc -m unittest tests.logging_tests
+          env RDMAV_FORK_SAFE=1 mpirun -n 4 coverage run --rcfile=coverage.rc -m unittest tests.shared_network_tests
+      - name: Generate Coverage Report
+        run: |
+          coverage combine
+          coverage report -m
+          bash <(curl -s https://codecov.io/bash) 
       
     
