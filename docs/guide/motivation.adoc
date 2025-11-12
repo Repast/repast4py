@@ -51,8 +51,8 @@ The preferred install is into a Python virtual environment.
 [source,bash]
 ----
 $ python3 -m venv path/to/repast4py_venv
-$ source path/to/globus_compute_venv/bin/activate
-(repast4py_env) $ python3 -m pip install repast4py
+$ source path/to/repast4py_venv/bin/activate
+(repast4py_venv) $ env CC=mpicxx CXX=mpicxx pip install repast4py
 ----
 
 The environment only needs to be created once with `python3 -m venv ...`,
