@@ -46,6 +46,24 @@ installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
 a python dev package using your OS's package manager. For example, assuming
 Python 3.8, `sudo apt install python3.8-dev` will work for Ubuntu.
 
+The preferred install is into a Python virtual environment.
+
+[source,bash]
+----
+$ python3 -m venv path/to/repast4py_venv
+$ source path/to/globus_compute_venv/bin/activate
+(repast4py_env) $ python3 -m pip install repast4py
+----
+
+The environment only needs to be created once with `python3 -m venv ...`,
+but does need to be sourced in order to be used. 
+
+NOTE: Using Repast4Py in a conda environment can have issues. Conda may
+install its own MPI distribution, and its own C/C++ compiler. These
+can conflict with those installed on the host OS. Using a non-conda
+Python virtual environment is recommended.
+
+
 === Documentation
 
 * link:./user_guide.html[User's Guide] (This document)

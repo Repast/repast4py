@@ -46,6 +46,11 @@ Depending on the operating system, the `CXX` variable may also need to be set.
 env CC=mpicxx CXX=mpicxx pip install repast4py
 ----
 
+The preferred install is into a Python virtual environment. See
+https://repast.github.io/repast4py.site/guide/user_guide.html#_installation[here]
+for additional installation instructions.
+
+
 NOTE: If you see an error message about a missing `python.h` header file when
 installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
 a python dev package using your OS's package manager. For example, assuming

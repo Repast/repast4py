@@ -65,6 +65,10 @@ to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation
 env CC=mpicxx pip install repast4py
 ```
 
+The preferred install is into a Python virtual environment. See
+[here](https://repast.github.io/repast4py.site/guide/user_guide.html#_installation)
+for additional installation instructions.
+
 __NOTE__: If you see an error message about a missing `python.h` header file when
 installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
 a python dev package using your OS's package manager. For example, assuming
