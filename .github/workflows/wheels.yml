@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup MPI (${{ matrix.mpi }})
         uses: mpi4py/setup-mpi@v1
@@ -46,7 +46,7 @@ jobs:
           mpi: ${{ matrix.mpi }}
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: pip
@@ -71,7 +71,7 @@ jobs:
           # Disable building PyPy wheels on all platforms
           CIBW_SKIP: pp*
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
