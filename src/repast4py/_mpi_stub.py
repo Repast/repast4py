@@ -16,6 +16,10 @@ singleton (see ``single_rank_include/mpi4py/mpi4py.h``), so the module path and
 the names ``MPI.Intracomm`` / ``MPI.COMM_WORLD`` must remain stable.
 """
 
+import os
+import sys
+import warnings
+
 
 class _Op:
     """Sentinel for an MPI reduction operator (e.g. MPI.SUM). At size 1 the
@@ -160,3 +164,58 @@ class MPI:
 
     # The single communicator.
     COMM_WORLD = Intracomm()
+
+
+# Environment variable (size, rank) pairs set by common MPI launchers / schedulers.
+# Used to detect, without a real MPI, whether this mock build was launched as a
+# multi-process job.
+_LAUNCHER_VARS = (
+    ("OMPI_COMM_WORLD_SIZE", "OMPI_COMM_WORLD_RANK"),   # Open MPI
+    ("PMI_SIZE", "PMI_RANK"),                           # MPICH, Hydra, Intel MPI
+    ("MV2_COMM_WORLD_SIZE", "MV2_COMM_WORLD_RANK"),     # MVAPICH2
+    ("SLURM_NTASKS", "SLURM_PROCID"),                   # Slurm srun
+)
+
+
+def _launch_size_rank():
+    """Best-effort (size, rank) of the launching job from launcher environment
+    variables. Returns (1, 0) when none are set."""
+    for size_var, rank_var in _LAUNCHER_VARS:
+        raw = os.environ.get(size_var)
+        if raw is None:
+            continue
+        try:
+            size = int(raw)
+        except ValueError:
+            continue
+        try:
+            rank = int(os.environ.get(rank_var, "0"))
+        except ValueError:
+            rank = 0
+        return size, rank
+    return 1, 0
+
+
+def _check_launch():
+    """Announce that the single-rank mock MPI is in use, and refuse to run as a
+    multi-process job (where the mock would silently produce independent runs)."""
+    size, rank = _launch_size_rank()
+    if size > 1:
+        if rank == 0:
+            sys.stderr.write(
+                "ERROR: repast4py is using its single-rank (mock) MPI, but this "
+                f"program was launched with {size} processes (e.g. mpirun/srun). The "
+                "mock MPI does not communicate between processes, so a multi-process "
+                "run is invalid. Rebuild repast4py without R4PY_SINGLE_RANK (with a "
+                "real MPI) to run across multiple ranks.\n"
+            )
+            sys.stderr.flush()
+        sys.exit(1)
+    warnings.warn(
+        "repast4py is using its single-rank (mock) MPI substitute (no real MPI); "
+        "MPI.COMM_WORLD has size 1 and this run is not distributed.",
+        RuntimeWarning, stacklevel=2,
+    )
+
+
+_check_launch()
