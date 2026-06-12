@@ -62,6 +62,36 @@ jobs:
         run: |
           coverage combine
           coverage report -m
-          bash <(curl -s https://codecov.io/bash) 
+          bash <(curl -s https://codecov.io/bash)
+
+  test-single-rank:
+    name: single-rank test with ${{ matrix.env }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - "3.13"
+          - "3.12"
+          - "3.11"
+          - "3.10"
+          - "3.9"
+        os:
+          - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python ${{ matrix.env }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.env }}
+      # No MPI is set up: the single-rank build must require neither a native MPI
+      # nor mpi4py.
+      - name: Install Repast4Py (single-rank, no MPI)
+        run: R4PY_SINGLE_RANK=1 python3 -m pip install -e .
+      - name: Verify single-rank MPI is active
+        run: python3 -c "from repast4py import MPI; assert MPI.COMM_WORLD.Get_size() == 1; print(MPI.__name__)"
+      - name: Test with unittest
+        run: python3 -m unittest discover tests
       
     
