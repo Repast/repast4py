@@ -15,7 +15,13 @@ install the macOS Xcode command line tools, if necessary, by running the followi
 xcode-select -install
 ----
 
-This will start a dialog for the tools installation. 
+This will start a dialog for the tools installation.
+
+NOTE: If you only need to run smaller scale models on a single process, you can skip
+installing MPI entirely. Repast4Py offers a single-rank installation that requires
+neither MPI nor mpi4py, built with `env R4PY_SINGLE_RANK=1 pip install repast4py`. See
+the https://repast.github.io/repast4py.site/guide/user_guide.html#single_rank_install[User's Guide]
+for details.
 
 === Homebrew
 

@@ -29,6 +29,10 @@ Installation instructions for MPI on macOS can be found {website}/macos_mpi_inst
 A typical campus cluster, or HPC resource will have MPI and mpi4py installed.
 Check the resource's documentation on available software for more details.
 
+If you only need to run smaller scale models on a single process, Repast4Py can be
+installed in a single-rank mode that requires neither MPI nor mpi4py; see
+<<single_rank_install>>.
+
 === Installation
 
 Repast4Py can be downloaded and installed from PyPI using pip. 
@@ -62,6 +66,29 @@ NOTE: Using Repast4Py in a conda environment can have issues. Conda may
 install its own MPI distribution, and its own C/C++ compiler. These
 can conflict with those installed on the host OS. Using a non-conda
 Python virtual environment is recommended.
+
+
+[[single_rank_install]]
+==== Single-Rank Installation (without MPI)
+
+Repast4Py can also be installed in a *single-rank* mode that requires neither a
+native MPI installation nor mpi4py. This is intended for developing and running
+smaller scale models on a single process -- for example on a laptop without MPI, or
+in continuous integration. In this mode the MPI calls are provided by a pure-Python
+substitute: `MPI.COMM_WORLD` has size 1 and all collective operations are no-ops.
+
+A C/{cpp} compiler and the Python development headers are still required to compile
+Repast4Py's native extensions, but no MPI compiler wrapper is needed. Set the
+`R4PY_SINGLE_RANK` environment variable when installing:
+
+----
+env R4PY_SINGLE_RANK=1 pip install repast4py
+----
+
+NOTE: A single-rank installation can only be run as a single process. Launching it
+across multiple processes (e.g. `mpirun -n 2`) is an error and the program will exit;
+for multi-process / distributed runs use the default installation above with a working
+MPI.
 
 
 === Documentation
