@@ -48,6 +48,31 @@ mpirun -n 9 ./unit_tests --gtest_filter=CartesianTopology.*
 ./unit_tests --gtest_filter=SpatialTreeTests.*
 ```
 
+### Testing both build modes with tox ###
+
+`tox` builds and runs the test suite for both build modes across Python versions.
+The environments are generative: `py{39,310,311,312,313}-{mpi,mock}`.
+
+* `*-mpi` envs build the default native-MPI variant (`CC=CXX=mpicxx`) and run the
+  single-process tests plus the `mpirun` parallel suites.
+* `*-mock` envs build the single-rank variant (`R4PY_SINGLE_RANK=1`, no native MPI
+  and no mpi4py) and run the single-process tests.
+
+Common invocations:
+
+```
+tox                 # all environments (both modes, all Python versions)
+tox -f mpi          # default native-MPI mode, all Python versions
+tox -f mock         # single-rank mock mode, all Python versions
+tox -e py312-mpi    # a single environment
+tox -e py312-mock
+```
+
+tox builds the package itself per environment and sets `CC`/`CXX` to `mpicxx` for
+the `mpi` envs (taken from `PATH`), so those do not need to be set on the command
+line. The `mpi` envs require an MPI installation (`mpicxx`, `mpirun`); the `mock`
+envs require neither.
+
 ## Requirements
 
 * Python 3.8+
@@ -125,24 +150,19 @@ https://packaging.python.org/tutorials/packaging-projects/#packaging-python-proj
 Note that a whl created on linux cannot be uploaded. See the many linux project:
 https://github.com/pypa/manylinux
 
-Testing the sdist (source dist) in a virtual env with tox:
+Testing the source dist in a virtual env with tox — see "Testing both build modes
+with tox" above for the environment names. The `-r` flag recreates the virtual
+envs if needed:
 
-`CC=mpicxx CXX=mpicxx tox --list-dependencies`
-
-and 
-
-`CC=mpicxx CXX=mpicxx tox -r --list-dependencies`
-
-if the virtual env needs to be recreated.
+`tox -r -f mpi`
 
 If using conda for Python, switch to the appropriate
 environment, and then use tox's -e argument to select
-the py environment that matches the activated conda
-environment:
+the env that matches the activated conda environment:
 
 ```
-CC=mpicxx CXX=mpicxx tox -e py37
-CC=mpicxx CXX=mpicxx tox -e py38
+tox -e py312-mpi
+tox -e py312-mock
 ```
 
 ### Uploading to PyPI (or testpypi)
