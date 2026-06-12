@@ -4,13 +4,19 @@ import os
 import csv
 
 from dataclasses import dataclass
-from mpi4py import MPI
+from repast4py._mpi import MPI
 
 try:
     from repast4py import logging
 except ModuleNotFoundError:
     sys.path.append("{}/../src".format(os.path.dirname(os.path.abspath(__file__))))
     from repast4py import logging
+
+
+def setUpModule():
+    # These tests require multiple ranks; skip them in a single-rank run.
+    if MPI.COMM_WORLD.Get_size() == 1:
+        raise unittest.SkipTest('requires more than one rank (run with mpirun)')
 
 
 @dataclass

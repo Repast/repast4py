@@ -5,7 +5,7 @@
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
 
 from typing import Callable, List, Tuple
-import mpi4py
+from repast4py._mpi import MPI
 import numpy as np
 from enum import IntEnum
 
@@ -84,7 +84,7 @@ class SharedGrid(_SharedGrid, SharedProjection):
     """
 
     def __init__(self, name: str, bounds: BoundingBox, borders: BorderType, occupancy: OccupancyType, buffer_size: int,
-                 comm: mpi4py.MPI.Intracomm):
+                 comm: MPI.Intracomm):
         super().__init__(name, bounds, borders, occupancy, buffer_size, comm)
         self.buffered_agents = []
         self.do_synch = buffer_size > 0
@@ -302,7 +302,7 @@ class SharedCSpace(_SharedContinuousSpace, SharedProjection):
     """
 
     def __init__(self, name: str, bounds: BoundingBox, borders: BorderType, occupancy: OccupancyType,
-                 buffer_size: int, comm: mpi4py.MPI.Intracomm, tree_threshold: int):
+                 buffer_size: int, comm: MPI.Intracomm, tree_threshold: int):
         super().__init__(name, bounds, borders, occupancy, buffer_size, comm, tree_threshold)
         self.buffered_agents = []
         self.do_synch = buffer_size > 0

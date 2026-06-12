@@ -2,7 +2,7 @@ import unittest
 import sys
 import os
 import math
-from mpi4py import MPI
+from repast4py._mpi import MPI
 
 try:
     # allows us to reload schedule to check runner() runtime error
@@ -156,7 +156,7 @@ class ScheduleTests(unittest.TestCase):
 
         a1 = Agent2()
 
-        from mpi4py import MPI
+        from repast4py._mpi import MPI
         runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
         runner.schedule_event(1.1, a1.run)
         runner.schedule_stop(2.0)
@@ -183,7 +183,7 @@ class ScheduleTests(unittest.TestCase):
     def test_void_evt(self):
         a1 = Agent2()
 
-        from mpi4py import MPI
+        from repast4py._mpi import MPI
         runner = schedule.init_schedule_runner(MPI.COMM_WORLD)
         runner.schedule_event(1.1, a1.run)
         runner.schedule_stop(2.0)

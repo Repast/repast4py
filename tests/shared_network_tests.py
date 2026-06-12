@@ -1,6 +1,6 @@
 import sys
 import os
-from mpi4py import MPI
+from repast4py._mpi import MPI
 import unittest
 from collections import OrderedDict
 import networkx as nx
@@ -18,6 +18,12 @@ from repast4py import context as ctx
 from repast4py.space import ContinuousPoint as cpt
 from repast4py.space import DiscretePoint as dpt
 from repast4py.space import BorderType, OccupancyType
+
+
+def setUpModule():
+    # These tests require multiple ranks; skip them in a single-rank run.
+    if MPI.COMM_WORLD.Get_size() == 1:
+        raise unittest.SkipTest('requires more than one rank (run with mpirun)')
 
 
 class EAgent(core.Agent):

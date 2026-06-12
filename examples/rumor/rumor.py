@@ -1,6 +1,6 @@
 import networkx as nx
 from typing import Dict
-from mpi4py import MPI
+from repast4py._mpi import MPI
 import numpy as np
 from dataclasses import dataclass
 

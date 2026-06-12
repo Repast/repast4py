@@ -14,7 +14,7 @@ from typing import Callable, List, Dict
 import types
 from enum import IntEnum
 
-from mpi4py import MPI
+from repast4py._mpi import MPI
 
 from . import random
 

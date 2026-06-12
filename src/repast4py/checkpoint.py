@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 import warnings
 import itertools
 
-from mpi4py import MPI
+from repast4py._mpi import MPI
 
 
 

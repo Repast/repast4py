@@ -3,7 +3,7 @@ import os
 import torch
 import unittest
 
-from mpi4py import MPI
+from repast4py._mpi import MPI
 
 try:
     from repast4py.space import DiscretePoint as dpt
@@ -13,6 +13,12 @@ except ModuleNotFoundError:
 
 from repast4py.space import BorderType, BoundingBox
 from repast4py.value_layer import SharedValueLayer
+
+
+def setUpModule():
+    # These tests require multiple ranks; skip them in a single-rank run.
+    if MPI.COMM_WORLD.Get_size() == 1:
+        raise unittest.SkipTest('requires more than one rank (run with mpirun)')
 
 # TODO: TEST:
 # value_layer.buffered bounds -- 1D, 2D, 3D for sticky and periodic

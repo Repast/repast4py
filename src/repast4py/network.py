@@ -10,7 +10,7 @@ agents are the nodes in the network. The network code is built-on the `networkx 
 python package.
 """
 
-from mpi4py import MPI
+from repast4py._mpi import MPI
 from dataclasses import dataclass
 import numpy as np
 import networkx as nx
