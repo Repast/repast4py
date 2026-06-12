@@ -1,6 +1,6 @@
 import unittest
 import dill as pickle
-from repast4py._mpi import MPI
+from repast4py import MPI
 from typing import Tuple, Union
 import networkx as nx
 import os

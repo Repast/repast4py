@@ -1,5 +1,5 @@
 from typing import Dict, Tuple
-from repast4py._mpi import MPI
+from repast4py import MPI
 import numpy as np
 from dataclasses import dataclass
 

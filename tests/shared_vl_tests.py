@@ -3,7 +3,7 @@ import os
 import torch
 import unittest
 
-from repast4py._mpi import MPI
+from repast4py import MPI
 
 try:
     from repast4py.space import DiscretePoint as dpt

@@ -4,7 +4,7 @@ import os
 import csv
 
 from dataclasses import dataclass
-from repast4py._mpi import MPI
+from repast4py import MPI
 
 try:
     from repast4py import logging

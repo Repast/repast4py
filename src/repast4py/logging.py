@@ -9,7 +9,7 @@ repast4py simulation to a file.
 """
 
 import numpy as np
-from repast4py._mpi import MPI
+from repast4py import MPI
 import os
 
 from typing import List, Dict

@@ -2,7 +2,7 @@ import sys
 import math
 import numpy as np
 from typing import Dict, Tuple
-from repast4py._mpi import MPI
+from repast4py import MPI
 from dataclasses import dataclass
 
 import numba

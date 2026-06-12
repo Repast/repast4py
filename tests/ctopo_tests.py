@@ -2,7 +2,7 @@ import unittest
 import sys
 import os
 
-from repast4py._mpi import MPI
+from repast4py import MPI
 
 try:
     from repast4py.space import DiscretePoint as dpt

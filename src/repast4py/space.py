@@ -5,7 +5,7 @@
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
 
 from typing import Callable, List, Tuple
-from repast4py._mpi import MPI
+from repast4py import MPI
 import numpy as np
 from enum import IntEnum
 

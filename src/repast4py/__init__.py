@@ -5,3 +5,5 @@
 # License: BSD-3 - https://github.com/Repast/repast4py/blob/master/LICENSE.txt
 
 __version__ = '1.2.1'
+
+from ._mpi import MPI  # noqa: E402,F401

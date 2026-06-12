@@ -4,7 +4,7 @@ import numpy as np
 import random
 import unittest
 
-from repast4py._mpi import MPI          # mock stub or real mpi4py, per build
+from repast4py import MPI          # mock stub or real mpi4py, per build
 
 try:
     from repast4py import core, space

@@ -15,7 +15,7 @@ matches what the native ``_space`` extension was compiled against. The
 ``R4PY_SINGLE_RANK`` environment variable is honored only as a fallback when no
 marker is present (e.g. running from a source tree that was never built).
 
-repast4py modules should ``from repast4py._mpi import MPI`` rather than importing
+repast4py modules should ``from repast4py import MPI`` rather than importing
 mpi4py directly.
 """
 

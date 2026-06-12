@@ -1,6 +1,6 @@
 import sys
 import os
-from repast4py._mpi import MPI
+from repast4py import MPI
 import unittest
 from collections import OrderedDict
 import networkx as nx
