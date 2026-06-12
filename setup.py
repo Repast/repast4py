@@ -46,7 +46,14 @@ def get_mpi_include_dirs():
     """
     if SINGLE_RANK:
         return [STUB_INCLUDE_DIR]
-    import mpi4py
+    try:
+        import mpi4py
+    except ImportError:
+        # mpi4py is a *dynamic* build requirement (see build_support/r4py_backend.py).
+        # During the PEP 517 get_requires / egg_info phase it may not be installed
+        # yet; the include dir is only needed when the extensions are actually
+        # compiled, by which point pip has installed mpi4py.
+        return []
     return [mpi4py.get_include()]
 
 
