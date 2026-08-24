@@ -77,6 +77,27 @@ installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
 a python dev package using your OS's package manager. For example, assuming
 Python 3.11, `sudo apt install python3.11-dev` will work for Ubuntu.
 
+#### Single-Rank Installation (without MPI)
+
+Repast4Py can also be installed in a *single-rank* mode that requires neither a
+native MPI installation nor mpi4py. This is intended for developing and running
+smaller scale models on a single process -- for example on a laptop without MPI, or
+in continuous integration. In this mode the MPI calls are provided by a pure-Python
+substitute: `MPI.COMM_WORLD` has size 1 and all collective operations are no-ops.
+
+A C/{cpp} compiler and the Python development headers are still required to compile
+Repast4Py's native extensions, but no MPI compiler wrapper is needed. Set the
+`R4PY_SINGLE_RANK` environment variable when installing:
+
+```
+env R4PY_SINGLE_RANK=1 pip install repast4py
+```
+
+NOTE: A single-rank installation can only be run as a single process. Launching it
+across multiple processes (e.g. `mpirun -n 2`) is an error and the program will exit;
+for multi-process / distributed runs use the default installation above with a working
+MPI.
+
 ### Documentation
 
 * [User's Guide](https://repast.github.io/repast4py.site/guide/user_guide.html)
