@@ -7,6 +7,7 @@ on:
   pull_request:
   push:
     branches:
+      - master
       - develop
   release:
     types:
@@ -33,13 +34,13 @@ jobs:
           - ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup MPI ${{ matrix.mpi }}
         uses: mpi4py/setup-mpi@v1
         with:
           mpi: ${{ matrix.mpi }}
       - name: Set up Python ${{ matrix.env}}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.env }}
       - name: Install Repast4Py
