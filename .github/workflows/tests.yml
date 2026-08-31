@@ -52,6 +52,8 @@ jobs:
           RDMAV_FORK_SAFE: 1
           OMPI_MCA_btl_openib_allow_ib: 0  #  disables OpenIB transport and forces OpenMPI to use TCP instead, 
                                            #     which is compatible with the GitHub Actions environment.
+          UCX_TLS: tcp          # Forces UCX to use only TCP transport, avoiding InfiniBand issues
+          OMPI_MCA_pml: ^ucx    # Disables the UCX pointille message layer and uses the standard PML instead
         run: |
           coverage run -m unittest discover tests
           mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests
