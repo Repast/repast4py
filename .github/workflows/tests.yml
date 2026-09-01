@@ -48,7 +48,7 @@ jobs:
       - name: Install Coverage
         run: pip install coverage
       - name: Test with unittest
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         env:
           # MPI envs for compatiblity with the GitHub Actions environment
           RDMAV_FORK_SAFE: 1
