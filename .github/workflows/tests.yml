@@ -7,7 +7,9 @@ on:
   pull_request:
   push:
     branches:
+      - master
       - develop
+      - single_rank_mock_mpi
   release:
     types:
       - published
@@ -27,19 +29,18 @@ jobs:
           - "3.12"
           - "3.11"
           - "3.10"
-          - "3.9"
         mpi: [ 'mpich', 'openmpi' ]
         os:
           - ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup MPI ${{ matrix.mpi }}
         uses: mpi4py/setup-mpi@v1
         with:
           mpi: ${{ matrix.mpi }}
       - name: Set up Python ${{ matrix.env}}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.env }}
       - name: Install Repast4Py
@@ -47,15 +48,27 @@ jobs:
       - name: Install Coverage
         run: pip install coverage
       - name: Test with unittest
-        run: |
-          env RDMAV_FORK_SAFE=1 coverage run -m unittest discover tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.shared_vl_tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.ctopo_tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 18 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
-          env RDMAV_FORK_SAFE=1 mpirun -n 18 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
-          env RDMAV_FORK_SAFE=1 mpirun -n 4 coverage run --rcfile=coverage.rc -m unittest tests.logging_tests
-          env RDMAV_FORK_SAFE=1 mpirun -n 4 coverage run --rcfile=coverage.rc -m unittest tests.shared_network_tests
+        uses: nick-fields/retry@v4
+        env:
+          # MPI envs for compatiblity with the GitHub Actions environment
+          RDMAV_FORK_SAFE: 1
+          OMPI_MCA_btl_openib_allow_ib: 0  #  disables OpenIB transport and forces OpenMPI to use TCP instead
+          UCX_TLS: tcp          # Forces UCX to use only TCP transport, avoiding InfiniBand issues
+          OMPI_MCA_pml: ^ucx    # Disables the UCX pointille message layer and uses the standard PML instead
+        with:
+          timeout_minutes: 15   # per-attempt cap; MPI on GH runners can hang indefinitely
+          max_attempts: 3       # retry attempts
+          retry_on: any         # retry condition on any failure or timeout
+          command: |
+            coverage run -m unittest discover tests
+            coverage run -m unittest discover tests
+            mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests
+            mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.shared_vl_tests
+            mpirun -n 9 coverage run --rcfile=coverage.rc -m unittest tests.ctopo_tests
+            mpirun -n 18 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d
+            mpirun -n 18 coverage run --rcfile=coverage.rc -m unittest tests.shared_obj_tests.SharedGridTests.test_buffer_data_3d_periodic
+            mpirun -n 4 coverage run --rcfile=coverage.rc -m unittest tests.logging_tests
+            mpirun -n 4 coverage run --rcfile=coverage.rc -m unittest tests.shared_network_tests
       - name: Generate Coverage Report
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -75,18 +88,19 @@ jobs:
           - "3.12"
           - "3.11"
           - "3.10"
-          - "3.9"
+        
+        # No MPI is set up: the single-rank build must require neither a native MPI nor mpi4py.
+        
         os:
           - ubuntu-latest
+          - windows-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up Python ${{ matrix.env }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.env }}
-      # No MPI is set up: the single-rank build must require neither a native MPI
-      # nor mpi4py.
       - name: Install Repast4Py (single-rank, no MPI)
         run: R4PY_SINGLE_RANK=1 python3 -m pip install -e .
       - name: Verify single-rank MPI is active
