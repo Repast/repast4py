@@ -102,7 +102,9 @@ jobs:
         with:
           python-version: ${{ matrix.env }}
       - name: Install Repast4Py (single-rank, no MPI)
-        run: R4PY_SINGLE_RANK=1 python3 -m pip install -e .
+        env:
+          R4PY_SINGLE_RANK: 1
+        run: python3 -m pip install -e .
       - name: Verify single-rank MPI is active
         run: python3 -c "from repast4py import MPI; assert MPI.COMM_WORLD.Get_size() == 1; print(MPI.__name__)"
       - name: Test with unittest
