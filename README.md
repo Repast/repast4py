@@ -54,6 +54,10 @@ Installation instructions for MPI on macOS can be found [here](https://repast.gi
 A typical campus cluster, or HPC resource will have MPI and mpi4py installed. 
 Check the resource's documentation on available software for more details.
 
+Repast4Py also requires PyTorch. On Linux, the default PyTorch wheel on PyPI bundles
+NVIDIA CUDA libraries; if you have no NVIDIA GPU, see
+[CPU-only PyTorch](#cpu-only-pytorch) for installing the smaller CPU-only build.
+
 ### Installation
 
 Repast4Py can be downloaded and installed from PyPI using pip. 
@@ -97,6 +101,55 @@ NOTE: A single-rank installation can only be run as a single process. Launching 
 across multiple processes (e.g. `mpirun -n 2`) is an error and the program will exit;
 for distributed multi-rank runs use the default installation above with a working
 MPI.
+
+#### CPU-only PyTorch
+
+Repast4Py uses PyTorch to store the values in its value layers, and to seed its random
+number generation. It makes no CUDA calls of its own, so the CPU-only build of PyTorch
+does everything Repast4Py needs, whether on a laptop or on a cluster node without an
+NVIDIA GPU.
+
+This matters because on Linux the default PyTorch wheel on PyPI bundles the NVIDIA CUDA
+libraries (cuDNN, NCCL, cuSPARSELt, nvSHMEM and Triton), adding several gigabytes to the
+installation. To avoid that, install the CPU-only build from PyTorch's own package index
+*before* installing Repast4Py:
+
+```bash
+$ pip install torch --index-url https://download.pytorch.org/whl/cpu
+$ env CC=mpicxx CXX=mpicxx pip install repast4py
+```
+
+pip sees that torch is already satisfied and will not replace it. The same two steps work
+for a no-mpi installation, substituting `env R4PY_NO_MPI=1 pip install repast4py` for the
+second command.
+
+A single command also works, adding the PyTorch index alongside PyPI:
+
+```bash
+$ env CC=mpicxx CXX=mpicxx pip install repast4py \
+      --extra-index-url https://download.pytorch.org/whl/cpu
+```
+
+The CPU-only wheels carry a `+cpu` version suffix that pip prefers over the plain
+version.
+
+__NOTE__: The two-step form above is the recommended one. It takes only PyTorch from
+the PyTorch index, whereas the single command makes every dependency resolvable from
+both indexes.
+
+To check which build is installed:
+
+```bash
+$ python -c "import torch; print(torch.__version__)"
+2.14.0+cpu
+```
+
+A `+cpu` suffix is the CPU-only build. A plain version number, or a `+cu...` suffix, is a
+CUDA build.
+
+This is only relevant on Linux; the macOS and Windows wheels on PyPI are CPU-only already.
+A campus cluster or HPC resource may also provide PyTorch itself, so check the resource's
+documentation before installing your own.
 
 ### Documentation
 
