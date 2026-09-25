@@ -73,6 +73,9 @@ def get_linker_args():
             print(
                 'Error: MPI compiler is not specified. Please specify the MPI compiler using the "CC" environment variable'
             )
+            # Nothing to query for link flags. Commands that do not compile
+            # (sdist, egg_info) still need setup.py to import.
+            return linker_args
         args = run_command(compiler, "-show")
         for arg in args:
             if arg.startswith("-l") or arg.startswith("-L"):
