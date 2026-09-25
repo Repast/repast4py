@@ -2,7 +2,7 @@ import time, sys
 
 import torch
 
-from mpi4py import MPI
+from repast4py import MPI
 from scipy import stats
 import numpy as np
 

@@ -58,11 +58,14 @@ Check the resource's documentation on available software for more details.
 
 Repast4Py can be downloaded and installed from PyPI using pip. 
 Since Repast4Py includes native MPI C++ code that needs to be compiled,
-the C compiler `CC` environment variable must be set
+the compiler environment variables `CC` and `CXX` must be set
 to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation.
 
+Depending on the operating system and setuptools version, the `CXX` variable may
+also need to be set.
+
 ```
-env CC=mpicxx pip install repast4py
+env CC=mpicxx CXX=mpicxx pip install repast4py
 ```
 
 The preferred install is into a Python virtual environment. See
@@ -72,7 +75,28 @@ for additional installation instructions.
 __NOTE__: If you see an error message about a missing `python.h` header file when
 installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
 a python dev package using your OS's package manager. For example, assuming
-Python 3.11, `sudo apt install python3.11-dev` will work for Ubuntu.
+Python 3.12, `sudo apt install python3.12-dev` will work for Ubuntu.
+
+#### No MPI Installation
+
+Repast4Py can also be installed in a *no-mpi* mode that requires neither a
+native MPI installation nor mpi4py. This mode can be used to develop models that
+are amenable to Python's built-in multiprocessing or thread-based parallelism, 
+enabling other forms of parallelism. This mode also makes native windows installation
+easier, where an mpi distribution may be difficult to install.
+
+A C++ compiler and the Python development headers are still required to compile
+Repast4Py's native extensions, but no MPI compiler wrapper is needed. Set the
+`R4PY_NO_MPI` environment variable when installing:
+
+```
+env R4PY_NO_MPI=1 pip install repast4py
+```
+
+NOTE: A single-rank installation can only be run as a single process. Launching it
+across multiple processes (e.g. `mpirun -n 2`) is an error and the program will exit;
+for distributed multi-rank runs use the default installation above with a working
+MPI.
 
 ### Documentation
 

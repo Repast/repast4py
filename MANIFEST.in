@@ -1,1 +1,3 @@
 include ./src/repast4py/*.h
+recursive-include src/repast4py/single_rank_include *.h
+include build_support/r4py_backend.py
