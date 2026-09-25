@@ -35,7 +35,7 @@ Collier, N. T., Ozik, J., & Tatara, E. R. (2020). Experiences in Developing a Di
 
 ### Requirements
 
-Repast4Py requires Python 3.9+
+Repast4Py requires Python 3.10+
 
 Repast4Py can run on Linux, macOS and Windows provided there is a working MPI implementation
 installed and mpi4py is supported. Repast4Py is developed and tested on Linux. We recommend

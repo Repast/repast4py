@@ -72,7 +72,7 @@ def setUpModule():
         raise unittest.SkipTest('requires more than one rank (run with mpirun)')
 ```
 
-Both modes across Python 3.9–3.13 via tox (`py{39,310,311,312,313}-{mpi,mock}`); tox builds non-editably per env because a shared install cannot represent both modes:
+Both modes across Python 3.10–3.14 via tox (`py{310,311,312,313,314}-{mpi,mock}`); tox builds non-editably per env because a shared install cannot represent both modes:
 
 ```bash
 tox            # everything
