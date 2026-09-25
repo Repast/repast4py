@@ -97,15 +97,15 @@ MPI.
 [[cpu_torch_install]]
 ==== CPU-only PyTorch
 
-Repast4Py uses PyTorch to store the values in its value layers, and to seed its
-random number generation. It makes no CUDA calls of its own, so the CPU-only build
-of PyTorch does everything Repast4Py needs, whether on a laptop or on a cluster
-node without an NVIDIA GPU.
+Repast4Py uses PyTorch in its value layer raster implementation,
+and the default Linux PyTorch wheels on PyPI with GPU support can be very large
+(e.g. several gigabytes). For models that do not use value layers or for
+non-GPU Linux environments, the CPU-only build can be used.
 
-This matters because on Linux the default PyTorch wheel on PyPI bundles the NVIDIA
-CUDA libraries (cuDNN, NCCL, cuSPARSELt, nvSHMEM and Triton), adding several
-gigabytes to the installation. To avoid that, install the CPU-only build from
-PyTorch's own package index _before_ installing Repast4Py:
+This is only relevant on Linux. The macOS and Windows wheels on PyPI are CPU-only already.
+A cluster or HPC resource may also provide PyTorch itself, so check the resource's
+documentation before installing your own. Install the
+CPU-only build from PyTorch's own package index _before_ installing Repast4Py:
 
 [source,bash]
 ----
@@ -113,9 +113,9 @@ $ pip install torch --index-url https://download.pytorch.org/whl/cpu
 $ env CC=mpicxx CXX=mpicxx pip install repast4py
 ----
 
-pip sees that torch is already satisfied and will not replace it. The same two steps
-work for a no-mpi installation, substituting `env R4PY_NO_MPI=1 pip install repast4py`
-for the second command.
+The same two steps work for a no-mpi installation,
+substituting `env R4PY_NO_MPI=1 pip install repast4py` for the
+second command.
 
 A single command also works, adding the PyTorch index alongside PyPI:
 
@@ -142,10 +142,6 @@ $ python -c "import torch; print(torch.__version__)"
 
 A `+cpu` suffix is the CPU-only build. A plain version number, or a `+cu...` suffix,
 is a CUDA build.
-
-This is only relevant on Linux; the macOS and Windows wheels on PyPI are CPU-only
-already. A campus cluster or HPC resource may also provide PyTorch itself, so check
-the resource's documentation before installing your own.
 
 === Documentation
 
