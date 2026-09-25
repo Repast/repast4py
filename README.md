@@ -80,13 +80,12 @@ Python 3.12, `sudo apt install python3.12-dev` will work for Ubuntu.
 #### No MPI Installation
 
 Repast4Py can also be installed in a *no-mpi* mode that requires neither a
-native MPI installation nor mpi4py. Others forms of parallelism are 
-available, and this mode can be used to develop models that are ameneable to
-Python's built-in multiprocessing or thread-based parallelism. This mode also
-makes native windows installation easier, where an mpi distribution may be
-difficult to install.
+native MPI installation nor mpi4py. This mode can be used to develop models that
+are amenable to Python's built-in multiprocessing or thread-based parallelism, 
+enabling other forms of parallelism. This mode also makes native windows installation
+easier, where an mpi distribution may be difficult to install.
 
-A C/{cpp} compiler and the Python development headers are still required to compile
+A C++ compiler and the Python development headers are still required to compile
 Repast4Py's native extensions, but no MPI compiler wrapper is needed. Set the
 `R4PY_NO_MPI` environment variable when installing:
 
