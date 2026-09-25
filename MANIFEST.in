@@ -1,3 +1,6 @@
 include ./src/repast4py/*.h
 recursive-include src/repast4py/single_rank_include *.h
 include build_support/r4py_backend.py
+
+# Generated at build time by setup.py (build_py / build_ext), never shipped as source.
+exclude src/repast4py/_mpi_config.py

@@ -33,13 +33,9 @@ CC=mpicxx CXX=mpicxx pip install -e .       # installs
 R4PY_NO_MPI=1 pip install -e .         # works under normal build isolation
 ```
 
-A build always rewrites `_mpi_config.py`, so switching modes requires a rebuild — the in-tree `_*.so` and the marker must agree.
+Switching modes needs no cleaning: the two modes build into separate directories (`build/` and `build/nompi/`, via the `build` command subclass in `setup.py`), so neither can relink the other's object files. `build_ext` compares timestamps only and a mode change touches no source, so sharing one directory used to let a rebuild silently keep the previous mode's objects.
 
-**Switching modes needs a forced rebuild.** `build_ext` only compares timestamps, and changing the mode changes no source file, so a second `build_ext --inplace` in the other mode recompiles nothing and relinks the *previous* mode's objects. The marker flips but the `.so` does not, and the result is silent: the stub's `PyMPIComm_Get` ignores the communicator it is handed, so a stub-built `_space` paired with real mpi4py still imports and still constructs a `SharedGrid` at size 1 — it would only misbehave under `mpirun`, as independent non-communicating ranks, and the launch guard cannot catch it because the Python side is genuinely mpi4py. Delete the objects when switching:
-
-```bash
-rm -rf build/temp.* build/lib.* src/repast4py/_*.so src/repast4py/_mpi_config.py
-```
+`_mpi_config.py` is a build artifact, not a source file. `build_py` writes it into the build output, so it reaches the wheel; `build_ext` writes it into `src/` only for an in-place build, which covers editable installs too (setuptools turns `editable_mode` into `inplace`). A plain `pip install .` therefore leaves the in-tree development build alone — which matters because `tox` runs one, in whichever mode its env selects.
 
 ## Test
 
