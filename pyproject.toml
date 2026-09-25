@@ -1,7 +1,7 @@
 [build-system]
 # mpi4py is intentionally NOT listed here: it is added dynamically by the in-tree
 # backend (build_support/r4py_backend.py) only for the default native-MPI build,
-# so the single-rank build (R4PY_SINGLE_RANK=1) installs under build isolation
+# so the single-rank build (R4PY_NO_MPI=1) installs under build isolation
 # without pulling mpi4py / a native MPI.
 requires = [
     "setuptools>=42",

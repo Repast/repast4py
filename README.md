@@ -75,27 +75,28 @@ for additional installation instructions.
 __NOTE__: If you see an error message about a missing `python.h` header file when
 installing Repast4Py under Ubuntu (or other Linuxes), you will need to install
 a python dev package using your OS's package manager. For example, assuming
-Python 3.11, `sudo apt install python3.11-dev` will work for Ubuntu.
+Python 3.12, `sudo apt install python3.12-dev` will work for Ubuntu.
 
-#### Single-Rank Installation (without MPI)
+#### No MPI Installation
 
-Repast4Py can also be installed in a *single-rank* mode that requires neither a
-native MPI installation nor mpi4py. This is intended for developing and running
-smaller scale models on a single process -- for example on a laptop without MPI, or
-in continuous integration. In this mode the MPI calls are provided by a pure-Python
-substitute: `MPI.COMM_WORLD` has size 1 and all collective operations are no-ops.
+Repast4Py can also be installed in a *no-mpi* mode that requires neither a
+native MPI installation nor mpi4py. Others forms of parallelism are 
+available, and this mode can be used to develop models that are ameneable to
+Python's built-in multiprocessing or thread-based parallelism. This mode also
+makes native windows installation easier, where an mpi distribution may be
+difficult to install.
 
 A C/{cpp} compiler and the Python development headers are still required to compile
 Repast4Py's native extensions, but no MPI compiler wrapper is needed. Set the
-`R4PY_SINGLE_RANK` environment variable when installing:
+`R4PY_NO_MPI` environment variable when installing:
 
 ```
-env R4PY_SINGLE_RANK=1 pip install repast4py
+env R4PY_NO_MPI=1 pip install repast4py
 ```
 
 NOTE: A single-rank installation can only be run as a single process. Launching it
 across multiple processes (e.g. `mpirun -n 2`) is an error and the program will exit;
-for multi-process / distributed runs use the default installation above with a working
+for distributed multi-rank runs use the default installation above with a working
 MPI.
 
 ### Documentation

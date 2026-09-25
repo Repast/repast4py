@@ -71,10 +71,10 @@ substitute: `MPI.COMM_WORLD` has size 1 and all collective operations are no-ops
 
 A C/{cpp} compiler and the Python development headers are still required to compile
 Repast4Py's native extensions, but no MPI compiler wrapper is needed. Set the
-`R4PY_SINGLE_RANK` environment variable when installing:
+`R4PY_NO_MPI` environment variable when installing:
 
 ----
-env R4PY_SINGLE_RANK=1 pip install repast4py
+env R4PY_NO_MPI=1 pip install repast4py
 ----
 
 NOTE: A single-rank installation can only be run as a single process. Launching it

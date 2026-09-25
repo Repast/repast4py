@@ -7,8 +7,8 @@
 
 Wraps setuptools' build backend to make ``mpi4py`` a *dynamic* build requirement:
 it is needed only for the default (native MPI) build, not for the single-rank
-build (``R4PY_SINGLE_RANK`` set). Keeping it out of the static
-``[build-system].requires`` lets ``R4PY_SINGLE_RANK=1 pip install .`` succeed under
+build (``R4PY_NO_MPI`` set). Keeping it out of the static
+``[build-system].requires`` lets ``R4PY_NO_MPI=1 pip install .`` succeed under
 normal build isolation without pulling mpi4py (which would require a native MPI).
 
 setup.py imports mpi4py lazily (only when building the native extensions), so the
@@ -25,7 +25,7 @@ from setuptools.build_meta import *  # noqa: F401,F403
 
 
 def _single_rank() -> bool:
-    return os.environ.get("R4PY_SINGLE_RANK", "") not in ("", "0")
+    return os.environ.get("R4PY_NO_MPI", "") not in ("", "0")
 
 
 def _mpi_req():

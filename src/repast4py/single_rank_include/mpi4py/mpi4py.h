@@ -7,7 +7,7 @@
 // Single-rank stub of the mpi4py C API.
 //
 // Used in place of the real <mpi4py/mpi4py.h> when repast4py is built with
-// R4PY_SINGLE_RANK set (see setup.py). It mirrors the macro pattern of mpi4py's
+// R4PY_NO_MPI set (see setup.py). It mirrors the macro pattern of mpi4py's
 // own pycapi.h so existing call sites in spacemodule.cpp compile unchanged:
 //
 //   - PyMPIComm_Type is a macro over a cached PyTypeObject*, so &PyMPIComm_Type
@@ -21,8 +21,8 @@
 //
 // import_mpi4py() binds these to the pure-Python stub in repast4py._mpi_stub.
 
-#ifndef R4PY_SINGLE_RANK_MPI4PY_H
-#define R4PY_SINGLE_RANK_MPI4PY_H
+#ifndef R4PY_NO_MPI_MPI4PY_H
+#define R4PY_NO_MPI_MPI4PY_H
 
 #include <Python.h>
 
@@ -84,4 +84,4 @@ static inline PyObject* PyMPIComm_New(MPI_Comm /*comm*/) {
     return _r4py_comm_world;
 }
 
-#endif  // R4PY_SINGLE_RANK_MPI4PY_H
+#endif  // R4PY_NO_MPI_MPI4PY_H

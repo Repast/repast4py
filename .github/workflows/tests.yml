@@ -88,7 +88,7 @@ jobs:
       # No MPI is set up: the single-rank build must require neither a native MPI
       # nor mpi4py.
       - name: Install Repast4Py (single-rank, no MPI)
-        run: R4PY_SINGLE_RANK=1 python3 -m pip install -e .
+        run: R4PY_NO_MPI=1 python3 -m pip install -e .
       - name: Verify single-rank MPI is active
         run: python3 -c "from repast4py import MPI; assert MPI.COMM_WORLD.Get_size() == 1; print(MPI.__name__)"
       - name: Test with unittest

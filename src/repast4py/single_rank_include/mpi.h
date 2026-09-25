@@ -7,7 +7,7 @@
 // Single-rank stub of the MPI C API.
 //
 // This header is used in place of a real <mpi.h> when repast4py is built with
-// R4PY_SINGLE_RANK set (see setup.py). It provides trivial, header-only
+// R4PY_NO_MPI set (see setup.py). It provides trivial, header-only
 // implementations of the small subset of MPI used by the _space extension,
 // assuming a single process (size == 1, rank == 0). No MPI library is required.
 //
@@ -16,8 +16,8 @@
 // bytes to copy depends on the MPI_Datatype argument (count is in elements, not
 // bytes). _r4py_type_size derives the element size from the datatype tag.
 
-#ifndef R4PY_SINGLE_RANK_MPI_H
-#define R4PY_SINGLE_RANK_MPI_H
+#ifndef R4PY_NO_MPI_MPI_H
+#define R4PY_NO_MPI_MPI_H
 
 #include <cstddef>
 #include <cstring>
@@ -99,4 +99,4 @@ static inline int MPI_Allgather(const void* sendbuf, int sendcount, MPI_Datatype
     return MPI_SUCCESS;
 }
 
-#endif  // R4PY_SINGLE_RANK_MPI_H
+#endif  // R4PY_NO_MPI_MPI_H

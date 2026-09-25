@@ -55,7 +55,7 @@ The environments are generative: `py{39,310,311,312,313}-{mpi,mock}`.
 
 * `*-mpi` envs build the default native-MPI variant (`CC=CXX=mpicxx`) and run the
   single-process tests plus the `mpirun` parallel suites.
-* `*-mock` envs build the single-rank variant (`R4PY_SINGLE_RANK=1`, no native MPI
+* `*-mock` envs build the single-rank variant (`R4PY_NO_MPI=1`, no native MPI
   and no mpi4py) and run the single-process tests.
 
 Common invocations:

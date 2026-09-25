@@ -110,7 +110,7 @@ jobs:
         env:
           # Single-rank build. The dynamic build backend omits mpi4py; CC=mpicxx is
           # deliberately NOT set (unlike the native-MPI job above).
-          CIBW_ENVIRONMENT: "R4PY_SINGLE_RANK=1"
+          CIBW_ENVIRONMENT: "R4PY_NO_MPI=1"
 
           CIBW_ARCHS_WINDOWS: "AMD64 x86"
 

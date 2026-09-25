@@ -15,7 +15,7 @@ IS_LINUX = platform.system() == "Linux"
 # library nor mpi4py: bundled stub headers replace <mpi.h> and <mpi4py/mpi4py.h>,
 # and the build records the choice in repast4py/_mpi_config.py so the Python side
 # (repast4py._mpi) matches what the _space extension was compiled against.
-SINGLE_RANK = os.environ.get("R4PY_SINGLE_RANK", "") not in ("", "0")
+SINGLE_RANK = os.environ.get("R4PY_NO_MPI", "") not in ("", "0")
 
 SRC_DIR = os.path.join("src", "repast4py")
 STUB_INCLUDE_DIR = os.path.join(SRC_DIR, "single_rank_include")

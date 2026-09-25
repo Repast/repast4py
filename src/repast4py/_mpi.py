@@ -6,13 +6,13 @@
 """Selects the MPI implementation used by repast4py.
 
 By default the real :mod:`mpi4py.MPI` is used. When repast4py is built
-single-rank (``R4PY_SINGLE_RANK`` set at build time), :mod:`setup.py` writes a
+single-rank (``R4PY_NO_MPI`` set at build time), :mod:`setup.py` writes a
 ``_mpi_config`` module recording that choice, and the pure-Python single-rank
 substitute :mod:`repast4py._mpi_stub` is used instead.
 
 The build-time marker is the source of truth so that the Python ``MPI`` always
 matches what the native ``_space`` extension was compiled against. The
-``R4PY_SINGLE_RANK`` environment variable is honored only as a fallback when no
+``R4PY_NO_MPI`` environment variable is honored only as a fallback when no
 marker is present (e.g. running from a source tree that was never built).
 
 repast4py modules should ``from repast4py import MPI`` rather than importing
@@ -24,7 +24,7 @@ try:
     _single_rank = _mpi_config.SINGLE_RANK
 except ImportError:
     import os
-    _single_rank = os.environ.get('R4PY_SINGLE_RANK', '') not in ('', '0')
+    _single_rank = os.environ.get('R4PY_NO_MPI', '') not in ('', '0')
 
 if _single_rank:
     from ._mpi_stub import MPI

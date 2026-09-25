@@ -206,7 +206,7 @@ def _check_launch():
                 "ERROR: repast4py is using its single-rank (mock) MPI, but this "
                 f"program was launched with {size} processes (e.g. mpirun/srun). The "
                 "mock MPI does not communicate between processes, so a multi-process "
-                "run is invalid. Rebuild repast4py without R4PY_SINGLE_RANK (with a "
+                "run is invalid. Rebuild repast4py without R4PY_NO_MPI (with a "
                 "real MPI) to run across multiple ranks.\n"
             )
             sys.stderr.flush()
