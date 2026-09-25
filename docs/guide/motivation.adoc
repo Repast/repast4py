@@ -29,9 +29,9 @@ Installation instructions for MPI on macOS can be found {website}/macos_mpi_inst
 A typical campus cluster, or HPC resource will have MPI and mpi4py installed.
 Check the resource's documentation on available software for more details.
 
-If you only need to run smaller scale models on a single process, Repast4Py can be
-installed in a single-rank mode that requires neither MPI nor mpi4py; see
-<<single_rank_install>>.
+If you do not have MPI, or want to use only Python's own multiprocessing or
+threading instead, Repast4Py can be installed in a no-mpi mode that requires
+neither MPI nor mpi4py; see <<single_rank_install>>.
 
 === Installation
 
