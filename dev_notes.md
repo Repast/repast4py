@@ -73,6 +73,11 @@ the `mpi` envs (taken from `PATH`), so those do not need to be set on the comman
 line. The `mpi` envs require an MPI installation (`mpicxx`, `mpirun`); the `mock`
 envs require neither.
 
+These builds are non-editable and stay out of the source tree, so running tox does
+not disturb an in-tree `build_ext --inplace` build. Switching an in-tree build
+between the two modes also needs no cleaning: each mode has its own build directory
+(`build/` and `build/nompi/`), so a rebuild cannot relink the other mode's objects.
+
 ## Requirements
 
 * Python 3.8+
