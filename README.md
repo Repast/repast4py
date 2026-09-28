@@ -43,7 +43,7 @@ that Windows users use the Windows Subsystem for Linux (WSL). Installation instr
 WSL can be found [here](https://docs.microsoft.com/en-us/windows/wsl/install).
 
 Under Linux, MPI can be installed using your OS's package manager. For example, 
-under Ubuntu 20.04 (and thus WSL), the mpich MPI implementation can be installed with:
+under Ubuntu 24.04 (and thus WSL), the mpich MPI implementation can be installed with:
 
 ```bash
 $ sudo apt install mpich
