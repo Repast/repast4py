@@ -1,7 +1,7 @@
 = Repast4Py Examples
 :toc2:
 :icons: font
-:website: https://jozik.github.io/goes_bing
+:website: https://repast.github.io/repast4py.site
 :xrefstyle: full
 :imagesdir: images
 :source-highlighter: pygments
