@@ -67,7 +67,7 @@ Once the command line tool installation is complete, download the mpich source f
 ----
 
 NOTE: The compilation will take a few minutes or more, depending on your 
-machine.
+machine, and the versions may differ.
 
 === Testing the MPI Installation
 
@@ -85,6 +85,8 @@ terminal window.
 
 If the wrappers are not found, you will see an error like `zsh: command not found: mpicc`, and you will need to add the wrapper location to the `PATH` environment variable. If you installed via Homebrew, this will be `/opt/homebrew/bin`. If you installed from source, this will be the install directory specified
 in the `prefix` argument plus `/bin` (e.g., `$HOME/sfw/mpich-4.0.3/bin`).
+
+NOTE: Again, the version numbers may differ from those seen below.
 
 [source,zsh]
 ----
