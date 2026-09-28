@@ -904,7 +904,7 @@ def _parse_graph_desc(line: str):
                          'format: "id [0|1]", where 0 indicates an undirected graph and 1 directed')
 
 
-_LINE_P = re.compile('\{[^}]+\}|\S+')
+_LINE_P = re.compile(r'\{[^}]+\}|\S+')
 _EMPTY_DICT = {}
 
 

@@ -29,16 +29,14 @@ class GhostAgent:
 
     **This is class is internal to the repast4py implementation and is NOT for users.**
 
-    Attributes:
-        agent (Agent): the ghost agent
-        ref_count (int): a reference count tracking the number of projections
-            on this rank that refer to the agent
-
     """
 
     agent: Agent
-    # the number of projections that refer to this ghost
+    """the ghost agent"""
+
     ref_count: int
+    """a reference count tracking the number of projections on this rank that
+    refer to the agent"""
 
 
 @dataclass
@@ -51,16 +49,13 @@ class GhostedAgent:
 
     **This is class is internal to the repast4py implementation and is NOT for users.**
 
-    Attributes:
-        agent (Agent): the ghosted agent
-        ghost_ranks (Dict): maps the ghosted to rank to the number references the agent has on that rank.
-
     """
 
     agent: Agent
-    # maps ghost rank to number of references
-    # on that rank
+    """the ghosted agent"""
+
     ghost_ranks: Dict
+    """maps the ghosted to rank to the number references the agent has on that rank."""
 
 
 class AgentManager:

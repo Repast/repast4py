@@ -5,4 +5,4 @@ repast4py.space module
    :members:
    :undoc-members:
    :show-inheritance:
-   :inherited-members:
+   :inherited-members: int
