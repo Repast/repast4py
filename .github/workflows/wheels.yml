@@ -84,17 +84,17 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-14
-          - windows-2022
+          - macos-latest
+          - windows-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: pip
 
       - name: Upgrade pip
@@ -122,7 +122,7 @@ jobs:
           # Disable building PyPy wheels on all platforms
           CIBW_SKIP: pp*
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: cibw-wheels-mock-${{ matrix.os }}
           path: ./wheelhouse/*.whl
