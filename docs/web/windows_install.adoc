@@ -25,18 +25,18 @@ create the environment, in a `powershell` or `cmd` terminal do:
 .Powershell
 [source,powershell]
 ----
-python -m venv path/to/repast4py_venv
-path/to/repast4py_venv/Scripts/Activate.ps1
+python -m venv path\to\repast4py_venv
+path\to\repast4py_venv\Scripts\Activate.ps1
 ----
 
 .CMD
 [source,cmd]
 ----
-python -m venv path/to/repast4py_venv
-path/to/repast4py_venv/activate.bat
+python -m venv path\to\repast4py_venv
+path\to\repast4py_venv\activate.bat
 ----
 
-The environment only needs to be created once with `python3 -m venv ...`,
+The environment only needs to be created once with `python -m venv ...`,
 but does need to be activated each time in order to be used. For
 more information see the `venv` Python documenation
 https://docs.python.org/3/library/venv.html[here]
