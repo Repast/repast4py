@@ -1,0 +1,50 @@
+:icons: font
+:website: http://repast.github.io
+:xrefstyle: full
+:imagesdir: ./images
+:source-highlighter: pygments
+
+== Installing Repast4Py on Windows without MPI
+
+On Windows, Repast4Py can also be installed from a pre-built Python wheel in a *no-mpi* mode that requires neither a
+native MPI installation, mpi4py nor a C/C++ compiler. This mode can be used to develop models that
+are amenable to Python's built-in multiprocessing or thread-based parallelism, 
+enabling other forms of parallelism. This mode also makes native windows installation
+easier, as an mpi distribution may be difficult to install.
+
+IMPORTANT: Do not install the no-mpi version and the mpi version of Repast4Py in the same Python environment.
+
+// NOTE: We recommend that Windows users use the Windows Subsystem for Linux (WSL) in order
+// take advantage of MPI and mpi4py to build distributed models. 
+// Installation instructions for
+// WSL can be found https://docs.microsoft.com/en-us/windows/wsl/install[here]. 
+
+=== Installation steps
+
+1. Download the wheel that matches your Python version
+
+* 3.10: https://github.com/Repast/repast4py/releases/download/v1.3.0/repast4py-1.3.0-cp310-cp310-win_amd64.whl[repast4py-1.3.0-cp310-cp310-win_amd64.whl]
+* 3.11: https://github.com/Repast/repast4py/releases/download/v1.3.0/repast4py-1.3.0-cp311-cp311-win_amd64.whl[repast4py-1.3.0-cp311-cp311-win_amd64.whl]
+* 3.12: https://github.com/Repast/repast4py/releases/download/v1.3.0/repast4py-1.3.0-cp312-cp312-win_amd64.whl[repast4py-1.3.0-cp312-cp312-win_amd64.whl]
+* 3.13: https://github.com/Repast/repast4py/releases/download/v1.3.0/repast4py-1.3.0-cp313-cp313-win_amd64.whl[repast4py-1.3.0-cp313-cp313-win_amd64.whl]
+* 3.14: https://github.com/Repast/repast4py/releases/download/v1.3.0/repast4py-1.3.0-cp314-cp314-win_amd64.whl[repast4py-1.3.0-cp314-cp314-win_amd64.whl]
+
+2. Install the wheel in your Python environment
++
+From a `powershell` or `cmd` terminal
++
+.POWERSHELL
+[source,powershell]
+----
+$env:R4PY_NO_MPI=1
+pip install <wheel>
+----
++
+.CMD
+[source,powershell]
+----
+set R4PY_NO_MPI=1
+pip install <wheel>
+----
++
+Replace `<wheel>` with the path to the downloaded wheel.

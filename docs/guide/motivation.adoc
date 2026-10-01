@@ -14,7 +14,8 @@ to create a scalable modeling system that can exploit the largest HPC resources 
 Repast4Py can run on Linux, macOS and Windows provided there is a working MPI implementation
 installed and mpi4py is supported. Repast4Py is developed and tested on Linux. We recommend
 that Windows users use the Windows Subsystem for Linux (WSL). Installation instructions for
-WSL can be found https://docs.microsoft.com/en-us/windows/wsl/install[here].
+WSL can be found https://docs.microsoft.com/en-us/windows/wsl/install[here]. Instructions
+for alternative Windows installations that do not require MPI or a C/C++ compiler are {website}/windows_install.html[here].
 
 Under Linux, MPI can be installed using your OS's package manager. For example, 
 under Ubuntu 24.04 (and thus WSL), the mpich MPI implementation can be installed with:
@@ -93,6 +94,8 @@ NOTE: A single-rank installation can only be run as a single process. Launching 
 across multiple processes (e.g. `mpirun -n 2`) is an error and the program will exit;
 for distributed multi-rank runs use the default installation above with a working
 MPI.
+
+IMPORTANT: Do not install the no-mpi version and the mpi version of Repast4Py in the same Python environment.
 
 [[cpu_torch_install]]
 ==== CPU-only PyTorch
