@@ -11,15 +11,32 @@ to create a scalable modeling system that can exploit the largest HPC resources 
 
 === Requirements
 
-Repast4Py can run on Linux, macOS and Windows provided there is a working MPI implementation
-installed and mpi4py is supported. Repast4Py is developed and tested on Linux. We recommend
-that Windows users use the Windows Subsystem for Linux (WSL). Installation instructions for
-WSL can be found https://docs.microsoft.com/en-us/windows/wsl/install[here]. Instructions
-for alternative Windows installations that do not require MPI or a C/C++ compiler are {website}/windows_install.html[here].
+The default multiprocess distributed version of Repast4Py can run on Linux, macOS and Windows
+provided there is a working MPI implementation installed and mpi4py is supported. On Windows,
+we recommend using the Windows Subsystem for Linux (WSL) and following the Linux install
+instructions. Installation instructions for
+WSL can be found https://docs.microsoft.com/en-us/windows/wsl/install[here].
+
+A native Windows install that does not require MPI or
+a C/C++ compiler is also available. Installation instructions are
+https://repast.github.io/repast4py.site/windows_install.html[here]. 
+This mode can be used to develop models that are amenable to Python's built-in multiprocessing
+or thread-based parallelism, enabling forms of parallelism other than distributed MPI.
+
+NOTE: A non-mpi install is also available for Linux and Mac, but a C/C++
+compiler is currently still required. See <<single_rank_install>>.
+
+Repast4Py also requires PyTorch. On Linux, the default PyTorch wheel on PyPI
+bundles NVIDIA CUDA libraries; if you have no NVIDIA GPU, see
+<<cpu_torch_install>> for installing the smaller CPU-only build
+**before** installing Repast4Py.
+
+==== MPI Installation
 
 Under Linux, MPI can be installed using your OS's package manager. For example, 
 under Ubuntu 24.04 (and thus WSL), the mpich MPI implementation can be installed with:
 
+.Linux and WSL
 [source,bash]
 ----
 $ sudo apt install mpich
@@ -30,14 +47,6 @@ Installation instructions for MPI on macOS can be found {website}/macos_mpi_inst
 A typical campus cluster, or HPC resource will have MPI and mpi4py installed.
 Check the resource's documentation on available software for more details.
 
-If you do not have MPI, or want to use only Python's own multiprocessing or
-threading instead, Repast4Py can be installed in a no-mpi mode that requires
-neither MPI nor mpi4py; see <<single_rank_install>>.
-
-Repast4Py also requires PyTorch. On Linux, the default PyTorch wheel on PyPI
-bundles NVIDIA CUDA libraries; if you have no NVIDIA GPU, see
-<<cpu_torch_install>> for installing the smaller CPU-only build.
-
 === Installation
 
 Repast4Py can be downloaded and installed from PyPI using pip. 
@@ -46,6 +55,8 @@ the C compiler `CC` environment variable must be set
 to the `mpicxx` (or `mpic++`) compiler wrapper provided by your MPI installation.
 Depending on the operating system, the `CXX` variable may also need to be set.
 
+.Linux, macOS, and WSL
+[source,bash]
 ----
 env CC=mpicxx CXX=mpicxx pip install repast4py
 ----
@@ -57,6 +68,7 @@ Python 3.12, `sudo apt install python3.12-dev` will work for Ubuntu.
 
 The preferred install is into a Python virtual environment.
 
+.Linux, macOS, and WSL
 [source,bash]
 ----
 $ python3 -m venv path/to/repast4py_venv
@@ -65,7 +77,9 @@ $ source path/to/repast4py_venv/bin/activate
 ----
 
 The environment only needs to be created once with `python3 -m venv ...`,
-but does need to be sourced in order to be used. 
+but does need to be sourced in order to be used. For more
+more information see the `venv` Python documenation
+https://docs.python.org/3/library/venv.html[here]
 
 NOTE: Using Repast4Py in a conda environment can have issues. Conda may
 install its own MPI distribution, and its own C/C++ compiler. These
@@ -86,6 +100,8 @@ A C++ compiler and the Python development headers are still required to compile
 Repast4Py's native extensions, but no MPI compiler wrapper is needed. Set the
 `R4PY_NO_MPI` environment variable when installing:
 
+.Linux, macOS, and WSL
+[source,bash]
 ----
 env R4PY_NO_MPI=1 pip install repast4py
 ----
@@ -110,6 +126,7 @@ A cluster or HPC resource may also provide PyTorch itself, so check the resource
 documentation before installing your own. Install the
 CPU-only build from PyTorch's own package index _before_ installing Repast4Py:
 
+.Linux and WSL
 [source,bash]
 ----
 $ pip install torch --index-url https://download.pytorch.org/whl/cpu
@@ -120,23 +137,12 @@ The same two steps work for a no-mpi installation,
 substituting `env R4PY_NO_MPI=1 pip install repast4py` for the
 second command.
 
-A single command also works, adding the PyTorch index alongside PyPI:
-
-[source,bash]
-----
-$ env CC=mpicxx CXX=mpicxx pip install repast4py \
-      --extra-index-url https://download.pytorch.org/whl/cpu
-----
-
 The CPU-only wheels carry a `+cpu` version suffix that pip prefers over the plain
 version.
 
-NOTE: The two-step form above is the recommended one. It takes only PyTorch from the
-PyTorch index, whereas the single command makes every dependency resolvable from both
-indexes.
-
 To check which build is installed:
 
+.Linux and WSL
 [source,bash]
 ----
 $ python -c "import torch; print(torch.__version__)"

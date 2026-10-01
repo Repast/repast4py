@@ -19,6 +19,28 @@ IMPORTANT: Do not install the no-mpi version and the mpi version of Repast4Py in
 // Installation instructions for
 // WSL can be found https://docs.microsoft.com/en-us/windows/wsl/install[here]. 
 
+The preferred install is into a Python virtual environment. To
+create the environment, in a `powershell` or `cmd` terminal do:
+
+.Powershell
+[source,powershell]
+----
+python -m venv path/to/repast4py_venv
+path/to/repast4py_venv/Scripts/Activate.ps1
+----
+
+.CMD
+[source,cmd]
+----
+python -m venv path/to/repast4py_venv
+path/to/repast4py_venv/activate.bat
+----
+
+The environment only needs to be created once with `python3 -m venv ...`,
+but does need to be activated each time in order to be used. For
+more information see the `venv` Python documenation
+https://docs.python.org/3/library/venv.html[here]
+
 === Installation steps
 
 1. Download the wheel that matches your Python version
@@ -31,9 +53,9 @@ IMPORTANT: Do not install the no-mpi version and the mpi version of Repast4Py in
 
 2. Install the wheel in your Python environment
 +
-From a `powershell` or `cmd` terminal
+Be sure your environment is activated, and from a `powershell` or `cmd` terminal
 +
-.POWERSHELL
+.Powershell
 [source,powershell]
 ----
 $env:R4PY_NO_MPI=1
@@ -41,10 +63,11 @@ pip install <wheel>
 ----
 +
 .CMD
-[source,powershell]
+[source,cmd]
 ----
 set R4PY_NO_MPI=1
 pip install <wheel>
 ----
 +
-Replace `<wheel>` with the path to the downloaded wheel.
+Replace `<wheel>` with the path to the downloaded wheel. At this point, Repast4Py should be
+ready to use in the activated environment.
