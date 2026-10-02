@@ -6,10 +6,7 @@
 
 == Installing Repast4Py on Windows without MPI
 
-On Windows, Repast4Py can also be installed from a pre-built Python wheel in a *no-mpi* mode that requires neither a
-native MPI installation, mpi4py nor a C/C++ compiler. This mode can be used to develop models that
-are amenable to Python's built-in multiprocessing or thread-based parallelism, 
-enabling other forms of parallelism. This mode also makes native windows installation
+On Windows, Repast4Py can also be installed from a pre-built Python wheel in a *no-mpi* mode that requires neither a native MPI installation, mpi4py, nor a C/C++ compiler. In this mode, other, non-MPI-based parallelism, such as Python's built-in multiprocessing or thread-based parallelism, can be used to develop models. This mode also makes native windows installation
 easier, as an mpi distribution may be difficult to install.
 
 IMPORTANT: Do not install the no-mpi version and the mpi version of Repast4Py in the same Python environment.
@@ -38,7 +35,7 @@ path\to\repast4py_venv\activate.bat
 
 The environment only needs to be created once with `python -m venv ...`,
 but does need to be activated each time in order to be used. For
-more information see the `venv` Python documenation
+more information see the `venv` Python documentation
 https://docs.python.org/3/library/venv.html[here]
 
 === Installation steps
@@ -58,6 +55,7 @@ Be sure your environment is activated, and from a `powershell` or `cmd` terminal
 .Powershell
 [source,powershell]
 ----
+path\to\repast4py_venv\Scripts\Activate.ps1
 $env:R4PY_NO_MPI=1
 pip install <wheel>
 ----
@@ -65,6 +63,7 @@ pip install <wheel>
 .CMD
 [source,cmd]
 ----
+path\to\repast4py_venv\activate.bat
 set R4PY_NO_MPI=1
 pip install <wheel>
 ----
