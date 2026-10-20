@@ -866,7 +866,7 @@ The `run` function creates the Model class and calls its `run` method, which the
 
 [source,python,numbered]
 ----
-from mpi4py import MPI
+from repast4py import MPI
 
 def run(params: Dict):
     global model    <1>
