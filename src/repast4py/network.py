@@ -371,10 +371,15 @@ class SharedNetwork(SharedProjection, ABC):
         recv_agents = self.comm.alltoall(sync_agents)
         for rank, agents in enumerate(recv_agents):
             for agent_data in agents:
-                agent = create_agent(agent_data)
-                # 1 because added to network
-                agent_manager.add_ghost(rank, agent, 1)
-                self.add(agent)
+                agent = agent_manager.get_ghost(agent_data[0], incr=0)
+                if agent is None:
+                    agent = create_agent(agent_data)
+                    # 1 because added to network
+                    agent_manager.add_ghost(rank, agent, 1)
+                else:
+                    agent_manager.get_ghost(agent.uid, incr=1)
+                if not self.graph.has_node(agent):
+                    self.add(agent)
 
         return sync_edges
 
@@ -941,7 +946,6 @@ def _request_remote_agents(graph_data: GraphData, ctx, create_agent: Callable):
 
 
 def _parse_edge(line: str, line_num: int, graph, graph_data: GraphData):
-    requested = set()
     try:
         vals = _LINE_P.findall(line)
         n_vals = len(vals)
@@ -963,9 +967,8 @@ def _parse_edge(line: str, line_num: int, graph, graph_data: GraphData):
                 graph.add_edge(u, v)
         elif u_in and not v_in:
             v_uid = graph_data.remote_agents[v_id]
-            if v_id not in requested:
+            if not any(r[0] == v_uid for r in graph_data.requested_agents):
                 graph_data.requested_agents.append((v_uid, v_uid[2]))
-                requested.add(v_id)
 
             u_uid = graph_data.agents[u_id].uid
             if n_vals == 3:
@@ -975,9 +978,8 @@ def _parse_edge(line: str, line_num: int, graph, graph_data: GraphData):
 
         elif not u_in and v_in:
             u_uid = graph_data.remote_agents[u_id]
-            if u_id not in requested:
+            if not any(r[0] == u_uid for r in graph_data.requested_agents):
                 graph_data.requested_agents.append((u_uid, u_uid[2]))
-                requested.add(u_id)
             v_uid = graph_data.agents[v_id].uid
             if n_vals == 3:
                 graph_data.edges.append((u_uid, v_uid, vals[2]))
