@@ -266,8 +266,11 @@ class AgentManager:
         """
         uid = agent.uid
         agent.local_rank = ghosted_rank
-        ghost_agent = GhostAgent(agent, incr)
-        self._ghost_agents[uid] = ghost_agent
+        existing = self._ghost_agents.get(agent.uid)
+        if existing is not None:
+            existing.ref_count += incr
+        else:
+            self._ghost_agents[uid] = GhostAgent(agent, incr)
 
     def add_ghosts_to_projection(self, projection):
         """Adds all the ghost agents to the specified projection.

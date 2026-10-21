@@ -55,9 +55,16 @@ class SharedContext:
             proj.add(agent)
 
     def _add_ghost(self, rank: int, agent: Agent):
-        self._agent_manager.add_ghost(rank, agent, incr=len(self.projections))
-        for proj in self.projections.values():
-            proj.add(agent)
+        existing = self._agent_manager.get_ghost(agent.uid, incr=0)
+        if existing is not None:
+            self._agent_manager.get_ghost(agent.uid, incr=len(self.projections))
+            for proj in self.projections.values():
+                if existing not in proj:
+                    proj.add(existing)
+        else:
+            self._agent_manager.add_ghost(rank, agent, incr=len(self.projections))
+            for proj in self.projections.values():
+                proj.add(agent)
 
     def add_value_layer(self, value_layer: SharedValueLayer):
         """Adds the specified value_layer to the this context.
