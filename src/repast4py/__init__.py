@@ -18,6 +18,6 @@ identities / no-ops. Either way, ``MPI.COMM_WORLD`` is the communicator passed t
 shared projections and contexts.
 """
 
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 from ._mpi import MPI  # noqa: E402,F401
