@@ -1616,3 +1616,59 @@ class InitNetworkTests(unittest.TestCase):
             except ModuleNotFoundError:
                 print("Ignoring nxmetis test")
 
+
+    def test_key_error_issue85(self):
+        # KeyError in SharedContext._update_ghosts when a buffered
+        # SharedCSpace and a SharedNetwork ghost the same agent
+
+        class Walker(core.Agent):
+            def __init__(self, local_id, rank):
+                super().__init__(id=local_id, type=0, rank=rank)
+
+            def save(self):
+                return (self.uid,)
+
+            def update(self, *data):
+                pass
+
+
+        def restore(data):
+            uid = data[0]
+            return Walker(uid[0], uid[2])
+
+
+        new_group = MPI.COMM_WORLD.Get_group().Incl([0, 1])
+        comm = MPI.COMM_WORLD.Create(new_group)
+
+        if comm != MPI.COMM_NULL:
+            rank = comm.Get_rank()
+
+            context = ctx.SharedContext(comm)
+            box = space.BoundingBox(0, 100, 0, 100, 0, 0)
+            cspace = space.SharedCSpace('space', bounds=box, borders=BorderType.Sticky,
+                                        occupancy=OccupancyType.Multiple, buffer_size=10,
+                                        comm=comm, tree_threshold=100)
+            
+            context.add_projection(cspace)
+            net = DirectedSharedNetwork('net', comm)
+            context.add_projection(net)
+
+            # One agent per rank, each inside the other rank's buffer zone
+            agent = Walker(0, rank)
+            context.add(agent)
+            cspace.move(agent, cpt(49.0 if rank == 0 else 51.0, 50.0))
+
+            # Rank 1 requests rank 0's agent and links its local agent to it
+            requests = [((0, 0, 0), 0)] if rank == 1 else []
+            context.request_agents(requests, restore)
+            if rank == 1:
+                net.add_edge(agent, context.ghost_agent((0, 0, 0)))
+
+            for _ in range(3):
+                # Issue: KeyError (0, 0, 1) on rank 0 at the 2nd call
+                try: 
+                    context.synchronize(restore)
+                except KeyError:
+                    self.fail()
+
+
